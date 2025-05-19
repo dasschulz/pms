@@ -3,6 +3,7 @@ import { Work_Sans, Inter } from 'next/font/google';
 import './globals.css';
 import {AppLayout} from '@/components/layout/app-layout';
 import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "next-themes";
 
 const workSans = Work_Sans({
   subsets: ['latin'],
@@ -28,10 +29,17 @@ export default function RootLayout({
   return (
     <html lang="de" suppressHydrationWarning>
       <body className={`${workSans.variable} ${inter.variable} antialiased bg-background text-foreground`}>
-        <AppLayout>
-          {children}
-        </AppLayout>
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AppLayout>
+            {children}
+          </AppLayout>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

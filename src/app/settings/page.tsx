@@ -1,3 +1,4 @@
+"use client";
 
 import { PageLayout } from "@/components/page-layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User } from "lucide-react"; // Für Avatar Fallback
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useTheme } from "next-themes"; // Import useTheme
+import { useEffect, useState } from "react"; // Import useEffect and useState for client-side rendering
 
 export default function SettingsPage() {
   // Placeholder-Daten - in einer echten App kämen diese vom Backend/Auth-Service
@@ -14,6 +18,17 @@ export default function SettingsPage() {
   const userEmail = "max.mustermann@bundestag.de";
   const userConstituency = "Musterwahlkreis";
   const userProfileImageUrl = "https://placehold.co/100x100.png"; // Platzhalter-Profilbild
+
+  const { theme, setTheme } = useTheme();
+  // Ensure the component is mounted before using theme to avoid hydration mismatch
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    // Render nothing or a loading indicator until mounted
+    // This helps prevent hydration mismatch with server-rendered theme class
+    return null; 
+  }
 
   return (
     <PageLayout
@@ -23,8 +38,8 @@ export default function SettingsPage() {
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
         <Card className="lg:col-span-1 xl:col-span-2">
           <CardHeader>
-            <CardTitle>Profilinformationen</CardTitle>
-            <CardDescription>Aktualisieren Sie Ihre persönlichen Daten, Wahlkreisdetails und Ihr Profilbild.</CardDescription>
+            <CardTitle className="font-heading-black">Profilinformationen</CardTitle>
+            <CardDescription className="font-heading-light">Aktualisieren Sie Ihre persönlichen Daten, Wahlkreisdetails und Ihr Profilbild.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-col sm:flex-row items-center gap-6">
@@ -43,17 +58,62 @@ export default function SettingsPage() {
                 {/* Das Input-Feld kann versteckt und per Klick auf den Button getriggert werden */}
               </div>
               <div className="flex-grow space-y-4">
-                <div>
-                  <Label htmlFor="name">Vollständiger Name</Label>
-                  <Input id="name" defaultValue={userFullName} />
+                <div className="flex gap-4">
+                  <div className="basis-1/5 min-w-[90px]">
+                    <Label htmlFor="title">Titel</Label>
+                    <Select defaultValue="Dr.">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Titel wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Dr.">Dr.</SelectItem>
+                        <SelectItem value="Prof.">Prof.</SelectItem>
+                        <SelectItem value="Prof. Dr.">Prof. Dr.</SelectItem>
+                        <SelectItem value="Dipl.-Ing.">Dipl.-Ing.</SelectItem>
+                        <SelectItem value="Dipl.-Kfm.">Dipl.-Kfm.</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="basis-4/5">
+                    <Label htmlFor="name">Vollständiger Name</Label>
+                    <Input id="name" defaultValue={userFullName} />
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="email">E-Mail-Adresse</Label>
                   <Input id="email" type="email" defaultValue={userEmail} />
                 </div>
-                <div>
-                  <Label htmlFor="electoralDistrict">Wahlkreis</Label>
-                  <Input id="electoralDistrict" defaultValue={userConstituency} />
+                <div className="flex gap-4">
+                  <div className="basis-2/5 min-w-[120px]">
+                    <Label htmlFor="stateAssociation">Landesverband</Label>
+                    <Select defaultValue="Berlin">
+                      <SelectTrigger>
+                        <SelectValue placeholder="Land wählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Baden-Württemberg">Baden-Württemberg</SelectItem>
+                        <SelectItem value="Bayern">Bayern</SelectItem>
+                        <SelectItem value="Berlin">Berlin</SelectItem>
+                        <SelectItem value="Brandenburg">Brandenburg</SelectItem>
+                        <SelectItem value="Bremen">Bremen</SelectItem>
+                        <SelectItem value="Hamburg">Hamburg</SelectItem>
+                        <SelectItem value="Hessen">Hessen</SelectItem>
+                        <SelectItem value="Mecklenburg-Vorpommern">Mecklenburg-Vorpommern</SelectItem>
+                        <SelectItem value="Niedersachsen">Niedersachsen</SelectItem>
+                        <SelectItem value="Nordrhein-Westfalen">Nordrhein-Westfalen</SelectItem>
+                        <SelectItem value="Rheinland-Pfalz">Rheinland-Pfalz</SelectItem>
+                        <SelectItem value="Saarland">Saarland</SelectItem>
+                        <SelectItem value="Sachsen">Sachsen</SelectItem>
+                        <SelectItem value="Sachsen-Anhalt">Sachsen-Anhalt</SelectItem>
+                        <SelectItem value="Schleswig-Holstein">Schleswig-Holstein</SelectItem>
+                        <SelectItem value="Thüringen">Thüringen</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="basis-3/5">
+                    <Label htmlFor="electoralDistrict">Wahlkreis</Label>
+                    <Input id="electoralDistrict" defaultValue={userConstituency} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -63,8 +123,8 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Passwort ändern</CardTitle>
-            <CardDescription>Aktualisieren Sie Ihr Anmelde-Passwort.</CardDescription>
+            <CardTitle className="font-heading-black">Passwort ändern</CardTitle>
+            <CardDescription className="font-heading-light">Aktualisieren Sie Ihr Anmelde-Passwort.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -85,8 +145,8 @@ export default function SettingsPage() {
         
         <Card className="lg:col-span-1 xl:col-span-3"> {/* Nimmt volle Breite auf xl, halbe auf lg */}
           <CardHeader>
-            <CardTitle>Benachrichtigungseinstellungen</CardTitle>
-            <CardDescription>Konfigurieren Sie, wie Sie Benachrichtigungen erhalten.</CardDescription>
+            <CardTitle className="font-heading-black">Benachrichtigungseinstellungen</CardTitle>
+            <CardDescription className="font-heading-light">Konfigurieren Sie, wie Sie Benachrichtigungen erhalten.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
@@ -112,11 +172,29 @@ export default function SettingsPage() {
 
         <Card className="lg:col-span-1 xl:col-span-3">
           <CardHeader>
-            <CardTitle>Erscheinungsbild</CardTitle>
-            <CardDescription>Passen Sie das Aussehen und Verhalten der Anwendung an.</CardDescription>
+            <CardTitle className="font-heading-black">Erscheinungsbild</CardTitle>
+            <CardDescription className="font-heading-light">Passen Sie das Aussehen und Verhalten der Anwendung an.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">Theme-Einstellungen (Hell-/Dunkelmodus) werden normalerweise von Ihrem Betriebssystem oder Browsereinstellungen gehandhabt. Erweiterte Darstellungseinstellungen könnten hier in Zukunft hinzugefügt werden.</p>
+            <div className="flex items-center justify-between py-2">
+              <div>
+                <Label htmlFor="theme-toggle" className="text-sm font-medium">
+                  Dunkelmodus
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Wechseln Sie zwischen hellem und dunklem Design.
+                </p>
+              </div>
+              <Switch
+                id="theme-toggle"
+                checked={theme === "dark"}
+                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                aria-label="Dunkelmodus umschalten"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Die Standardeinstellung ist oft \\'system\\', welche die Einstellungen Ihres Betriebssystems widerspiegelt. Diese Option schaltet direkt zwischen Hell und Dunkel um.
+            </p>
           </CardContent>
         </Card>
       </div>
