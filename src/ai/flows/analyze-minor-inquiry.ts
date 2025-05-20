@@ -12,8 +12,8 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AnalyzeMinorInquiryInputSchema = z.object({
-  inquiryText: z.string().describe('The text of the minor inquiry.'),
-  responseText: z.string().describe('The response to the minor inquiry.'),
+  inquiryText: z.any().describe('The PDF file of the minor inquiry response from the government.'),
+  responseText: z.string().describe('User-defined focus points for the analysis.'),
 });
 export type AnalyzeMinorInquiryInput = z.infer<typeof AnalyzeMinorInquiryInputSchema>;
 

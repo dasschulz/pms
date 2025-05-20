@@ -93,10 +93,18 @@ export default function NewsPage() {
       }}>
         <div className="mb-6 flex justify-center">
           <ToggleGroup type="single" value={contentType} onValueChange={(value: "topic" | "person") => { if (value) setContentType(value); }} defaultValue="topic">
-            <ToggleGroupItem value="topic" aria-label="Toggle Themen">
+            <ToggleGroupItem 
+              value="topic" 
+              aria-label="Toggle Themen"
+              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:hover:bg-primary/90"
+            >
               Themen
             </ToggleGroupItem>
-            <ToggleGroupItem value="person" aria-label="Toggle Personen">
+            <ToggleGroupItem 
+              value="person" 
+              aria-label="Toggle Personen"
+              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:hover:bg-primary/90"
+            >
               Personen
             </ToggleGroupItem>
           </ToggleGroup>

@@ -1,9 +1,9 @@
-
 "use client";
 import React from "react";
 import type { PropsWithChildren } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
   SidebarProvider,
   Sidebar,
@@ -26,11 +26,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger as ShadCNA
 import { cn } from "@/lib/utils";
 
 // Custom Party Icon SVG - Wird für Sidebar Header und Header-Platzhalter verwendet
-const PartyIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 100 100" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <path d="M20,80 L20,30 L30,20 L40,30 L40,80 L35,85 L35,40 L25,40 L25,85 L20,80 Z M50,80 L50,10 L55,5 L60,10 L60,80 L50,80 Z M70,80 L70,30 L80,20 L90,30 L90,80 L85,85 L85,40 L75,40 L75,85 L70,80 Z" />
-  </svg>
-);
+// const PartyIcon = () => (
+//   <svg width=\"24\" height=\"24\" viewBox=\"0 0 100 100\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\">
+//     <path d=\"M20,80 L20,30 L30,20 L40,30 L40,80 L35,85 L35,40 L25,40 L25,85 L20,80 Z M50,80 L50,10 L55,5 L60,10 L60,80 L50,80 Z M70,80 L70,30 L80,20 L90,30 L90,80 L85,85 L85,40 L75,40 L75,85 L70,80 Z\" />
+//   </svg>
+// );
 
 
 function SidebarNav() {
@@ -42,9 +42,8 @@ function SidebarNav() {
 
     if (item.isHeader) {
       return (
-        <div key={index} className={cn("flex items-center gap-2 px-4 py-3 h-14", sidebarState === "collapsed" ? "justify-center" : "")}>
-          <PartyIcon />
-          {/* Titel für Header-Item entfernt, nur Icon bleibt */}
+        <div key={index} className={cn("flex items-center justify-center px-2 py-2 h-16 border-b", sidebarState === "collapsed" ? "" : "")}>
+          <Image src="/images/logo.svg" alt="Logo" width={sidebarState === 'collapsed' ? 32 : 100} height={32} className="transition-all duration-300 ease-in-out" />
         </div>
       );
     }
@@ -84,7 +83,7 @@ function SidebarNav() {
     }
 
     const commonProps = {
-      variant: "ghost" as const,
+      variant: "default" as const,
       className: cn(
         "w-full justify-start h-9",
         isActive && !isSubItem && "bg-sidebar-accent text-sidebar-accent-foreground",
@@ -133,7 +132,7 @@ function SidebarNav() {
   };
 
   return (
-    <>
+    <div className="flex flex-col flex-grow">
       <SidebarMenu className="px-2">
         {navItems.map((item, index) => renderNavItem(item, index))}
       </SidebarMenu>
@@ -143,7 +142,7 @@ function SidebarNav() {
             {bottomNavItems.map((item, index) => renderNavItem(item, index))}
         </SidebarMenu>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -183,20 +182,6 @@ export function AppLayout({ children }: PropsWithChildren) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col">
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 sm:px-6">
-          <SidebarTrigger asChild>
-             <Button variant="outline" size="icon" className="sm:hidden h-10 w-10">
-              <PartyIcon />
-              <span className="sr-only">Seitenleiste umschalten</span>
-            </Button>
-          </SidebarTrigger>
-          {/* Logo-Platzhalter - Ersetzen Sie dies durch Ihre actual Logo Komponente/Bild */}
-          <div className="flex items-center h-full">
-            <PartyIcon /> 
-            {/* <span className="ml-2 font-semibold text-lg">DIE LINKE</span> Optionaler Text neben dem Logo */}
-          </div>
-          {/* Add user menu or other header elements here */}
-        </header>
         <main className="flex-1 overflow-auto p-4 sm:p-6">
           {children}
         </main>

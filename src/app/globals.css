@@ -107,6 +107,25 @@
   body {
     @apply bg-background text-foreground font-sans; /* Default to Inter */
   }
+
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    z-index: -1; /* Place behind content */
+    pointer-events: none; /* Allow interactions through background */
+    left: 0; /* Default left for full-width or specific positioning */
+    right: 0; /* Default right for full-width or specific positioning */
+  }
+
+  /* Large gradient from bottom-right to top-left */
+  body::before {
+    top: 0;
+    bottom: 0;
+    background-image: linear-gradient(to top left, hsla(var(--secondary), 0.15), transparent 30%);
+  }
+
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-work-sans; /* Default heading font (Work Sans, default weight e.g. 400) */
   }

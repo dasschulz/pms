@@ -1,12 +1,14 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useActionState } from "react";
+import { useEffect, useState } from "react";
+// SettingsIcon will be used in the page now
+// import { Settings as SettingsIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+// Button will be used in the page for settings
+// import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -16,16 +18,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+// import { Input } from "@/components/ui/input"; // Not used directly if settings fields are removed
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { AiSubmitButton, AiResultDisplay, FormSection } from "@/components/ai/ai-form-controls";
+import { VideoScriptSettingsModal, type VideoScriptSettings } from "./video-script-settings-modal";
 
 import type { GenerateVideoScriptInput, GenerateVideoScriptOutput } from "@/ai/flows/generate-video-script";
 import { generateVideoScript } from "@/ai/flows/generate-video-script";
@@ -38,163 +34,157 @@ const formSchema = z.object({
   keyTopics: z.string().min(10, "Schlüsselthemen müssen mindestens 10 Zeichen lang sein."),
 });
 
-type FormValues = GenerateVideoScriptInput;
+type VisibleFormValues = Pick<GenerateVideoScriptInput, 'keyTopics'>;
 
-const initialState: { result: GenerateVideoScriptOutput | null; error: string | null } = {
-  result: null,
-  error: null,
-};
+const LOCAL_STORAGE_KEY = "videoScriptSettings";
 
-async function handleGenerateScriptAction(
-  prevState: typeof initialState,
-  formData: FormData
-): Promise<typeof initialState> {
-  const validatedFields = formSchema.safeParse(Object.fromEntries(formData.entries()));
-
-  if (!validatedFields.success) {
-    return { result: null, error: "Ungültige Eingabe. Bitte überprüfen Sie die Formularfelder." };
-  }
-  try {
-    const result = await generateVideoScript(validatedFields.data);
-    return { result, error: null };
-  } catch (e) {
-    const error = e instanceof Error ? e.message : "Ein unbekannter Fehler ist aufgetreten.";
-    return { result: null, error };
-  }
+interface ScriptGenerationState {
+  result: GenerateVideoScriptOutput | null;
+  error: string | null;
+  isPending: boolean;
 }
 
-export function VideoScriptForm() {
-  const [state, formAction] = useActionState(handleGenerateScriptAction, initialState);
-  
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+const initialGenerationState: ScriptGenerationState = {
+  result: null,
+  error: null,
+  isPending: false,
+};
+
+interface VideoScriptFormProps {
+  isSettingsModalOpen: boolean;
+  onSettingsModalOpenChange: (isOpen: boolean) => void;
+}
+
+export function VideoScriptForm({ isSettingsModalOpen, onSettingsModalOpenChange }: VideoScriptFormProps) {
+  const [generationState, setGenerationState] = useState<ScriptGenerationState>(initialGenerationState);
+  // isSettingsModalOpen and setIsSettingsModalOpen are now props
+  // const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [currentSettings, setCurrentSettings] = useState<VideoScriptSettings>({
+    speakerStrengths: "",
+    speakerWeaknesses: "",
+    speakingStyle: "direct",
+    populismLevel: "medium",
+  });
+
+  const form = useForm<VisibleFormValues>({
+    resolver: zodResolver(formSchema.pick({ keyTopics: true })),
     defaultValues: {
-      strengths: "",
-      weaknesses: "",
-      speakingStyle: "direct", 
-      populismLevel: "medium", 
       keyTopics: "",
     },
   });
-  
-  const speakingStyles = [
-    { value: "direct", label: "Direkt" },
-    { value: "conversational", label: "Gesprächig" },
-    { value: "energetic", label: "Energetisch" },
-    { value: "calm", label: "Ruhig" },
-    { value: "humorous", label: "Humorvoll" },
-  ];
-  const populismLevels = [
-    { value: "low", label: "Niedrig" },
-    { value: "medium", label: "Mittel" },
-    { value: "high", label: "Hoch" },
-    { value: "none", label: "Kein" },
-  ];
+
+  useEffect(() => {
+    const storedSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (storedSettings) {
+      try {
+        const parsedSettings = JSON.parse(storedSettings) as VideoScriptSettings;
+        setCurrentSettings(parsedSettings);
+      } catch (error) {
+        console.error("Error parsing video script settings from localStorage:", error);
+        setCurrentSettings({
+          speakerStrengths: "",
+          speakerWeaknesses: "",
+          speakingStyle: "direct",
+          populismLevel: "medium",
+        });
+      }
+    }
+  }, []);
+
+  const handleSaveSettings = (newSettings: VideoScriptSettings) => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(newSettings));
+    setCurrentSettings(newSettings);
+    // toast or other confirmation could be handled here or by the modal itself if needed
+  };
+
+  const handleClientSubmit = async () => {
+    setGenerationState({ result: null, error: null, isPending: true });
+    const keyTopicsValue = form.getValues("keyTopics");
+
+    const fullDataToValidate: GenerateVideoScriptInput = {
+      strengths: currentSettings.speakerStrengths,
+      weaknesses: currentSettings.speakerWeaknesses,
+      speakingStyle: currentSettings.speakingStyle,
+      populismLevel: currentSettings.populismLevel,
+      keyTopics: keyTopicsValue,
+    };
+
+    const validatedFields = formSchema.safeParse(fullDataToValidate);
+
+    if (!validatedFields.success) {
+      let errorMessages = "Ungültige Eingabe:";
+      validatedFields.error.errors.forEach(err => {
+        errorMessages += `\n- ${err.path.join('.') || 'Allgemein'}: ${err.message}`;
+      });
+      if (validatedFields.error.errors.some(e => e.path.includes('keyTopics'))) {
+         form.setError("keyTopics", { type: "manual", message: validatedFields.error.errors.find(e => e.path.includes('keyTopics'))?.message || "Schlüsselthemen sind ungültig." });
+      }
+      setGenerationState({ result: null, error: errorMessages, isPending: false });
+      return;
+    }
+
+    try {
+      const result = await generateVideoScript(validatedFields.data);
+      setGenerationState({ result, error: null, isPending: false });
+    } catch (e) {
+      const error = e instanceof Error ? e.message : "Ein unbekannter Fehler ist aufgetreten.";
+      setGenerationState({ result: null, error, isPending: false });
+    }
+  };
 
   return (
-    <Form {...form}>
-      <form action={formAction} className="space-y-8">
-        <FormSection title="Sprecherprofil" description="Beschreiben Sie die Eigenschaften des Sprechers.">
-          <FormField
-            control={form.control}
-            name="strengths"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Stärken des Sprechers</FormLabel>
-                <FormControl>
-                  <Input placeholder="z.B. Charismatisch, Kenntnisreich in X" {...field} />
-                </FormControl>
-                <FormDescription>Was sind die Stärken des Sprechers?</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="weaknesses"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Schwächen des Sprechers</FormLabel>
-                <FormControl>
-                  <Input placeholder="z.B. Kann zu akademisch sein, Spricht manchmal schnell" {...field} />
-                </FormControl>
-                <FormDescription>In welchen Bereichen kann sich der Sprecher verbessern?</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </FormSection>
-
-        <FormSection title="Skriptstil" description="Definieren Sie Stil und Ton des Videoskripts.">
-          <FormField
-            control={form.control}
-            name="speakingStyle"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Sprechstil</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Wählen Sie einen Sprechstil" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {speakingStyles.map(style => <SelectItem key={style.value} value={style.value}>{style.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <FormDescription>Der gewünschte Vortragsstil für das Video.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="populismLevel"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Populismusniveau</FormLabel>
-                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Wählen Sie ein Populismusniveau" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {populismLevels.map(level => <SelectItem key={level.value} value={level.value}>{level.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <FormDescription>Der Grad der populistischen Rhetorik, die einbezogen werden soll.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </FormSection>
-
-        <FormSection title="Inhaltlicher Fokus" description="Geben Sie die Schlüsselthemen für das Videoskript an.">
-          <FormField
-            control={form.control}
-            name="keyTopics"
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Schlüsselthemen</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Listen Sie die Hauptthemen, Argumente oder Punkte für das Video auf. Seien Sie spezifisch." {...field} rows={4}/>
-                </FormControl>
-                <FormDescription>Worum soll es im Video gehen?</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </FormSection>
+    <>
+      {/* 
+        The following button was moved to the page level and is now passed 
+        into PageLayout's headerActions slot.
         
-        <AiSubmitButton isPending={form.formState.isSubmitting} buttonText="Videoskript generieren"/>
-      </form>
-
+        <div className="mb-6 flex justify-end">
+          <Button variant="outline" onClick={() => setIsSettingsModalOpen(true)}>
+            <SettingsIcon className="mr-2 h-4 w-4" />
+            Meine Einstellungen
+          </Button>
+        </div>
+      */}
+      <VideoScriptSettingsModal
+        isOpen={isSettingsModalOpen} // Prop from parent
+        onOpenChange={onSettingsModalOpenChange} // Prop from parent
+        initialSettings={currentSettings}
+        onSave={handleSaveSettings}
+      />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleClientSubmit)} className="space-y-8">
+          <FormSection title="Inhaltlicher Fokus" description="Geben Sie die Schlüsselthemen für das Videoskript an.">
+            <FormField
+              control={form.control}
+              name="keyTopics"
+              render={({ field }: { field: any }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Schlüsselthemen</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Listen Sie die Hauptthemen, Argumente oder Punkte für das Video auf. Seien Sie spezifisch."
+                      {...field}
+                      rows={4}
+                    />
+                  </FormControl>
+                  <FormDescription>Worum soll es im Video gehen?</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </FormSection>
+          
+          <AiSubmitButton 
+            isPending={generationState.isPending} 
+            buttonText="Videoskript generieren" 
+          />
+        </form>
+      </Form> 
       <AiResultDisplay
-        content={state.result?.script}
-        error={state.error}
+        content={generationState.result?.script}
+        error={generationState.error}
         defaultMessage="Ihr generiertes Videoskript wird hier erscheinen."
       />
-    </Form>
+    </>
   );
 }
