@@ -1,19 +1,37 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeatherCard } from "./weather-card";
 import { QuickLinkCard } from "./quicklink-card";
 import { navItems } from "@/lib/nav-items";
 import Link from "next/link";
 import type { NavItem } from "@/lib/nav-items";
+import { base } from '@/lib/airtable';
 
 const coreFeatures: NavItem[] = navItems.filter(item => item.href && item.href !== '/' && !item.isHeader && !item.children);
 const inquiryFeaturesParent: NavItem | undefined = navItems.find(item => item.title === 'Kleine Anfrage');
 const inquiryFeatures: NavItem[] = inquiryFeaturesParent?.children || [];
 
-
-export function DashboardPage() {
+export async function DashboardPage() {
   // Placeholder - in einer echten Anwendung käme der Name aus Authentifizierungsdaten
   const userName = "Max Mustermann"; 
+
+  // Fetch image attachments from Airtable Picture-Records table
+  const [pmRecords, skriptRecords, kaRecords] = await Promise.all([
+    base('Picture-Records')
+      .select({ filterByFormula: "{Status} = 'PM'", maxRecords: 1 })
+      .firstPage(),
+    base('Picture-Records')
+      .select({ filterByFormula: "{Status} = 'skript'", maxRecords: 1 })
+      .firstPage(),
+    base('Picture-Records')
+      .select({ filterByFormula: "{Status} = 'KA'", maxRecords: 1 })
+      .firstPage(),
+  ]);
+  const pmImageField = pmRecords[0]?.get('Status');
+  const skriptImageField = skriptRecords[0]?.get('Status');
+  const kaImageField = kaRecords[0]?.get('Status');
+  const pmImageSrc = Array.isArray(pmImageField) ? pmImageField[0]?.url : undefined;
+  const skriptImageSrc = Array.isArray(skriptImageField) ? skriptImageField[0]?.url : undefined;
+  const kaImageSrc = Array.isArray(kaImageField) ? kaImageField[0]?.url : undefined;
 
   return (
     <div className="space-y-8">
@@ -29,17 +47,24 @@ export function DashboardPage() {
               <CardDescription>Navigieren Sie zu den Hauptfunktionen der Suite.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
-              {[...coreFeatures, ...inquiryFeatures].map((item) => (
-                item.href ? ( 
+              {[...coreFeatures, ...inquiryFeatures].map((item) => {
+                if (!item.href) return null;
+                // Determine image source based on route
+                let imageSrc: string | undefined;
+                if (item.href === '/press-release') imageSrc = pmImageSrc;
+                else if (item.href === '/video-script') imageSrc = skriptImageSrc;
+                else if (item.href.startsWith('/minor-inquiry')) imageSrc = kaImageSrc;
+                return (
                   <Link href={item.href} key={item.href} className="group">
                     <QuickLinkCard
                       title={item.title}
                       Icon={item.icon}
                       description={`Greifen Sie auf das ${item.title.toLowerCase()} Werkzeug zu.`}
+                      imageSrc={imageSrc}
                     />
                   </Link>
-                ) : null
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         </div>
