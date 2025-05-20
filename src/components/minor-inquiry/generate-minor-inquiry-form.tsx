@@ -1,10 +1,9 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useActionState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,9 +18,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { AiSubmitButton, AiResultDisplay, FormSection } from "@/components/ai/ai-form-controls";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 
 import type { GenerateMinorInquiryInput, GenerateMinorInquiryOutput } from "@/ai/flows/generate-minor-inquiry";
-import { generateMinorInquiry } from "@/ai/flows/generate-minor-inquiry";
+import { useMdBUsers } from "@/hooks/use-mdb-users";
+import { useSession } from "next-auth/react";
 
 const formSchema = z.object({
   topic: z.string().min(5, "Das Thema muss mindestens 5 Zeichen lang sein."),
@@ -32,45 +39,50 @@ const formSchema = z.object({
 
 type FormValues = GenerateMinorInquiryInput;
 
-const initialState: { result: GenerateMinorInquiryOutput | null; error: string | null } = {
-  result: null,
-  error: null,
-};
-
-async function handleGenerateInquiryAction(
-  prevState: typeof initialState,
-  formData: FormData
-): Promise<typeof initialState> {
-  const validatedFields = formSchema.safeParse(Object.fromEntries(formData.entries()));
-
-  if (!validatedFields.success) {
-    return { result: null, error: "Ungültige Eingabe. Bitte überprüfen Sie die Formularfelder." };
-  }
-  try {
-    const result = await generateMinorInquiry(validatedFields.data);
-    return { result, error: null };
-  } catch (e) {
-    const error = e instanceof Error ? e.message : "Ein unbekannter Fehler ist aufgetreten.";
-    return { result: null, error };
-  }
-}
-
 export function GenerateMinorInquiryForm() {
-  const [state, formAction] = useActionState(handleGenerateInquiryAction, initialState);
-  
+  const { data: users, isLoading: usersLoading } = useMdBUsers();
+  const { data: session } = useSession();
+  const [result, setResult] = useState<GenerateMinorInquiryOutput | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       topic: "",
       context: "",
       desiredOutcome: "",
-      targetAudience: "Zuständiges Bundesministerium",
+      targetAudience: "",
     },
   });
 
+  const onSubmit = async (values: FormValues) => {
+    if (!session) {
+      setError("Bitte melden Sie sich an.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/minor-inquiry/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Fehler bei der Anfrage");
+      } else {
+        setResult({ title: data.title, inquiryText: data.inquiryText });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unbekannter Fehler");
+    }
+    setIsLoading(false);
+  };
+
   return (
     <Form {...form}>
-      <form action={formAction} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <FormSection title="Details zur Anfrage" description="Geben Sie die Kerninformationen für die Kleine Anfrage an.">
           <FormField
             control={form.control}
@@ -91,11 +103,26 @@ export function GenerateMinorInquiryForm() {
             name="targetAudience"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Zielgruppe</FormLabel>
-                <FormControl>
-                  <Input placeholder="z.B. Wirtschaftsministerium, Bundestagsausschuss für Umwelt" {...field} />
-                </FormControl>
-                <FormDescription>Das spezifische Ministerium oder der Ausschuss, an den sich die Anfrage richtet.</FormDescription>
+                <FormLabel>Beteiligte MdB</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Wählen Sie MdB aus" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {usersLoading ? (
+                      <SelectItem value="loading" disabled>Lade...</SelectItem>
+                    ) : (
+                      users?.map((user) => (
+                        <SelectItem key={user.id} value={String(user.id)}>
+                          {user.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormDescription>Wählen Sie die MdBs, die an dieser Anfrage beteiligt sind.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -103,20 +130,6 @@ export function GenerateMinorInquiryForm() {
         </FormSection>
 
         <FormSection title="Kontext und Ziele" description="Erläutern Sie den Hintergrund und die Ziele Ihrer Anfrage.">
-          <FormField
-            control={form.control}
-            name="context"
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Kontext / Hintergrundinformationen</FormLabel>
-                <FormControl>
-                  <Textarea placeholder="Geben Sie relevanten Hintergrund, frühere Aussagen oder Datenpunkte an." {...field} rows={4} />
-                </FormControl>
-                <FormDescription>Detaillierter Kontext zur Information der Anfrage.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
           <FormField
             control={form.control}
             name="desiredOutcome"
@@ -131,15 +144,29 @@ export function GenerateMinorInquiryForm() {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="context"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormLabel>Kontext / Hintergrundinformationen</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Geben Sie relevanten Hintergrund, frühere Aussagen oder Datenpunkte an." {...field} rows={4} />
+                </FormControl>
+                <FormDescription>Detaillierter Kontext zur Information der Anfrage. Sie können auch gerne einfache Links zu Nachrichtenartikeln eingeben.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </FormSection>
 
-        <AiSubmitButton isPending={form.formState.isSubmitting} buttonText="Anfrage generieren"/>
+        <AiSubmitButton isPending={isLoading} buttonText="Anfrage generieren"/>
       </form>
 
       <AiResultDisplay
-        title={state.result?.title}
-        content={state.result ? { title: state.result.title, inquiryText: state.result.inquiryText } : undefined}
-        error={state.error}
+        title={result?.title}
+        content={result ? { title: result.title, inquiryText: result.inquiryText } : undefined}
+        error={error}
         defaultMessage="Ihre generierte Kleine Anfrage wird hier erscheinen."
       />
     </Form>

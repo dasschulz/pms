@@ -2,34 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+--rot: 0 100% 50%;
+--dunkelrot: 326 100% 22%
+--dunkel-dun: 194 100% 10%;
+--dunkelgruen: 189 100% 18%;
+--tuerkis: 173 100% 35%;
+--lila: 285 100% 32%;
+--rosa: 298 53% 65%;
+--blau: 229 61% 47%;
+--hellblau: 240 100% 91%;
+--background: 26 38% 92%;
+--white 0 0% 100%
+--rosa 0 60% 97%
+
+*/
 @layer base {
   :root {
-    --background: 36 39% 88%; /* RGB(236, 228, 224) */
-    --foreground: 36 20% 10%;
+    --background: 0 0% 100%; /* RGB(236, 228, 224) */
+    --foreground: 326 100% 22%;
 
-    --card: 36 42% 92%;
-    --card-foreground: 36 20% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 326 100% 22%;
 
-    --popover: 36 42% 92%;
-    --popover-foreground: 36 20% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 100% 50%;
 
-    --primary: 36 45% 70%; /* RGB(211, 180, 115) */
-    --primary-foreground: 36 30% 20%;
+    --primary: 0 100% 50%; /* RGB(211, 180, 115) */
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 36 40% 80%;
     --secondary-foreground: 36 25% 30%;
 
-    --muted: 36 38% 94%;
-    --muted-foreground: 36 20% 45%;
+    --muted: 326 100% 22%;
+    --muted-foreground: 326 100% 22%;
 
-    --accent: 6 64% 57%; /* RGB(207, 82, 59) */
+    --accent: 0 100% 50%; /* RGB(207, 82, 59) */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 65% 55%;
+    --destructive: 0 100% 50%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 36 35% 82%;
-    --input: 36 40% 90%;
+    --input: 0 60% 97%;
     --ring: 36 50% 60%;
 
     /* Updated chart colors based on theme */

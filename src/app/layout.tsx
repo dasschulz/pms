@@ -2,8 +2,7 @@ import type {Metadata} from 'next';
 import { Work_Sans, Inter } from 'next/font/google';
 import './globals.css';
 import {AppLayout} from '@/components/layout/app-layout';
-import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "next-themes";
+import { Providers } from '@/components/providers';
 
 const workSans = Work_Sans({
   subsets: ['latin'],
@@ -29,17 +28,11 @@ export default function RootLayout({
   return (
     <html lang="de" suppressHydrationWarning>
       <body className={`${workSans.variable} ${inter.variable} antialiased bg-background text-foreground`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <Providers>
           <AppLayout>
             {children}
           </AppLayout>
-          <Toaster />
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

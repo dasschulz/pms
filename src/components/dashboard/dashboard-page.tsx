@@ -5,14 +5,17 @@ import { navItems } from "@/lib/nav-items";
 import Link from "next/link";
 import type { NavItem } from "@/lib/nav-items";
 import { base } from '@/lib/airtable';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 const coreFeatures: NavItem[] = navItems.filter(item => item.href && item.href !== '/' && !item.isHeader && !item.children);
 const inquiryFeaturesParent: NavItem | undefined = navItems.find(item => item.title === 'Kleine Anfrage');
 const inquiryFeatures: NavItem[] = inquiryFeaturesParent?.children || [];
 
 export async function DashboardPage() {
-  // Placeholder - in einer echten Anwendung käme der Name aus Authentifizierungsdaten
-  const userName = "Max Mustermann"; 
+  // Get authenticated user from NextAuth
+  const session = await getServerSession(authOptions);
+  const userName = session?.user?.name ?? 'Unbekannte/r Nutzer/in';
 
   // Fetch image attachments from Airtable Picture-Records table
   const [pmRecords, skriptRecords, kaRecords] = await Promise.all([

@@ -43,6 +43,11 @@ export const navItems: NavItem[] = [
         href: '/minor-inquiry/analyze',
         icon: FileSearch2,
       },
+      {
+        title: 'Meine Anfragen',
+        href: '/minor-inquiry',
+        icon: FileSearch2,
+      },
     ],
   },
   {

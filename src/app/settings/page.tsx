@@ -9,15 +9,19 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User } from "lucide-react"; // Für Avatar Fallback
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { useTheme } from "next-themes"; // Import useTheme
-import { useEffect, useState } from "react"; // Import useEffect and useState for client-side rendering
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 export default function SettingsPage() {
-  // Placeholder-Daten - in einer echten App kämen diese vom Backend/Auth-Service
-  const userFullName = "Max Mustermann";
-  const userEmail = "max.mustermann@bundestag.de";
-  const userConstituency = "Musterwahlkreis";
-  const userProfileImageUrl = "https://placehold.co/100x100.png"; // Platzhalter-Profilbild
+  const { data: session } = useSession();
+  // Extract current user from session
+  const user = session?.user;
+  const userFullName = user?.name || "";
+  const userEmail = user?.email || "";
+  const userConstituency = user?.wahlkreis || "";
+  const userProfileImageUrl = user?.image || "/images/default-avatar.png";
+  const userLandesverband = user?.landesverband || "";
 
   const { theme, setTheme } = useTheme();
   // Ensure the component is mounted before using theme to avoid hydration mismatch
@@ -86,7 +90,7 @@ export default function SettingsPage() {
                 <div className="flex gap-4">
                   <div className="basis-2/5 min-w-[120px]">
                     <Label htmlFor="stateAssociation">Landesverband</Label>
-                    <Select defaultValue="Berlin">
+                    <Select defaultValue={userLandesverband}>
                       <SelectTrigger>
                         <SelectValue placeholder="Land wählen" />
                       </SelectTrigger>
