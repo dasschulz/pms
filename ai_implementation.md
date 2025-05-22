@@ -126,4 +126,15 @@
    - Sections for `Vorbemerkung`, `Fragenteil`, `Signatur`, `Vorblatt_Heading`, `Politische Zielsetzung`, `Öffentliche Botschaft`, and `Maßnahmen`.
 2. Structured content with separators and typography per frontend theme guidelines.
 
-*Next Steps:* Review styling adjustments for dark/light modes and ensure backend theme remains unaffected. 
+*Next Steps:* Review styling adjustments for dark/light modes and ensure backend theme remains unaffected.
+
+## Entry 11: Dropdown Multi-Select for MdBs
+
+- Date: 2025-05-23
+
+**Actions:**
+1. Replaced the inline checkbox list with a Popover-based dropdown accommodating multi-select.
+2. Sorted MdB entries alphabetically and display selected names in the trigger button.
+3. Added a "Fertig" button inside the Popover to close the dropdown.
+
+*Next Steps:* Test with larger MdB lists (~68 entries) to ensure performance and UX; adjust Popover size or virtualization if needed. 

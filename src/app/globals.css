@@ -4,7 +4,7 @@
 
 /*
 --rot: 0 100% 50%;
---dunkelrot: 326 100% 22%
+--dunkelrot: 326 100% 22%;
 --dunkel-dun: 194 100% 10%;
 --dunkelgruen: 189 100% 18%;
 --tuerkis: 173 100% 35%;
@@ -15,15 +15,17 @@
 --background: 26 38% 92%;
 --white 0 0% 100%
 --rosa 0 60% 97%
+-- hellgrau 0 0% 97%
+-- off-schwarz 0 0% 20%
 
 */
 @layer base {
   :root {
-    --background: 0 0% 100%; /* RGB(236, 228, 224) */
-    --foreground: 326 100% 22%;
+    --background: 0 0% 97%; /* RGB(236, 228, 224) */
+    --foreground: 0 0% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 326 100% 22%;
+    --card-foreground: 0 0% 20%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 0 100% 50%;
@@ -35,7 +37,7 @@
     --secondary-foreground: 36 25% 30%;
 
     --muted: 326 100% 22%;
-    --muted-foreground: 326 100% 22%;
+    --muted-foreground: 0 0% 50%;
 
     --accent: 0 100% 50%; /* RGB(207, 82, 59) */
     --accent-foreground: 0 0% 100%;
@@ -45,25 +47,25 @@
 
     --border: 36 35% 82%;
     --input: 0 60% 97%;
-    --ring: 36 50% 60%;
+    --ring: 173 100% 35%;
 
     /* Updated chart colors based on theme */
-    --chart-1: 36 45% 70%; /* Primary */
-    --chart-2: 6 64% 57%;   /* Accent */
-    --chart-3: 36 40% 80%; /* Secondary */
-    --chart-4: 36 45% 60%; /* Primary Darker */
-    --chart-5: 6 64% 47%;   /* Accent Darker */
+    --chart-1: 0 100% 50%; /* Primary */
+    --chart-2: 173 100% 35%;   /* Accent */
+    --chart-3: 240 100% 91%; /* Secondary */
+    --chart-4: 326 100% 22%; /* Primary Darker */
+    --chart-5: 189 100% 18%;   /* Accent Darker */
     
     --radius: 0.5rem;
 
-    --sidebar-background: 36 38% 86%;
-    --sidebar-foreground: 36 18% 20%;
+    --sidebar-background: 189 100% 18%;
+    --sidebar-foreground: 173 100% 75%;
     --sidebar-primary: 36 45% 70%;
-    --sidebar-primary-foreground: 36 30% 20%;
-    --sidebar-accent: 36 50% 78%;
+    --sidebar-primary-foreground: 189 100% 18%;
+    --sidebar-accent: 173 100% 35%;
     --sidebar-accent-foreground: 36 25% 15%;
-    --sidebar-border: 36 30% 78%;
-    --sidebar-ring: 36 50% 60%;
+    --sidebar-border: 173 100% 35%;
+    --sidebar-ring: 173 100% 35%;
 
     /* Font variables will be injected by next/font */
   }

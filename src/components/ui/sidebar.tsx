@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -6,6 +5,8 @@ import { Slot } from "@radix-ui/react-slot"
 import type { VariantProps} from "class-variance-authority";
 import { cva } from "class-variance-authority"
 import { PanelLeft } from "lucide-react"
+import { signOut } from "next-auth/react"
+import { Button } from "@/components/ui/button"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -408,7 +409,12 @@ const SidebarFooter = React.forwardRef<
       data-sidebar="footer"
       className={cn("flex flex-col gap-2 p-2", className)}
       {...props}
-    />
+    >
+      <Button variant="outline" onClick={() => signOut({ callbackUrl: '/anmelden' })}>
+        Abmelden
+      </Button>
+      {props.children}
+    </div>
   )
 })
 SidebarFooter.displayName = "SidebarFooter"

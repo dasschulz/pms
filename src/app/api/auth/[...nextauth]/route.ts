@@ -22,7 +22,7 @@ export const authOptions = {
           .firstPage();
         const userRecord = records[0];
         if (!userRecord) return null;
-        const storedPassword = userRecord.get('Password') as string;
+        const storedPassword = userRecord.get('Passwort') as string;
         if (storedPassword !== password) {
           return null;
         }
