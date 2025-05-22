@@ -1,5 +1,5 @@
 import { PageLayout } from "@/components/page-layout";
-import { SpeechWriterForm } from "@/components/speech-writer/speech-writer-form";
+import { SpeechWriterForm } from "@/components/redenschreiber/speech-writer-form";
 
 export default function SpeechWriterPage() {
   return (

@@ -1,5 +1,5 @@
 import { PageLayout } from "@/components/page-layout";
-import { PressReleaseForm } from "@/components/press-release/press-release-form";
+import { PressReleaseForm } from "@/components/pressemitteilung/press-release-form";
 
 export default function PressReleasePage() {
   return (

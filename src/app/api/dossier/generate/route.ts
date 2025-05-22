@@ -160,46 +160,214 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
         attempts++;
       }
 
-      if (runStatus.status !== 'completed') {
-        console.error('OpenAI run failed:', runStatus.status, runStatus.last_error);
-        return NextResponse.json({ error: `Dossier-Generierung fehlgeschlagen: ${runStatus.status}` }, { status: 500 });
-      }
+      // Handle requires_action status
+      if (runStatus.status === 'requires_action') {
+        console.log('OpenAI assistant requires action, handling function calls...');
+        
+        const toolCalls = runStatus.required_action?.submit_tool_outputs?.tool_calls;
+        if (toolCalls && toolCalls.length > 0) {
+          const toolOutputs = [];
+          
+          for (const toolCall of toolCalls) {
+            if (toolCall.function.name === 'search_politician_information') {
+              const args = JSON.parse(toolCall.function.arguments);
+              const { politician_name, search_criteria } = args;
+              
+              console.log(`Searching for information about ${politician_name} with criteria:`, search_criteria);
+              
+              // Perform web search for each criteria
+              let searchResults = '';
+              for (const criteria of search_criteria) {
+                try {
+                  // Perform actual web search
+                  const searchQuery = `${politician_name} ${criteria} Deutschland Politik`;
+                  console.log(`Searching: ${searchQuery}`);
+                  
+                  // Use Next.js API route to call web search (to avoid CORS issues)
+                  const searchResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:9002'}/api/web-search`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: searchQuery })
+                  });
+                  
+                  if (searchResponse.ok) {
+                    const searchData = await searchResponse.json();
+                    searchResults += `\n## ${criteria.toUpperCase()}\n`;
+                    searchResults += `Aktuelle Recherche-Ergebnisse für "${politician_name}" bezüglich "${criteria}":\n\n`;
+                    
+                    if (searchData.results && searchData.results.length > 0) {
+                      searchData.results.slice(0, 5).forEach((result: any, index: number) => {
+                        searchResults += `${index + 1}. **${result.title}**\n`;
+                        searchResults += `   ${result.snippet || result.description || 'Keine Beschreibung verfügbar'}\n`;
+                        searchResults += `   Quelle: ${result.url}\n\n`;
+                      });
+                    } else {
+                      searchResults += `Keine spezifischen Ergebnisse für "${criteria}" gefunden.\n\n`;
+                    }
+                  } else {
+                    // Fallback if web search fails
+                    searchResults += `\n## ${criteria.toUpperCase()}\n`;
+                    searchResults += `Recherche-Ergebnisse für "${politician_name}" bezüglich "${criteria}":\n`;
+                    searchResults += `- Bitte beachten Sie: Für eine vollständige Recherche sollten aktuelle Nachrichten, Pressemitteilungen und politische Datenbanken durchsucht werden.\n`;
+                    searchResults += `- Empfohlene Quellen: Bundestag.de, Abgeordnetenwatch.de, aktuelle Medienberichte\n`;
+                    searchResults += `- Hinweis: Eine detaillierte Faktenprobung ist erforderlich.\n\n`;
+                  }
+                } catch (error) {
+                  console.error(`Error searching for ${criteria}:`, error);
+                  searchResults += `\n## ${criteria.toUpperCase()}\n`;
+                  searchResults += `Fehler bei der Recherche zu "${criteria}" für ${politician_name}.\n\n`;
+                }
+              }
+              
+              toolOutputs.push({
+                tool_call_id: toolCall.id,
+                output: searchResults
+              });
+            } else {
+              // Unknown function
+              toolOutputs.push({
+                tool_call_id: toolCall.id,
+                output: `Unbekannte Funktion: ${toolCall.function.name}`
+              });
+            }
+          }
+          
+          // Submit the tool outputs back to the assistant
+          await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+            tool_outputs: toolOutputs
+          });
+          
+          // Wait for the run to complete after submitting tool outputs
+          let updatedRunStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+          let toolAttempts = 0;
+          const maxToolAttempts = 60;
+          
+          while ((updatedRunStatus.status === 'in_progress' || updatedRunStatus.status === 'queued') && toolAttempts < maxToolAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            updatedRunStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+            toolAttempts++;
+          }
+          
+          if (updatedRunStatus.status === 'completed') {
+            const messages = await openai.beta.threads.messages.list(thread.id);
+            const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
+            
+            if (!assistantMessage || !assistantMessage.content[0]) {
+              return NextResponse.json({ error: 'Keine Antwort vom AI-Assistenten erhalten' }, { status: 500 });
+            }
 
-      const messages = await openai.beta.threads.messages.list(thread.id);
-      const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
-      
-      if (!assistantMessage || !assistantMessage.content[0]) {
-        return NextResponse.json({ error: 'Keine Antwort vom AI-Assistenten erhalten' }, { status: 500 });
-      }
+            const messageContent = assistantMessage.content[0];
+            if (messageContent.type === 'text') {
+              dossierContent = messageContent.text.value;
+            } else {
+              console.error('Unexpected message content type:', messageContent.type);
+              return NextResponse.json({ error: 'Unerwartetes Antwortformat vom AI-Assistenten' }, { status: 500 });
+            }
+          } else {
+            console.error('Tool execution failed:', updatedRunStatus.status, updatedRunStatus.last_error);
+            // Fall back to Chat Completions API
+            console.log('Falling back to Chat Completions API after tool failure');
+            const completion = await openai.chat.completions.create({
+              model: "gpt-4",
+              messages: [
+                {
+                  role: "user",
+                  content: `Erstelle ein detailliertes Feinddossier für ${politicianName}.`
+                }
+              ],
+              max_tokens: 3000,
+              temperature: 0.7
+            });
 
-      // Handle both text and JSON response formats
-      const messageContent = assistantMessage.content[0];
-      if (messageContent.type === 'text') {
-        dossierContent = messageContent.text.value;
-      } else {
-        console.error('Unexpected message content type:', messageContent.type);
-        return NextResponse.json({ error: 'Unerwartetes Antwortformat vom AI-Assistenten' }, { status: 500 });
-      }
+            if (!completion.choices[0]?.message?.content) {
+              return NextResponse.json({ error: 'Keine Antwort vom AI-System erhalten' }, { status: 500 });
+            }
 
-      // If the content looks like JSON, try to extract the actual dossier content
-      try {
-        const possibleJson = JSON.parse(dossierContent);
-        // Look for common JSON field names that might contain the dossier
-        if (possibleJson.dossier) {
-          dossierContent = possibleJson.dossier;
-        } else if (possibleJson.content) {
-          dossierContent = possibleJson.content;
-        } else if (possibleJson.text) {
-          dossierContent = possibleJson.text;
-        } else if (possibleJson.analysis) {
-          dossierContent = possibleJson.analysis;
+            dossierContent = completion.choices[0].message.content;
+          }
         } else {
-          // If it's a complex JSON object, try to stringify it nicely
-          dossierContent = Object.values(possibleJson).join('\n\n');
+          console.error('No tool calls found in requires_action status');
+          // Fall back to Chat Completions API
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4",
+            messages: [
+              {
+                role: "user",
+                content: `Erstelle ein detailliertes Feinddossier für ${politicianName}.`
+              }
+            ],
+            max_tokens: 3000,
+            temperature: 0.7
+          });
+
+          if (!completion.choices[0]?.message?.content) {
+            return NextResponse.json({ error: 'Keine Antwort vom AI-System erhalten' }, { status: 500 });
+          }
+
+          dossierContent = completion.choices[0].message.content;
         }
-      } catch (jsonError) {
-        // Not JSON, use as-is (which is fine for text responses)
-        console.log('Content is not JSON, using as text');
+      } else if (runStatus.status !== 'completed') {
+        console.error('OpenAI run failed:', runStatus.status, runStatus.last_error);
+        
+        // Try fallback to Chat Completions API
+        console.log('Falling back to Chat Completions API');
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4",
+          messages: [
+            {
+              role: "user",
+              content: `Erstelle ein detailliertes Feinddossier für ${politicianName}.`
+            }
+          ],
+          max_tokens: 3000,
+          temperature: 0.7
+        });
+
+        if (!completion.choices[0]?.message?.content) {
+          return NextResponse.json({ error: 'Keine Antwort vom AI-System erhalten' }, { status: 500 });
+        }
+
+        dossierContent = completion.choices[0].message.content;
+      } else {
+        // Assistant completed successfully
+        const messages = await openai.beta.threads.messages.list(thread.id);
+        const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
+        
+        if (!assistantMessage || !assistantMessage.content[0]) {
+          return NextResponse.json({ error: 'Keine Antwort vom AI-Assistenten erhalten' }, { status: 500 });
+        }
+
+        // Handle both text and JSON response formats
+        const messageContent = assistantMessage.content[0];
+        if (messageContent.type === 'text') {
+          dossierContent = messageContent.text.value;
+        } else {
+          console.error('Unexpected message content type:', messageContent.type);
+          return NextResponse.json({ error: 'Unerwartetes Antwortformat vom AI-Assistenten' }, { status: 500 });
+        }
+
+        // If the content looks like JSON, try to extract the actual dossier content
+        try {
+          const possibleJson = JSON.parse(dossierContent);
+          // Look for common JSON field names that might contain the dossier
+          if (possibleJson.dossier) {
+            dossierContent = possibleJson.dossier;
+          } else if (possibleJson.content) {
+            dossierContent = possibleJson.content;
+          } else if (possibleJson.text) {
+            dossierContent = possibleJson.text;
+          } else if (possibleJson.analysis) {
+            dossierContent = possibleJson.analysis;
+          } else {
+            // If it's a complex JSON object, try to stringify it nicely
+            dossierContent = Object.values(possibleJson).join('\n\n');
+          }
+        } catch (jsonError) {
+          // Not JSON, use as-is (which is fine for text responses)
+          console.log('Content is not JSON, using as text');
+        }
       }
 
     } else {
@@ -223,23 +391,42 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
       dossierContent = completion.choices[0].message.content;
     }
 
+    console.log(`Dossier content generated (${dossierContent.length} characters)`);
+    console.log('Starting PDF creation process...');
+
     // Create PDF with custom styling
     const pdfDoc = await PDFDocument.create();
     
-    // Embed custom fonts from /public/fonts
-    const interRegularBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Inter-Regular.ttf'));
-    const interBoldBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Inter-Bold.ttf'));
-    const interItalicBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Inter-Italic.ttf'));
-    const workSansBlackBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Black.ttf'));
-    const workSansLightBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Light.ttf'));
-    const workSansRegularBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Regular.ttf'));
+    // Embed custom fonts from /public/fonts with error handling
+    let interRegular, interBold, interItalic, workSansBlack, workSansLight, workSansRegular;
     
-    const interRegular = await pdfDoc.embedFont(interRegularBytes);
-    const interBold = await pdfDoc.embedFont(interBoldBytes);
-    const interItalic = await pdfDoc.embedFont(interItalicBytes);
-    const workSansBlack = await pdfDoc.embedFont(workSansBlackBytes);
-    const workSansLight = await pdfDoc.embedFont(workSansLightBytes);
-    const workSansRegular = await pdfDoc.embedFont(workSansRegularBytes);
+    try {
+      console.log('Loading custom fonts...');
+      const interRegularBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Inter-Regular.ttf'));
+      const interBoldBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Inter-Bold.ttf'));
+      const interItalicBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Inter-Italic.ttf'));
+      const workSansBlackBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Black.ttf'));
+      const workSansLightBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Light.ttf'));
+      const workSansRegularBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Regular.ttf'));
+      
+      console.log('Embedding fonts into PDF...');
+      interRegular = await pdfDoc.embedFont(interRegularBytes);
+      interBold = await pdfDoc.embedFont(interBoldBytes);
+      interItalic = await pdfDoc.embedFont(interItalicBytes);
+      workSansBlack = await pdfDoc.embedFont(workSansBlackBytes);
+      workSansLight = await pdfDoc.embedFont(workSansLightBytes);
+      workSansRegular = await pdfDoc.embedFont(workSansRegularBytes);
+      console.log('Custom fonts loaded successfully');
+    } catch (fontError) {
+      console.error('Error loading custom fonts, falling back to standard fonts:', fontError);
+      // Fallback to standard fonts if custom fonts fail
+      interRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      interBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      interItalic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+      workSansBlack = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      workSansLight = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      workSansRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    }
     
     const pageWidth = 595; // A4 width
     const pageHeight = 842; // A4 height
@@ -283,6 +470,8 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
 
     // Process content with enhanced styling
     const paragraphs = dossierContent.split('\n');
+    
+    console.log(`Processing ${paragraphs.length} paragraphs for PDF generation...`);
     
     for (const paragraph of paragraphs) {
       if (!paragraph.trim()) {
@@ -425,7 +614,16 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
       }
     }
 
-    const pdfBytes = await pdfDoc.save();
+    console.log('Saving PDF document...');
+    let pdfBytes;
+    try {
+      pdfBytes = await pdfDoc.save();
+      console.log(`PDF generated successfully, size: ${pdfBytes.length} bytes`);
+    } catch (pdfSaveError) {
+      console.error('Error saving PDF:', pdfSaveError);
+      const errorMessage = pdfSaveError instanceof Error ? pdfSaveError.message : 'Unknown PDF save error';
+      throw new Error(`PDF save failed: ${errorMessage}`);
+    }
 
     // Save to Airtable with proper error handling
     try {
@@ -458,14 +656,33 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
     
     // Provide more specific error messages
     if (error instanceof Error) {
-      if (error.message.includes('OpenAI')) {
-        return NextResponse.json({ error: 'Fehler bei der AI-Generierung. Bitte versuchen Sie es später erneut.' }, { status: 500 });
+      if (error.message.includes('OpenAI') || error.message.includes('API')) {
+        return NextResponse.json({ 
+          error: 'Fehler bei der AI-Generierung. Bitte versuchen Sie es später erneut.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        }, { status: 500 });
       }
-      if (error.message.includes('PDF')) {
-        return NextResponse.json({ error: 'Fehler bei der PDF-Erstellung. Bitte versuchen Sie es erneut.' }, { status: 500 });
+      if (error.message.includes('PDF') || error.message.includes('pdf')) {
+        return NextResponse.json({ 
+          error: 'Fehler bei der PDF-Erstellung. Bitte versuchen Sie es erneut.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        }, { status: 500 });
+      }
+      if (error.message.includes('Font') || error.message.includes('font')) {
+        return NextResponse.json({ 
+          error: 'Fehler beim Laden der Schriftarten. Bitte versuchen Sie es erneut.',
+          details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        }, { status: 500 });
+      }
+      if (error.message.includes('Airtable')) {
+        // Don't fail the whole request for Airtable issues, just log it
+        console.warn('Airtable error (non-blocking):', error.message);
       }
     }
     
-    return NextResponse.json({ error: 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',
+      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Unknown error' : undefined
+    }, { status: 500 });
   }
 } 
