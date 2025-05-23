@@ -16,7 +16,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'TEST_UPDATE - DIE LINKE Suite', // Geänderter Titel für Testzwecke
+  title: 'Linksfraktion Studio',
   description: 'Politische Werkzeugsammlung für Mitglieder von DIE LINKE.',
 };
 
