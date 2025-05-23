@@ -54,7 +54,24 @@ export default function MySpeechesPage() {
   };
 
   return (
-    <PageLayout title="Meine Reden" description="Übersicht meiner Reden">
+    <PageLayout 
+      title="Meine Reden" 
+      description={
+        <span>
+          Hier kannst du deine letzten Reden ansehen, anhören, nachlesen und dir Feedback geben lassen. 
+          Quelle für alle Reden ist der Deutsche Bundestag (
+          <a 
+            href="https://www.bundestag.de/nutzungsbedingungen" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 underline"
+          >
+            Nutzungsbedingungen
+          </a>
+          ).
+        </span>
+      }
+    >
       {!userName && <p>Bitte melde dich an, um deine Reden einzusehen.</p>}
 
       {userName && (
@@ -76,11 +93,6 @@ export default function MySpeechesPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {/* Source/license (least prominent) */}
-                    <p className="mb-2 text-xs text-gray-600 dark:text-gray-500">
-                      Quelle: {speech.creator || 'Unbekannt'},{' '}
-                      <span dangerouslySetInnerHTML={{ __html: decodeHtml(speech.license || '') }} />
-                    </p>
                     {/* Session info (normal size) */}
                     <p className="mb-4 text-base">
                       WP {speech.electoralPeriodNumber} | {speech.sessionNumber}. Sitzung | {speech.officialTitle}

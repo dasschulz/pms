@@ -2,7 +2,7 @@ import type { PropsWithChildren, ReactNode } from 'react';
 
 interface PageLayoutProps {
   title: string;
-  description?: string;
+  description?: ReactNode;
   headerActions?: ReactNode;
 }
 
