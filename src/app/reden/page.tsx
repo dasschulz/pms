@@ -92,7 +92,7 @@ export default function MySpeechesPage() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="pt-6">
                     {/* Session info (normal size) */}
                     <p className="mb-4 text-base">
                       WP {speech.electoralPeriodNumber} | {speech.sessionNumber}. Sitzung | {speech.officialTitle}
