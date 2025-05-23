@@ -85,7 +85,7 @@ export default function MySpeechesPage() {
               {speeches.map((speech: any) => (
                 <Card key={speech.id}>
                   <CardHeader className="p-0">
-                    <div className="relative w-full h-48 bg-[url('/images/categories/tweet.jpeg')] bg-cover bg-center">
+                    <div className="relative w-full h-48 bg-[url('/images/categories/rede.jpg')] bg-cover bg-center">
                       <div className="absolute inset-0 flex flex-col justify-end items-start p-4">
                         <h3 className="text-white text-xl font-semibold">{speech.agendaItem || speech.title}</h3>
                         <p className="text-white text-sm">{speech.date ? new Date(speech.date).toLocaleDateString('de-DE') : ''}</p>
