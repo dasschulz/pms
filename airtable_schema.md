@@ -94,6 +94,18 @@ fldc0vsO5LAjEtTF5
 
 multipleAttachment
 
+Wahlkreis
+
+fldFJKZ7JTaH2vS10
+
+text
+
+PLZ
+
+fldhCzlBBtFZd6qea
+
+text
+
 Landesverband
 
 fldjoGWQ8zePkVy8g

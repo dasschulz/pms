@@ -1435,7 +1435,7 @@ export default function GegnerRecherchePage() {
         )}
 
         {!selectedPolitician && !isLoadingSearch && !isLoadingDetails && searchTerm.length <= 2 && searchResults.length === 0 && (
-           <p>Bitte geben Sie mindestens 3 Zeichen ein, um die Suche zu starten.</p>
+           <p>Bitte gib mindestens 3 Zeichen ein, um die Suche nach einem/einer Abgeordneten zu starten.</p>
         )}
 
         <Toaster />

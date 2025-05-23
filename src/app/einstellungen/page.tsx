@@ -7,199 +7,649 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User } from "lucide-react"; // Für Avatar Fallback
+import { User, Upload, Eye, EyeOff, Lock, Shield, AlertTriangle } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 
-export default function SettingsPage() {
-  const { data: session } = useSession();
-  // Extract current user from session
-  const user = session?.user;
-  const userFullName = user?.name || "";
-  const userEmail = user?.email || "";
-  const userConstituency = user?.wahlkreis || "";
-  const userProfileImageUrl = user?.image || "/images/default-avatar.png";
-  const userLandesverband = user?.landesverband || "";
+interface UserData {
+  name: string;
+  email: string;
+  wahlkreis: string;
+  plz: string;
+  landesverband: string;
+  profilePictureUrl?: string;
+}
 
+interface PasswordData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+interface PasswordValidation {
+  isValid: boolean;
+  errors: string[];
+  strength: 'weak' | 'fair' | 'good' | 'strong';
+}
+
+export default function EinstellungenPage() {
   const { theme, setTheme } = useTheme();
-  // Ensure the component is mounted before using theme to avoid hydration mismatch
+  const { data: session } = useSession();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!mounted) {
-    // Render nothing or a loading indicator until mounted
-    // This helps prevent hydration mismatch with server-rendered theme class
-    return null; 
-  }
+  const [userData, setUserData] = useState<UserData>({
+    name: "",
+    email: "",
+    wahlkreis: "",
+    plz: "",
+    landesverband: "",
+    profilePictureUrl: ""
+  });
+
+  const [passwordData, setPasswordData] = useState<PasswordData>({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+
+  const [passwordValidation, setPasswordValidation] = useState<PasswordValidation>({
+    isValid: false,
+    errors: [],
+    strength: 'weak'
+  });
+
+  // Fix hydration by ensuring client-side only rendering for theme
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Load user data from Airtable
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!session?.user) return;
+      
+      try {
+        const response = await fetch('/api/user-details');
+        if (response.ok) {
+          const data = await response.json();
+          setUserData({
+            name: data.name || "",
+            email: data.email || "",
+            wahlkreis: data.wahlkreis || "",
+            plz: data.plz || "",
+            landesverband: data.landesverband || "",
+            profilePictureUrl: data.profilePictureUrl || ""
+          });
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+
+    loadUserData();
+  }, [session]);
+
+  // Password validation function
+  const validatePassword = (password: string): PasswordValidation => {
+    const errors: string[] = [];
+    let score = 0;
+    
+    if (password.length < 8) {
+      errors.push('Mindestens 8 Zeichen');
+    } else {
+      score += 1;
+    }
+    
+    if (!/[a-z]/.test(password)) {
+      errors.push('Mindestens ein Kleinbuchstabe');
+    } else {
+      score += 1;
+    }
+    
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Mindestens ein Großbuchstabe');
+    } else {
+      score += 1;
+    }
+    
+    if (!/\d/.test(password)) {
+      errors.push('Mindestens eine Zahl');
+    } else {
+      score += 1;
+    }
+    
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      errors.push('Mindestens ein Sonderzeichen');
+    } else {
+      score += 1;
+    }
+    
+    // Check for common weak passwords
+    const commonPasswords = [
+      'password', 'passwort', '12345678', 'qwertyui', 'asdfghjk'
+    ];
+    
+    if (commonPasswords.some(common => password.toLowerCase().includes(common))) {
+      errors.push('Zu häufig verwendetes Passwort');
+    }
+
+    // Check for personal info
+    if (userData.name && password.toLowerCase().includes(userData.name.toLowerCase())) {
+      errors.push('Darf deinen Namen nicht enthalten');
+    }
+
+    if (userData.email && password.toLowerCase().includes(userData.email.split('@')[0].toLowerCase())) {
+      errors.push('Darf deine E-Mail nicht enthalten');
+    }
+    
+    let strength: 'weak' | 'fair' | 'good' | 'strong' = 'weak';
+    if (score >= 5 && password.length >= 12) strength = 'strong';
+    else if (score >= 4 && password.length >= 10) strength = 'good';
+    else if (score >= 3 && password.length >= 8) strength = 'fair';
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+      strength
+    };
+  };
+
+  // Update password validation when new password changes
+  useEffect(() => {
+    if (passwordData.newPassword) {
+      setPasswordValidation(validatePassword(passwordData.newPassword));
+    } else {
+      setPasswordValidation({ isValid: false, errors: [], strength: 'weak' });
+    }
+  }, [passwordData.newPassword, userData.name, userData.email]);
+
+  // Get password strength color
+  const getStrengthColor = (strength: string) => {
+    switch (strength) {
+      case 'strong': return 'text-green-600';
+      case 'good': return 'text-blue-600';
+      case 'fair': return 'text-yellow-600';
+      default: return 'text-red-600';
+    }
+  };
+
+  // Get password strength label
+  const getStrengthLabel = (strength: string) => {
+    switch (strength) {
+      case 'strong': return 'Sehr sicher';
+      case 'good': return 'Sicher';
+      case 'fair': return 'Mittelmäßig';
+      default: return 'Schwach';
+    }
+  };
+
+  // Handle profile picture upload
+  const handleProfilePictureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Bitte wähle eine Bilddatei aus");
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Das Bild darf maximal 5MB groß sein");
+      return;
+    }
+
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64String = reader.result as string;
+        const profilePictureUrl = base64String;
+        
+        // Save to Airtable
+        await saveUserData({ profilePictureUrl });
+        
+        // Update local state
+        setUserData(prev => ({ ...prev, profilePictureUrl }));
+        toast.success("Profilbild erfolgreich aktualisiert");
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      toast.error("Fehler beim Hochladen des Profilbilds");
+    }
+  };
+
+  // Save user data to Airtable
+  const saveUserData = async (overrides: Partial<UserData> = {}) => {
+    setIsLoading(true);
+    try {
+      const dataToSave = { ...userData, ...overrides };
+      
+      const response = await fetch('/api/user-details', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dataToSave),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save user data');
+      }
+
+      if (!overrides.profilePictureUrl) {
+        toast.success("Änderungen erfolgreich gespeichert");
+      }
+    } catch (error) {
+      console.error('Error saving user data:', error);
+      toast.error("Fehler beim Speichern der Änderungen");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle password change
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!passwordData.currentPassword) {
+      toast.error("Bitte gib dein aktuelles Passwort ein");
+      return;
+    }
+
+    if (!passwordData.newPassword) {
+      toast.error("Bitte gib ein neues Passwort ein");
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error("Die Passwörter stimmen nicht überein");
+      return;
+    }
+
+    if (!passwordValidation.isValid) {
+      toast.error("Das neue Passwort erfüllt nicht die Sicherheitsanforderungen");
+      return;
+    }
+
+    setIsPasswordLoading(true);
+    try {
+      const response = await fetch('/api/user-details', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.details && Array.isArray(data.details)) {
+          toast.error(`${data.error}: ${data.details.join(', ')}`);
+        } else {
+          toast.error(data.error || 'Fehler beim Ändern des Passworts');
+        }
+        return;
+      }
+
+      // Clear password fields
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+      
+      toast.success("Passwort erfolgreich geändert");
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast.error("Fehler beim Ändern des Passworts");
+    } finally {
+      setIsPasswordLoading(false);
+    }
+  };
 
   return (
-    <PageLayout
-      title="Einstellungen"
-      description="Verwalten Sie Ihre Anwendungseinstellungen und Kontodetails."
-    >
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
-        <Card className="lg:col-span-1 xl:col-span-2">
-          <CardHeader>
-            <CardTitle className="font-heading-black">Profilinformationen</CardTitle>
-            <CardDescription className="font-heading-light">Aktualisieren Sie Ihre persönlichen Daten, Wahlkreisdetails und Ihr Profilbild.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="flex flex-col items-center space-y-2">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={userProfileImageUrl} alt={userFullName} data-ai-hint="user profile" />
-                  <AvatarFallback>
-                    <User className="h-12 w-12 text-muted-foreground" />
-                  </AvatarFallback>
-                </Avatar>
-                {/* Für den Dateiupload wird eine komplexere Logik benötigt (react-hook-form, Server Action) */}
-                <Button variant="outline" size="sm" onClick={() => alert("Profilbild ändern (Platzhalter)")}>
-                  Bild ändern
-                </Button>
-                <Input id="profilePicture" type="file" className="hidden" /> 
-                {/* Das Input-Feld kann versteckt und per Klick auf den Button getriggert werden */}
-              </div>
-              <div className="flex-grow space-y-4">
-                <div className="flex gap-4">
-                  <div className="basis-1/5 min-w-[90px]">
-                    <Label htmlFor="title">Titel</Label>
-                    <Select defaultValue="Dr.">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Titel wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="-">-</SelectItem>
-                        <SelectItem value="Dr.">Dr.</SelectItem>
-                        <SelectItem value="Prof.">Prof.</SelectItem>
-                        <SelectItem value="Prof. Dr.">Prof. Dr.</SelectItem>
-                        <SelectItem value="Dipl.-Ing.">Dipl.-Ing.</SelectItem>
-                        <SelectItem value="Dipl.-Kfm.">Dipl.-Kfm.</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="basis-4/5">
-                    <Label htmlFor="name">Vollständiger Name</Label>
-                    <Input id="name" defaultValue={userFullName} />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="email">E-Mail-Adresse</Label>
-                  <Input id="email" type="email" defaultValue={userEmail} />
-                </div>
-                <div className="flex gap-4">
-                  <div className="basis-2/5 min-w-[120px]">
-                    <Label htmlFor="stateAssociation">Landesverband</Label>
-                    <Select defaultValue={userLandesverband}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Land wählen" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Baden-Württemberg">Baden-Württemberg</SelectItem>
-                        <SelectItem value="Bayern">Bayern</SelectItem>
-                        <SelectItem value="Berlin">Berlin</SelectItem>
-                        <SelectItem value="Brandenburg">Brandenburg</SelectItem>
-                        <SelectItem value="Bremen">Bremen</SelectItem>
-                        <SelectItem value="Hamburg">Hamburg</SelectItem>
-                        <SelectItem value="Hessen">Hessen</SelectItem>
-                        <SelectItem value="Mecklenburg-Vorpommern">Mecklenburg-Vorpommern</SelectItem>
-                        <SelectItem value="Niedersachsen">Niedersachsen</SelectItem>
-                        <SelectItem value="Nordrhein-Westfalen">Nordrhein-Westfalen</SelectItem>
-                        <SelectItem value="Rheinland-Pfalz">Rheinland-Pfalz</SelectItem>
-                        <SelectItem value="Saarland">Saarland</SelectItem>
-                        <SelectItem value="Sachsen">Sachsen</SelectItem>
-                        <SelectItem value="Sachsen-Anhalt">Sachsen-Anhalt</SelectItem>
-                        <SelectItem value="Schleswig-Holstein">Schleswig-Holstein</SelectItem>
-                        <SelectItem value="Thüringen">Thüringen</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="basis-3/5">
-                    <Label htmlFor="electoralDistrict">Wahlkreis</Label>
-                    <Input id="electoralDistrict" defaultValue={userConstituency} />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <Button>Änderungen speichern</Button>
-          </CardContent>
-        </Card>
-
+    <PageLayout title="Einstellungen" description="Verwalte deine persönlichen Einstellungen und Kontoinformationen.">
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Profile Picture Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="font-heading-black">Passwort ändern</CardTitle>
-            <CardDescription className="font-heading-light">Aktualisieren Sie Ihr Anmelde-Passwort.</CardDescription>
+            <CardTitle>Profilbild</CardTitle>
+            <CardDescription>Lade ein Profilbild hoch oder ändere dein aktuelles Bild.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="currentPassword">Aktuelles Passwort</Label>
-              <Input id="currentPassword" type="password" />
-            </div>
-            <div>
-              <Label htmlFor="newPassword">Neues Passwort</Label>
-              <Input id="newPassword" type="password" />
-            </div>
-            <div>
-              <Label htmlFor="confirmNewPassword">Neues Passwort bestätigen</Label>
-              <Input id="confirmNewPassword" type="password" />
-            </div>
-            <Button>Passwort speichern</Button>
-          </CardContent>
-        </Card>
-        
-        <Card className="lg:col-span-1 xl:col-span-3"> {/* Nimmt volle Breite auf xl, halbe auf lg */}
-          <CardHeader>
-            <CardTitle className="font-heading-black">Benachrichtigungseinstellungen</CardTitle>
-            <CardDescription className="font-heading-light">Konfigurieren Sie, wie Sie Benachrichtigungen erhalten.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="emailNotifications" className="flex flex-col space-y-1">
-                <span>E-Mail-Benachrichtigungen</span>
-                <span className="font-normal leading-snug text-muted-foreground">
-                  Erhalten Sie Benachrichtigungen über wichtige Updates per E-Mail.
-                </span>
-              </Label>
-              <Switch id="emailNotifications" defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="inAppNotifications" className="flex flex-col space-y-1">
-                <span>In-App-Benachrichtigungen</span>
-                <span className="font-normal leading-snug text-muted-foreground">
-                  Benachrichtigungen innerhalb der DIE LINKE Suite anzeigen.
-                </span>
-              </Label>
-              <Switch id="inAppNotifications" defaultChecked />
+            <div className="flex items-center space-x-4">
+              <Avatar className="w-20 h-20">
+                <AvatarImage src={userData.profilePictureUrl} alt="Profilbild" />
+                <AvatarFallback>
+                  <User className="w-10 h-10" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col space-y-2">
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  disabled={isLoading}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Neues Bild hochladen
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  JPG, PNG oder GIF. Maximal 5MB.
+                </p>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleProfilePictureUpload}
+                accept="image/*"
+                className="hidden"
+              />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-1 xl:col-span-3">
+        {/* Personal Information */}
+        <Card>
           <CardHeader>
-            <CardTitle className="font-heading-black">Erscheinungsbild</CardTitle>
-            <CardDescription className="font-heading-light">Passen Sie das Aussehen und Verhalten der Anwendung an.</CardDescription>
+            <CardTitle>Persönliche Informationen</CardTitle>
+            <CardDescription>Aktualisiere deine persönlichen Daten.</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <Label htmlFor="theme-toggle" className="text-sm font-medium">
-                  Dunkelmodus
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Wechseln Sie zwischen hellem und dunklem Design.
-                </p>
-              </div>
-              <Switch
-                id="theme-toggle"
-                checked={theme === "dark"}
-                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-                aria-label="Dunkelmodus umschalten"
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={userData.name}
+                onChange={(e) => setUserData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Dein vollständiger Name"
               />
             </div>
-            <p className="text-xs text-muted-foreground mt-3">
-              Die Standardeinstellung ist oft \\'system\\', welche die Einstellungen Ihres Betriebssystems widerspiegelt. Diese Option schaltet direkt zwischen Hell und Dunkel um.
-            </p>
+            <div className="space-y-2">
+              <Label htmlFor="email">E-Mail</Label>
+              <Input
+                id="email"
+                type="email"
+                value={userData.email}
+                onChange={(e) => setUserData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="deine@email.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="wahlkreis">Wahlkreis</Label>
+              <Input
+                id="wahlkreis"
+                value={userData.wahlkreis}
+                onChange={(e) => setUserData(prev => ({ ...prev, wahlkreis: e.target.value }))}
+                placeholder="Dein Wahlkreis"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plz">PLZ (Wahlkreis, für Wetteranzeige im Dashboard)</Label>
+              <Input
+                id="plz"
+                value={userData.plz}
+                onChange={(e) => setUserData(prev => ({ ...prev, plz: e.target.value }))}
+                placeholder="Deine PLZ"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="landesverband">Landesverband</Label>
+              <Select value={userData.landesverband} onValueChange={(value) => setUserData(prev => ({ ...prev, landesverband: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wähle deinen Landesverband" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="baden-wuerttemberg">Baden-Württemberg</SelectItem>
+                  <SelectItem value="bayern">Bayern</SelectItem>
+                  <SelectItem value="berlin">Berlin</SelectItem>
+                  <SelectItem value="brandenburg">Brandenburg</SelectItem>
+                  <SelectItem value="bremen">Bremen</SelectItem>
+                  <SelectItem value="hamburg">Hamburg</SelectItem>
+                  <SelectItem value="hessen">Hessen</SelectItem>
+                  <SelectItem value="mecklenburg-vorpommern">Mecklenburg-Vorpommern</SelectItem>
+                  <SelectItem value="niedersachsen">Niedersachsen</SelectItem>
+                  <SelectItem value="nordrhein-westfalen">Nordrhein-Westfalen</SelectItem>
+                  <SelectItem value="rheinland-pfalz">Rheinland-Pfalz</SelectItem>
+                  <SelectItem value="saarland">Saarland</SelectItem>
+                  <SelectItem value="sachsen">Sachsen</SelectItem>
+                  <SelectItem value="sachsen-anhalt">Sachsen-Anhalt</SelectItem>
+                  <SelectItem value="schleswig-holstein">Schleswig-Holstein</SelectItem>
+                  <SelectItem value="thueringen">Thüringen</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={() => saveUserData()} disabled={isLoading}>
+              {isLoading ? "Speichere..." : "Änderungen speichern"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Password Change Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Lock className="w-5 h-5 mr-2" />
+              Passwort ändern
+            </CardTitle>
+            <CardDescription>Aktualisiere dein Passwort für mehr Sicherheit.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              {/* Current Password */}
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Aktuelles Passwort</Label>
+                <div className="relative">
+                  <Input
+                    id="currentPassword"
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                    placeholder="Gib dein aktuelles Passwort ein"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Neues Passwort</Label>
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showNewPassword ? "text" : "password"}
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                    placeholder="Gib dein neues Passwort ein"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                
+                {/* Password Strength Indicator */}
+                {passwordData.newPassword && (
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Shield className="w-4 h-4" />
+                      <span className={`text-sm font-medium ${getStrengthColor(passwordValidation.strength)}`}>
+                        Passwort-Stärke: {getStrengthLabel(passwordValidation.strength)}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          passwordValidation.strength === 'strong' ? 'bg-green-500 w-full' :
+                          passwordValidation.strength === 'good' ? 'bg-blue-500 w-3/4' :
+                          passwordValidation.strength === 'fair' ? 'bg-yellow-500 w-1/2' :
+                          'bg-red-500 w-1/4'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Password Requirements */}
+                {passwordData.newPassword && passwordValidation.errors.length > 0 && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                    <div className="flex items-center mb-2">
+                      <AlertTriangle className="w-4 h-4 text-red-600 mr-2" />
+                      <span className="text-sm font-medium text-red-600">Passwort-Anforderungen:</span>
+                    </div>
+                    <ul className="text-sm text-red-600 space-y-1">
+                      {passwordValidation.errors.map((error, index) => (
+                        <li key={index} className="flex items-center">
+                          <span className="w-1 h-1 bg-red-600 rounded-full mr-2" />
+                          {error}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Neues Passwort bestätigen</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    placeholder="Bestätige dein neues Passwort"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                {passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword && (
+                  <p className="text-sm text-red-600">Die Passwörter stimmen nicht überein</p>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <Button 
+                type="submit" 
+                disabled={
+                  isPasswordLoading || 
+                  !passwordData.currentPassword || 
+                  !passwordData.newPassword || 
+                  !passwordData.confirmPassword ||
+                  passwordData.newPassword !== passwordData.confirmPassword ||
+                  !passwordValidation.isValid
+                }
+                className="w-full"
+              >
+                {isPasswordLoading ? "Passwort wird geändert..." : "Passwort ändern"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Theme Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Darstellung</CardTitle>
+            <CardDescription>Passe das Erscheinungsbild der Anwendung an.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Design-Modus</Label>
+              {mounted && (
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant={theme === 'light' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('light')}
+                  >
+                    Hell
+                  </Button>
+                  <Button
+                    variant={theme === 'dark' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('dark')}
+                  >
+                    Dunkel
+                  </Button>
+                  <Button
+                    variant={theme === 'system' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('system')}
+                  >
+                    System
+                  </Button>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>E-Mail-Benachrichtigungen</Label>
+                <p className="text-sm text-muted-foreground">
+                  Erhalte E-Mails zu wichtigen Updates
+                </p>
+              </div>
+              <Switch />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Browser-Benachrichtigungen</Label>
+                <p className="text-sm text-muted-foreground">
+                  Erhalte Push-Benachrichtigungen in deinem Browser
+                </p>
+              </div>
+              <Switch />
+            </div>
           </CardContent>
         </Card>
       </div>
