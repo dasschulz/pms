@@ -1,48 +1,86 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { base } from '@/lib/airtable';
-import { openai } from '@/lib/openai';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Import fontkit using require for compatibility
+const fontkit = require('fontkit');
+
 // Helper function to add logo to page
 async function addLogoToPage(page: any, pdfDoc: any, pageWidth: number, marginRight: number, marginBottom: number, brandColor: any, interBold: any) {
   try {
-    // Note: You'd need to convert SVG to PNG first, or use a PNG version
-    // const logoPath = path.join(process.cwd(), 'public', 'images', 'logo.png');
-    // if (fs.existsSync(logoPath)) {
-    //   const logoBytes = fs.readFileSync(logoPath);
-    //   const logoImage = await pdfDoc.embedPng(logoBytes);
-    //   const logoMaxWidth = pageWidth * 0.2; // 20% of page width
-    //   const logoDims = logoImage.scale(logoMaxWidth / logoImage.width);
-    //   
-    //   page.drawImage(logoImage, {
-    //     x: pageWidth - marginRight - logoDims.width,
-    //     y: marginBottom - logoDims.height,
-    //     width: logoDims.width,
-    //     height: logoDims.height,
-    //   });
-    // }
+    // Try to load the actual PNG logo
+    const logoPath = path.join(process.cwd(), 'public', 'images', 'logo_standard.png');
     
-    // Placeholder for logo - draw brand-colored rectangle for now
-    page.drawRectangle({
-      x: pageWidth - marginRight - (pageWidth * 0.15),
-      y: marginBottom - 30,
-      width: pageWidth * 0.15,
-      height: 25,
-      color: brandColor,
-    });
-    page.drawText('LOGO', {
-      x: pageWidth - marginRight - (pageWidth * 0.12),
-      y: marginBottom - 22,
-      size: 10,
-      font: interBold,
-      color: rgb(1, 1, 1),
-    });
+    if (fs.existsSync(logoPath)) {
+      console.log('Loading PNG logo from:', logoPath);
+      const logoBytes = fs.readFileSync(logoPath);
+      const logoImage = await pdfDoc.embedPng(logoBytes);
+      
+      // Scale logo to max 20% of page width
+      const logoMaxWidth = pageWidth * 0.2;
+      const logoScale = Math.min(logoMaxWidth / logoImage.width, 50 / logoImage.height); // Also limit height to 50px
+      const logoDims = logoImage.scale(logoScale);
+      
+      // Position in lower right corner
+      page.drawImage(logoImage, {
+        x: pageWidth - marginRight - logoDims.width,
+        y: marginBottom - logoDims.height - 10,
+        width: logoDims.width,
+        height: logoDims.height,
+      });
+      
+      console.log(`Logo embedded successfully: ${logoDims.width}x${logoDims.height}px`);
+    } else {
+      console.log('PNG logo not found, using placeholder');
+      // Fallback to improved placeholder
+      const logoWidth = pageWidth * 0.15;
+      const logoHeight = 30;
+      const logoX = pageWidth - marginRight - logoWidth;
+      const logoY = marginBottom - logoHeight - 10;
+      
+      // Draw a subtle background rectangle
+      page.drawRectangle({
+        x: logoX - 5,
+        y: logoY - 5,
+        width: logoWidth + 10,
+        height: logoHeight + 10,
+        color: rgb(0.95, 0.95, 0.95), // Light gray background
+      });
+      
+      // Draw brand-colored accent line
+      page.drawRectangle({
+        x: logoX,
+        y: logoY + logoHeight - 3,
+        width: logoWidth,
+        height: 3,
+        color: brandColor,
+      });
+      
+      // Add stylized text placeholder
+      page.drawText('MdB', {
+        x: logoX + 5,
+        y: logoY + 8,
+        size: 14,
+        font: interBold,
+        color: brandColor,
+      });
+      
+      page.drawText('Platform', {
+        x: logoX + 45,
+        y: logoY + 8,
+        size: 10,
+        font: interBold,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+    }
+    
   } catch (error) {
-    console.log('Could not add logo:', error);
+    console.error('Error adding logo:', error);
+    // Minimal fallback - just log the error and continue without logo
   }
 }
 
@@ -71,34 +109,78 @@ function wrapText(text: string, maxWidth: number, fontSize: number, font: any): 
   return lines;
 }
 
-// Helper function to process Markdown-like formatting
-function processMarkdownLine(line: string): { text: string; isBold: boolean; isItalic: boolean } {
-  let text = line;
-  let isBold = false;
-  let isItalic = false;
-
-  // Handle bold text (**text** or __text__)
-  if (text.includes('**') || text.includes('__')) {
-    text = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/__(.*?)__/g, '$1');
-    isBold = true;
+// Text processing function for plaintext structure
+const processPlaintextStructure = (text: string) => {
+  const segments: Array<{text: string, isBold: boolean, isItalic: boolean}> = [];
+  
+  // Process **bold** formatting
+  let currentPos = 0;
+  let currentText = '';
+  let inBold = false;
+  
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '*' && i + 1 < text.length && text[i + 1] === '*') {
+      // Found ** - toggle bold
+      if (currentText) {
+        segments.push({text: currentText, isBold: inBold, isItalic: false});
+        currentText = '';
+      }
+      inBold = !inBold;
+      i++; // Skip the second *
+    } else {
+      currentText += text[i];
+    }
   }
-
-  // Handle italic text (*text* or _text_)
-  if (text.includes('*') || text.includes('_')) {
-    text = text.replace(/\*(.*?)\*/g, '$1').replace(/_(.*?)_/g, '$1');
-    isItalic = true;
+  
+  // Add remaining text
+  if (currentText) {
+    segments.push({text: currentText, isBold: inBold, isItalic: false});
   }
+  
+  return segments;
+};
 
-  return { text, isBold, isItalic };
-}
+// Function to detect heading levels in plaintext
+const detectHeadingLevel = (text: string): {level: number, cleanText: string} => {
+  const trimmed = text.trim();
+  
+  // Handle markdown-style headings (## Text) - level 2
+  if (trimmed.startsWith('## ')) {
+    return {level: 2, cleanText: trimmed.replace(/^##\s*/, '')};
+  }
+  
+  // Handle markdown-style headings (### Text) - level 3  
+  if (trimmed.startsWith('### ')) {
+    return {level: 3, cleanText: trimmed.replace(/^###\s*/, '')};
+  }
+  
+  // HAUPTÜBERSCHRIFT: All caps text (level 1)
+  if (trimmed === trimmed.toUpperCase() && trimmed.length > 3 && !trimmed.includes(':') && !trimmed.startsWith('-') && !trimmed.startsWith('*') && !trimmed.startsWith('#')) {
+    return {level: 1, cleanText: trimmed};
+  }
+  
+  // Unterüberschrift: Ends with colon (level 2)
+  if (trimmed.endsWith(':') && !trimmed.startsWith('-') && !trimmed.startsWith('*') && !trimmed.startsWith('#')) {
+    return {level: 2, cleanText: trimmed.replace(/:$/, '')};
+  }
+  
+  // Sub-Unterüberschrift: Detect by context - shorter lines that aren't bullets (level 3)
+  if (trimmed.length < 50 && !trimmed.startsWith('-') && !trimmed.startsWith('*') && !trimmed.includes('.') && trimmed !== trimmed.toUpperCase() && !trimmed.startsWith('#')) {
+    return {level: 3, cleanText: trimmed};
+  }
+  
+  return {level: 0, cleanText: trimmed};
+};
 
 export async function POST(request: NextRequest) {
   try {
-    const { politicianName } = await request.json();
+    const { politicianName, partyAffiliation } = await request.json();
     
     if (!politicianName) {
       return NextResponse.json({ error: 'Politiker Name ist erforderlich' }, { status: 400 });
     }
+
+    console.log('Generating dossier for:', { politicianName, partyAffiliation });
 
     // Authenticate user
     const session = await getServerSession(authOptions);
@@ -106,7 +188,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
     }
 
-    // Get user's Airtable record ID
+    // Get user's Airtable record ID and UserID
     const userRecords = await base('Users')
       .select({ filterByFormula: `{UserID} = '${session.user.id}'`, maxRecords: 1 })
       .firstPage();
@@ -116,279 +198,64 @@ export async function POST(request: NextRequest) {
     }
     
     const userAirtableId = userRecords[0].id;
+    const userAirtableUserID = userRecords[0].fields.UserID; // Get the actual UserID number
 
-    // Get OpenAI assistant ID from environment variables or use chat completions
-    const assistantId = process.env.OPENAI_FEINDDOSSIER_ASSISTANT_ID;
+    // Use Perplexity Sonar Pro API for dossier generation
+    const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
     
+    if (!perplexityApiKey) {
+      return NextResponse.json({ error: 'Perplexity API key not configured' }, { status: 500 });
+    }
+
     let dossierContent: string;
     
-    if (assistantId) {
-      // Use Assistants API if assistant ID is configured
-      const thread = await openai.beta.threads.create();
+    try {
+      console.log('Calling Perplexity Sonar Pro API...');
       
-      await openai.beta.threads.messages.create(thread.id, {
-        role: "user",
-        content: `Erstelle ein detailliertes Feinddossier für ${politicianName}. 
-
-Bitte strukturiere deine Antwort in Markdown-Format mit:
-- Hauptüberschriften mit # (z.B. # Politische Positionen)
-- Unterüberschriften mit ## (z.B. ## Kontroversen)
-- Sub-Unterüberschriften mit ### wenn nötig
-- Aufzählungszeichen mit - oder *
-- **Fettdruck** für wichtige Punkte
-
-Analysiere folgende Bereiche:
-- Politische Positionen und Abstimmungsverhalten
-- Kontroversen und Schwachstellen  
-- Mögliche Angriffspunkte für politische Gegner
-- Hintergrundinformationen und Karriere-Highlights
-
-Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
-      });
-
-      const run = await openai.beta.threads.runs.create(thread.id, {
-        assistant_id: assistantId
-      });
-
-      let runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-      let attempts = 0;
-      const maxAttempts = 60;
-      
-      while ((runStatus.status === 'in_progress' || runStatus.status === 'queued') && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-        attempts++;
-      }
-
-      // Handle requires_action status
-      if (runStatus.status === 'requires_action') {
-        console.log('OpenAI assistant requires action, handling function calls...');
-        
-        const toolCalls = runStatus.required_action?.submit_tool_outputs?.tool_calls;
-        if (toolCalls && toolCalls.length > 0) {
-          const toolOutputs = [];
-          
-          for (const toolCall of toolCalls) {
-            if (toolCall.function.name === 'search_politician_information') {
-              const args = JSON.parse(toolCall.function.arguments);
-              const { politician_name, search_criteria } = args;
-              
-              console.log(`Searching for information about ${politician_name} with criteria:`, search_criteria);
-              
-              // Perform web search for each criteria
-              let searchResults = '';
-              for (const criteria of search_criteria) {
-                try {
-                  // Perform actual web search
-                  const searchQuery = `${politician_name} ${criteria} Deutschland Politik`;
-                  console.log(`Searching: ${searchQuery}`);
-                  
-                  // Use Next.js API route to call web search (to avoid CORS issues)
-                  const searchResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:9002'}/api/web-search`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ query: searchQuery })
-                  });
-                  
-                  if (searchResponse.ok) {
-                    const searchData = await searchResponse.json();
-                    searchResults += `\n## ${criteria.toUpperCase()}\n`;
-                    searchResults += `Aktuelle Recherche-Ergebnisse für "${politician_name}" bezüglich "${criteria}":\n\n`;
-                    
-                    if (searchData.results && searchData.results.length > 0) {
-                      searchData.results.slice(0, 5).forEach((result: any, index: number) => {
-                        searchResults += `${index + 1}. **${result.title}**\n`;
-                        searchResults += `   ${result.snippet || result.description || 'Keine Beschreibung verfügbar'}\n`;
-                        searchResults += `   Quelle: ${result.url}\n\n`;
-                      });
-                    } else {
-                      searchResults += `Keine spezifischen Ergebnisse für "${criteria}" gefunden.\n\n`;
-                    }
-                  } else {
-                    // Fallback if web search fails
-                    searchResults += `\n## ${criteria.toUpperCase()}\n`;
-                    searchResults += `Recherche-Ergebnisse für "${politician_name}" bezüglich "${criteria}":\n`;
-                    searchResults += `- Bitte beachten Sie: Für eine vollständige Recherche sollten aktuelle Nachrichten, Pressemitteilungen und politische Datenbanken durchsucht werden.\n`;
-                    searchResults += `- Empfohlene Quellen: Bundestag.de, Abgeordnetenwatch.de, aktuelle Medienberichte\n`;
-                    searchResults += `- Hinweis: Eine detaillierte Faktenprobung ist erforderlich.\n\n`;
-                  }
-                } catch (error) {
-                  console.error(`Error searching for ${criteria}:`, error);
-                  searchResults += `\n## ${criteria.toUpperCase()}\n`;
-                  searchResults += `Fehler bei der Recherche zu "${criteria}" für ${politician_name}.\n\n`;
-                }
-              }
-              
-              toolOutputs.push({
-                tool_call_id: toolCall.id,
-                output: searchResults
-              });
-            } else {
-              // Unknown function
-              toolOutputs.push({
-                tool_call_id: toolCall.id,
-                output: `Unbekannte Funktion: ${toolCall.function.name}`
-              });
-            }
-          }
-          
-          // Submit the tool outputs back to the assistant
-          await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
-            tool_outputs: toolOutputs
-          });
-          
-          // Wait for the run to complete after submitting tool outputs
-          let updatedRunStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-          let toolAttempts = 0;
-          const maxToolAttempts = 60;
-          
-          while ((updatedRunStatus.status === 'in_progress' || updatedRunStatus.status === 'queued') && toolAttempts < maxToolAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            updatedRunStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-            toolAttempts++;
-          }
-          
-          if (updatedRunStatus.status === 'completed') {
-            const messages = await openai.beta.threads.messages.list(thread.id);
-            const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
-            
-            if (!assistantMessage || !assistantMessage.content[0]) {
-              return NextResponse.json({ error: 'Keine Antwort vom AI-Assistenten erhalten' }, { status: 500 });
-            }
-
-            const messageContent = assistantMessage.content[0];
-            if (messageContent.type === 'text') {
-              dossierContent = messageContent.text.value;
-            } else {
-              console.error('Unexpected message content type:', messageContent.type);
-              return NextResponse.json({ error: 'Unerwartetes Antwortformat vom AI-Assistenten' }, { status: 500 });
-            }
-          } else {
-            console.error('Tool execution failed:', updatedRunStatus.status, updatedRunStatus.last_error);
-            // Fall back to Chat Completions API
-            console.log('Falling back to Chat Completions API after tool failure');
-            const completion = await openai.chat.completions.create({
-              model: "gpt-4",
-              messages: [
-                {
-                  role: "user",
-                  content: `Erstelle ein detailliertes Feinddossier für ${politicianName}.`
-                }
-              ],
-              max_tokens: 3000,
-              temperature: 0.7
-            });
-
-            if (!completion.choices[0]?.message?.content) {
-              return NextResponse.json({ error: 'Keine Antwort vom AI-System erhalten' }, { status: 500 });
-            }
-
-            dossierContent = completion.choices[0].message.content;
-          }
-        } else {
-          console.error('No tool calls found in requires_action status');
-          // Fall back to Chat Completions API
-          const completion = await openai.chat.completions.create({
-            model: "gpt-4",
-            messages: [
-              {
-                role: "user",
-                content: `Erstelle ein detailliertes Feinddossier für ${politicianName}.`
-              }
-            ],
-            max_tokens: 3000,
-            temperature: 0.7
-          });
-
-          if (!completion.choices[0]?.message?.content) {
-            return NextResponse.json({ error: 'Keine Antwort vom AI-System erhalten' }, { status: 500 });
-          }
-
-          dossierContent = completion.choices[0].message.content;
-        }
-      } else if (runStatus.status !== 'completed') {
-        console.error('OpenAI run failed:', runStatus.status, runStatus.last_error);
-        
-        // Try fallback to Chat Completions API
-        console.log('Falling back to Chat Completions API');
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4",
+      const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${perplexityApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: "sonar-pro",
           messages: [
             {
-              role: "user",
-              content: `Erstelle ein detailliertes Feinddossier für ${politicianName}.`
+              role: "user", 
+              content: `Erstelle mir ein Dossier über ${politicianName}${partyAffiliation ? ` ${partyAffiliation}` : ''}.
+Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ihn aus Sicht eines linken Abgeordneten in einer Diskussion anzugreifen & zu stellen. Gib mir rhetorische Ideen. Unterteile das Dossier in einzelne Kapitel.`
             }
           ],
-          max_tokens: 3000,
+          max_tokens: 4000,
           temperature: 0.7
-        });
-
-        if (!completion.choices[0]?.message?.content) {
-          return NextResponse.json({ error: 'Keine Antwort vom AI-System erhalten' }, { status: 500 });
-        }
-
-        dossierContent = completion.choices[0].message.content;
-      } else {
-        // Assistant completed successfully
-        const messages = await openai.beta.threads.messages.list(thread.id);
-        const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
-        
-        if (!assistantMessage || !assistantMessage.content[0]) {
-          return NextResponse.json({ error: 'Keine Antwort vom AI-Assistenten erhalten' }, { status: 500 });
-        }
-
-        // Handle both text and JSON response formats
-        const messageContent = assistantMessage.content[0];
-        if (messageContent.type === 'text') {
-          dossierContent = messageContent.text.value;
-        } else {
-          console.error('Unexpected message content type:', messageContent.type);
-          return NextResponse.json({ error: 'Unerwartetes Antwortformat vom AI-Assistenten' }, { status: 500 });
-        }
-
-        // If the content looks like JSON, try to extract the actual dossier content
-        try {
-          const possibleJson = JSON.parse(dossierContent);
-          // Look for common JSON field names that might contain the dossier
-          if (possibleJson.dossier) {
-            dossierContent = possibleJson.dossier;
-          } else if (possibleJson.content) {
-            dossierContent = possibleJson.content;
-          } else if (possibleJson.text) {
-            dossierContent = possibleJson.text;
-          } else if (possibleJson.analysis) {
-            dossierContent = possibleJson.analysis;
-          } else {
-            // If it's a complex JSON object, try to stringify it nicely
-            dossierContent = Object.values(possibleJson).join('\n\n');
-          }
-        } catch (jsonError) {
-          // Not JSON, use as-is (which is fine for text responses)
-          console.log('Content is not JSON, using as text');
-        }
-      }
-
-    } else {
-      // Use Chat Completions API as fallback
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "user",
-            content: `Erstelle ein detailliertes Feinddossier für ${politicianName}.`
-          }
-        ],
-        max_tokens: 3000,
-        temperature: 0.7
+        })
       });
 
-      if (!completion.choices[0]?.message?.content) {
-        return NextResponse.json({ error: 'Keine Antwort vom AI-System erhalten' }, { status: 500 });
+      if (!perplexityResponse.ok) {
+        const errorText = await perplexityResponse.text();
+        console.error('Perplexity API error:', perplexityResponse.status, errorText);
+        throw new Error(`Perplexity API error: ${perplexityResponse.status} - ${errorText}`);
       }
 
-      dossierContent = completion.choices[0].message.content;
+      const perplexityData = await perplexityResponse.json();
+      console.log('Perplexity response received:', {
+        usage: perplexityData.usage,
+        contentLength: perplexityData.choices?.[0]?.message?.content?.length || 0
+      });
+
+      if (!perplexityData.choices?.[0]?.message?.content) {
+        throw new Error('No content received from Perplexity API');
+      }
+
+      dossierContent = perplexityData.choices[0].message.content;
+      
+    } catch (apiError) {
+      console.error('Error calling Perplexity API:', apiError);
+      return NextResponse.json({ 
+        error: 'Fehler bei der AI-Generierung mit Perplexity Sonar Pro',
+        details: process.env.NODE_ENV === 'development' ? (apiError instanceof Error ? apiError.message : 'Unknown error') : undefined
+      }, { status: 500 });
     }
 
     console.log(`Dossier content generated (${dossierContent.length} characters)`);
@@ -397,28 +264,54 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
     // Create PDF with custom styling
     const pdfDoc = await PDFDocument.create();
     
+    // Register fontkit to enable custom font embedding
+    pdfDoc.registerFontkit(fontkit as any);
+    
     // Embed custom fonts from /public/fonts with error handling
     let interRegular, interBold, interItalic, workSansBlack, workSansLight, workSansRegular;
     
     try {
       console.log('Loading custom fonts...');
-      const interRegularBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Inter-Regular.ttf'));
-      const interBoldBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Inter-Bold.ttf'));
-      const interItalicBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'Inter-Italic.ttf'));
-      const workSansBlackBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Black.ttf'));
-      const workSansLightBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Light.ttf'));
-      const workSansRegularBytes = fs.readFileSync(path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Regular.ttf'));
       
-      console.log('Embedding fonts into PDF...');
+      // Check if font files exist and load them
+      const fontPaths = {
+        interRegular: path.join(process.cwd(), 'public', 'fonts', 'Inter-Regular.ttf'),
+        interBold: path.join(process.cwd(), 'public', 'fonts', 'Inter-Bold.ttf'),
+        interItalic: path.join(process.cwd(), 'public', 'fonts', 'Inter-Italic.ttf'),
+        workSansBlack: path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Black.ttf'),
+        workSansLight: path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Light.ttf'),
+        workSansRegular: path.join(process.cwd(), 'public', 'fonts', 'WorkSans-Regular.ttf'),
+      };
+      
+      // Load font files and embed them
+      for (const [fontName, fontPath] of Object.entries(fontPaths)) {
+        if (fs.existsSync(fontPath)) {
+          console.log(`Loading font: ${fontName} from ${fontPath}`);
+        } else {
+          console.error(`Font file not found: ${fontPath}`);
+          throw new Error(`Font file not found: ${fontPath}`);
+        }
+      }
+      
+      const interRegularBytes = fs.readFileSync(fontPaths.interRegular);
+      const interBoldBytes = fs.readFileSync(fontPaths.interBold);
+      const interItalicBytes = fs.readFileSync(fontPaths.interItalic);
+      const workSansBlackBytes = fs.readFileSync(fontPaths.workSansBlack);
+      const workSansLightBytes = fs.readFileSync(fontPaths.workSansLight);
+      const workSansRegularBytes = fs.readFileSync(fontPaths.workSansRegular);
+      
       interRegular = await pdfDoc.embedFont(interRegularBytes);
       interBold = await pdfDoc.embedFont(interBoldBytes);
       interItalic = await pdfDoc.embedFont(interItalicBytes);
       workSansBlack = await pdfDoc.embedFont(workSansBlackBytes);
       workSansLight = await pdfDoc.embedFont(workSansLightBytes);
       workSansRegular = await pdfDoc.embedFont(workSansRegularBytes);
+      
       console.log('Custom fonts loaded successfully');
     } catch (fontError) {
-      console.error('Error loading custom fonts, falling back to standard fonts:', fontError);
+      console.error('Error loading custom fonts:', fontError);
+      console.log('Falling back to standard fonts');
+      
       // Fallback to standard fonts if custom fonts fail
       interRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
       interBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -438,7 +331,7 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
     
     // Color definitions
     const brandColor = rgb(111/255, 0/255, 60/255); // #6F003C
-    const textColor = rgb(0.1, 0.1, 0.1); // 90% black
+    const textColor = rgb(0.6, 0.6, 0.6); // 40% black (lighter)
     const bulletColor = rgb(111/255, 0/255, 60/255); // Red squares for bullets
     
     let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
@@ -449,31 +342,73 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
     
     // Header
     const currentDate = new Date().toLocaleDateString('de-DE');
-    // Note: Using largest available font size as fallback for 200pt
-    currentPage.drawText(`Feinddossier: ${politicianName}`, {
-      x: marginLeft,
-      y: yPosition,
-      size: 24, // Fallback for 200pt Work Sans Black
-      font: workSansBlack,
-      color: brandColor,
-    });
-    yPosition -= 35; // ~105% line height equivalent
     
-    currentPage.drawText(`Erstellt am: ${currentDate}`, {
-      x: marginLeft,
+    // Add user information header (right-aligned)
+    const userName = `${session.user.name || session.user.email || 'Unbekannt'}, MdB`;
+    const dateText = `Erstellt am: ${currentDate}`;
+    
+    // Calculate right-aligned positions
+    const userNameWidth = interRegular.widthOfTextAtSize(userName, 10);
+    const dateTextWidth = interRegular.widthOfTextAtSize(dateText, 10);
+    const userNameX = pageWidth - marginRight - userNameWidth;
+    const dateTextX = pageWidth - marginRight - dateTextWidth;
+    
+    currentPage.drawText(`Erstellt für: ${userName}`, {
+      x: userNameX - interRegular.widthOfTextAtSize('Erstellt für: ', 10),
       y: yPosition,
       size: 10,
       font: interRegular,
       color: textColor,
     });
-    yPosition -= 50;
+    yPosition -= 15;
+    
+    currentPage.drawText(dateText, {
+      x: dateTextX,
+      y: yPosition,
+      size: 10,
+      font: interRegular,
+      color: textColor,
+    });
+    yPosition -= 40;
+    
+    // Main title with line break between name and party
+    currentPage.drawText(`Dossier: ${politicianName}`, {
+      x: marginLeft,
+      y: yPosition,
+      size: 24,
+      font: workSansBlack,
+      color: brandColor,
+    });
+    yPosition -= 30; // Smaller spacing for party line
+    
+    if (partyAffiliation) {
+      currentPage.drawText(`(${partyAffiliation})`, {
+        x: marginLeft,
+        y: yPosition,
+        size: 18, // Slightly smaller for party
+        font: workSansLight,
+        color: brandColor,
+      });
+    }
+    yPosition -= 60;
 
     // Process content with enhanced styling
     const paragraphs = dossierContent.split('\n');
     
-    console.log(`Processing ${paragraphs.length} paragraphs for PDF generation...`);
+    // Filter out duplicate dossier titles
+    const filteredParagraphs = paragraphs.filter(paragraph => {
+      const trimmed = paragraph.trim();
+      return !(
+        trimmed.includes(`${politicianName} (`) && trimmed.includes('Dossier') ||
+        trimmed.match(/^#+\s*.*Dossier.*$/i) ||
+        trimmed === `${politicianName} - Dossier` ||
+        trimmed === `Feinddossier: ${politicianName}`
+      );
+    });
     
-    for (const paragraph of paragraphs) {
+    console.log(`Processing ${filteredParagraphs.length} paragraphs for PDF generation...`);
+    
+    for (const paragraph of filteredParagraphs) {
       if (!paragraph.trim()) {
         // Empty line - add spacing
         yPosition -= 15;
@@ -487,48 +422,48 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
       let textToRender = paragraph.trim();
       let textWidth = bodyWidth; // 70% width for body text
       
-      // Handle different heading levels with custom styling
-      if (textToRender.startsWith('# ')) {
-        // H1: Work Sans Black 200pt equivalent, #6F003C
-        textToRender = textToRender.replace(/^#\s*/, '');
+      // Detect heading level using plaintext structure
+      const headingInfo = detectHeadingLevel(textToRender);
+      
+      if (headingInfo.level === 1) {
+        // HAUPTÜBERSCHRIFT: Work Sans Black, #6F003C
+        textToRender = headingInfo.cleanText;
         currentFont = workSansBlack;
-        currentFontSize = 20; // Scaled down from 200pt for readability
-        currentLineHeight = 22; // ~105% line height
+        currentFontSize = 20;
+        currentLineHeight = 22;
         currentColor = brandColor;
         textWidth = pageWidth - marginLeft - marginRight; // Full width for headings
         yPosition -= 15; // Extra spacing before H1
-      } else if (textToRender.startsWith('## ')) {
-        // H2: Work Sans Light 200pt equivalent, #6F003C
-        textToRender = textToRender.replace(/^##\s*/, '');
-        currentFont = workSansLight; // Using regular as fallback for light
-        currentFontSize = 18; // Scaled down from 200pt
-        currentLineHeight = 20; // ~105% line height
+      } else if (headingInfo.level === 2) {
+        // Unterüberschrift: Work Sans Light, #6F003C
+        textToRender = headingInfo.cleanText;
+        currentFont = workSansLight;
+        currentFontSize = 18;
+        currentLineHeight = 20;
         currentColor = brandColor;
         textWidth = pageWidth - marginLeft - marginRight; // Full width for headings
         yPosition -= 12; // Extra spacing before H2
-      } else if (textToRender.startsWith('### ')) {
-        // Subheadline 1: Work Sans Black 80pt equivalent, #6F003C
-        textToRender = textToRender.replace(/^###\s*/, '');
+      } else if (headingInfo.level === 3) {
+        // Sub-Unterüberschrift: Work Sans Black, #6F003C
+        textToRender = headingInfo.cleanText;
         currentFont = workSansBlack;
-        currentFontSize = 14; // Scaled down from 80pt
-        currentLineHeight = 16; // ~110% line height
+        currentFontSize = 14;
+        currentLineHeight = 16;
         currentColor = brandColor;
         textWidth = pageWidth - marginLeft - marginRight; // Full width for headings
         yPosition -= 8; // Extra spacing before H3
-      } else if (textToRender.startsWith('#### ')) {
-        // Subheadline 2: Work Sans Light 80pt equivalent, #6F003C
-        textToRender = textToRender.replace(/^####\s*/, '');
-        currentFont = workSansLight;
-        currentFontSize = 13; // Scaled down from 80pt
-        currentLineHeight = 15; // ~110% line height
-        currentColor = brandColor;
-        textWidth = pageWidth - marginLeft - marginRight; // Full width for headings
-        yPosition -= 6; // Extra spacing before H4
       } else if (textToRender.startsWith('- ') || textToRender.startsWith('* ')) {
         // Bullet points with red squares
         textToRender = textToRender.replace(/^[-*]\s*/, '');
         currentFontSize = 12; // Body text size
         currentLineHeight = 18; // 150% line height
+        currentFont = interRegular;
+        currentColor = textColor;
+        
+        // Check for important markers
+        if (textToRender.toUpperCase().startsWith('WICHTIG:') || textToRender === textToRender.toUpperCase()) {
+          currentFont = interBold;
+        }
         
         // Draw red square bullet
         const bulletSize = 4;
@@ -565,51 +500,81 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
           yPosition -= currentLineHeight;
         }
         continue; // Skip the regular text processing below
-        
       } else if (/^\d+\.\s/.test(textToRender)) {
         // Numbered lists - keep as-is with body text styling
         currentFontSize = 12;
         currentLineHeight = 18;
       } else {
-        // Regular body text - check for bold/italic
-        const processed = processMarkdownLine(textToRender);
-        textToRender = processed.text;
-        if (processed.isBold && processed.isItalic) {
-          // For now, bold takes precedence since we don't have bold-italic
-          currentFont = interBold;
-        } else if (processed.isBold) {
-          currentFont = interBold; // Use Inter Bold for body text
-        } else if (processed.isItalic) {
-          currentFont = interItalic; // Use Inter Italic for body text
-        }
-        // Body text: Inter Regular 12pt, 120-150% line height, 90% black
+        // Regular body text
         currentFontSize = 12;
         currentLineHeight = 18; // 150% line height
+        currentFont = interRegular;
+        currentColor = textColor;
+        
+        // Check for important markers in body text
+        if (textToRender.toUpperCase().startsWith('WICHTIG:') || textToRender === textToRender.toUpperCase()) {
+          currentFont = interBold;
+        }
       }
       
-      const wrappedLines = wrapText(textToRender, textWidth, currentFontSize, currentFont);
-      
-      for (const line of wrappedLines) {
-        // Check if we need a new page
-        if (yPosition < marginBottom + currentLineHeight) {
-          currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-          await addLogoToPage(currentPage, pdfDoc, pageWidth, marginRight, marginBottom, brandColor, interBold);
-          yPosition = pageHeight - marginTop;
+      // Process text with inline formatting for non-heading text
+      if (headingInfo.level === 0) {
+        // Regular text with potential **bold** formatting
+        const segments = processPlaintextStructure(textToRender);
+        
+        for (const segment of segments) {
+          let font = interRegular;
+          if (segment.isBold) {
+            font = interBold;
+          }
+          
+          const wrappedLines = wrapText(segment.text, textWidth, currentFontSize, font);
+          
+          for (const line of wrappedLines) {
+            // Check if we need a new page
+            if (yPosition < marginBottom + currentLineHeight) {
+              currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+              await addLogoToPage(currentPage, pdfDoc, pageWidth, marginRight, marginBottom, brandColor, interBold);
+              yPosition = pageHeight - marginTop;
+            }
+            
+            currentPage.drawText(line, {
+              x: marginLeft,
+              y: yPosition,
+              size: currentFontSize,
+              font: font,
+              color: currentColor,
+            });
+            
+            yPosition -= currentLineHeight;
+          }
         }
+      } else {
+        // Process as simple text for headings
+        const wrappedLines = wrapText(textToRender, textWidth, currentFontSize, currentFont);
         
-        currentPage.drawText(line, {
-          x: marginLeft,
-          y: yPosition,
-          size: currentFontSize,
-          font: currentFont,
-          color: currentColor,
-        });
-        
-        yPosition -= currentLineHeight;
+        for (const line of wrappedLines) {
+          // Check if we need a new page
+          if (yPosition < marginBottom + currentLineHeight) {
+            currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+            await addLogoToPage(currentPage, pdfDoc, pageWidth, marginRight, marginBottom, brandColor, interBold);
+            yPosition = pageHeight - marginTop;
+          }
+          
+          currentPage.drawText(line, {
+            x: marginLeft,
+            y: yPosition,
+            size: currentFontSize,
+            font: currentFont,
+            color: currentColor,
+          });
+          
+          yPosition -= currentLineHeight;
+        }
       }
       
       // Add extra spacing after headings
-      if (textToRender !== paragraph.trim() || paragraph.startsWith('#')) {
+      if (headingInfo.level > 0) {
         yPosition -= 8;
       }
     }
@@ -627,18 +592,17 @@ Verwende konkrete Beispiele und strukturiere alles übersichtlich.`
 
     // Save to Airtable with proper error handling
     try {
-      await base('Feinddossier').create([
+      await base('tblEnUsrZekSFiOUx').create([
         {
           fields: {
-            'User-ID': [userAirtableId],
-            'Gegner': politicianName,
-            'Date': new Date().toISOString().split('T')[0],
-            'Status': 'Generated',
-            'Content': dossierContent.substring(0, 1000) // Store first 1000 chars as preview
+            'fldKC3zwRAgLUaWjv': session.user.email, // User-ID field (collaborator - use email string)
+            'fldzzro62bWdYNPbA': politicianName, // Gegner field
+            'fldEuC8DXovmJHkPa': dossierContent, // Notes field (full content)
+            'fldhzIEIMtrdXs0fz': new Date().toISOString().split('T')[0] // Date field
           },
         },
       ]);
-      console.log('Successfully saved dossier record to Airtable');
+      console.log('Successfully saved dossier record to Feinddossier table');
     } catch (airtableError) {
       console.error('Failed to save to Airtable:', airtableError);
       // Continue even if Airtable save fails - don't block PDF generation

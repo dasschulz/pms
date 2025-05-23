@@ -876,7 +876,8 @@ export default function GegnerRecherchePage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          politicianName: selectedPolitician.label
+          politicianName: selectedPolitician.label,
+          partyAffiliation: selectedPolitician.party?.label
         }),
       });
 

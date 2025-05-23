@@ -809,3 +809,19 @@ AW MV
 fldxtCuRsFyd735jU
 
 multipleAttachment
+
+Table: Feinddossier (tblEnUsrZekSFiOUx)
+
+Field Name                Field ID                Type
+
+Name                      fldSyg0UonTZ02G08       autoNumber
+
+Notes                     fldEuC8DXovmJHkPa       multilineText
+
+User-ID                   fldKC3zwRAgLUaWjv       collaborator
+
+Gegner                    fldzzro62bWdYNPbA       text
+
+Attachments               fldTBQN0hQi2NO5aK       multipleAttachment
+
+Date                      fldhzIEIMtrdXs0fz       date
