@@ -83,6 +83,37 @@ export async function GET(request: Request) {
       if (!detailRes.ok) return entry;
       const detailJson = await detailRes.json();
       const attr = detailJson.data?.attributes || {};
+      
+      // Extract and format transcript with timestamps from textContents
+      let transcriptSentences: Array<{text: string, timeStart: number, timeEnd: number, speaker?: string}> = [];
+      if (attr.textContents && Array.isArray(attr.textContents)) {
+        // Extract sentences with timestamps from all textBody entries
+        transcriptSentences = attr.textContents.flatMap((content: any) => {
+          if (content.textBody && Array.isArray(content.textBody)) {
+            return content.textBody.flatMap((body: any) => {
+              if (body.sentences && Array.isArray(body.sentences) && body.type === 'speech') {
+                // Extract speaker information if available
+                const speaker = body.speaker?.label || content.speaker?.label || '';
+                
+                return body.sentences
+                  .filter((sentence: any) => sentence.text && sentence.timeStart && sentence.timeEnd)
+                  .map((sentence: any) => ({
+                    text: sentence.text.trim(),
+                    timeStart: parseFloat(sentence.timeStart),
+                    timeEnd: parseFloat(sentence.timeEnd),
+                    speaker: speaker
+                  }));
+              }
+              return [];
+            });
+          }
+          return [];
+        });
+      }
+      
+      // Create simple text version for backwards compatibility
+      const transcriptText = transcriptSentences.map(s => s.text).join(' ');
+
       // Determine agenda item title (embedded)
       let agendaItemText = entry.title;
       const rel = detailJson.data?.relationships?.agendaItem?.data;
@@ -95,6 +126,25 @@ export async function GET(request: Request) {
       // Extract official title
       const officialTitle = rel?.attributes?.officialTitle ?? '';
 
+      // Extract additional context information
+      const electoralPeriod = detailJson.data.relationships?.electoralPeriod?.data?.attributes || {};
+      const session = detailJson.data.relationships?.session?.data?.attributes || {};
+      const agendaItem = detailJson.data.relationships?.agendaItem?.data?.attributes || {};
+      
+      // Extract documents information
+      const documents = detailJson.data.relationships?.documents?.data || [];
+      const documentsList = documents.map((doc: any) => ({
+        id: doc.id,
+        type: doc.type,
+        title: doc.attributes?.title || doc.attributes?.label || `Document ${doc.id}`,
+        abstract: doc.attributes?.abstract || '',
+        link: doc.links?.self || ''
+      }));
+
+      // Extract context and topic information
+      const context = attr.context || '';
+      const topic = agendaItem.title || agendaItemText;
+
       return {
         ...entry,
         agendaItem: agendaItemText,
@@ -105,6 +155,28 @@ export async function GET(request: Request) {
         electoralPeriodNumber: epNum,
         sessionNumber: sessNum,
         officialTitle,
+        // Extract transcript text from detailed API response
+        text: transcriptText || attr.text || entry.text || '',
+        // Include transcript sentences with timestamps
+        transcriptSentences: transcriptSentences,
+        // Include thumbnail URI from detailed response
+        thumbnailURI: attr.thumbnailURI || entry.thumbnail || '',
+        // Additional context information
+        electoralPeriod: {
+          number: electoralPeriod.number || epNum,
+          label: electoralPeriod.label || `Wahlperiode ${epNum}`,
+          dateStart: electoralPeriod.dateStart || '',
+          dateEnd: electoralPeriod.dateEnd || ''
+        },
+        session: {
+          number: session.number || sessNum,
+          label: session.label || `${sessNum}. Sitzung`,
+          date: session.date || entry.date,
+          location: session.location || ''
+        },
+        topic: topic,
+        context: context,
+        documents: documentsList
       };
     } catch (err) {
       return entry;

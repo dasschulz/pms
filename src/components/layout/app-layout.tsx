@@ -169,7 +169,7 @@ export function AppLayout({ children }: PropsWithChildren) {
   return (
     <SidebarProvider defaultOpen>
       <Sidebar className="border-r">
-        <SidebarHeader className="p-0 border-b">
+        <SidebarHeader className="p-0">
           {/* Das erste NavItem (isHeader=true) rendert das Logo im SidebarNav */}
         </SidebarHeader>
         <SidebarContent className="p-0">
@@ -177,7 +177,7 @@ export function AppLayout({ children }: PropsWithChildren) {
             <SidebarNav />
           </ScrollArea>
         </SidebarContent>
-        <SidebarFooter className="p-2 border-t">
+        <SidebarFooter className="p-2">
           {/* BottomNavItems werden im SidebarNav gerendert */}
         </SidebarFooter>
       </Sidebar>
