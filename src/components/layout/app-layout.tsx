@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger as ShadCNAccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { Navbar } from "./navbar";
 
 // Custom Party Icon SVG - Wird für Sidebar Header und Header-Platzhalter verwendet
 // const PartyIcon = () => (
@@ -182,6 +183,7 @@ export function AppLayout({ children }: PropsWithChildren) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col">
+        <Navbar />
         <main className="flex-1 overflow-auto p-4 sm:p-6">
           {children}
         </main>
