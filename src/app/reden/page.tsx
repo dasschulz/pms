@@ -21,7 +21,7 @@ export default function MySpeechesPage() {
     if (!userName) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/speeches?name=${encodeURIComponent(userName)}&page=${page}`);
+      const res = await fetch(`/api/reden?name=${encodeURIComponent(userName)}&page=${page}`);
       const json = await res.json();
       if (res.ok) {
         setSpeeches(json.speeches);

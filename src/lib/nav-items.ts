@@ -57,12 +57,12 @@ export const navItems: NavItem[] = [
     children: [
       {
         title: 'Redenschreiber',
-        href: '/speech-writer',
+        href: '/redenschreiber',
         icon: Mic2,
       },
       {
         title: 'Meine Reden',
-        href: '/speeches',
+        href: '/reden',
         icon: Mic2,
       },
     ],
@@ -74,12 +74,12 @@ export const navItems: NavItem[] = [
     children: [
       {
         title: 'PM-Generator',
-        href: '/press-release',
+        href: '/pressemitteilung',
         icon: FileText,
       },
       {
         title: 'Skriptgenerator',
-        href: '/video-script',
+        href: '/skriptgenerator',
         icon: Video,
       },
       {

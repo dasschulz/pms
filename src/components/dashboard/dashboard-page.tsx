@@ -54,9 +54,9 @@ export async function DashboardPage() {
                 if (!item.href) return null;
                 // Determine image source based on route
                 let imageSrc: string | undefined;
-                if (item.href === '/press-release') imageSrc = pmImageSrc;
-                else if (item.href === '/video-script') imageSrc = skriptImageSrc;
-                else if (item.href.startsWith('/minor-inquiry')) imageSrc = kaImageSrc;
+                if (item.href === '/pressemitteilung') imageSrc = pmImageSrc;
+                else if (item.href === '/skriptgenerator') imageSrc = skriptImageSrc;
+                else if (item.href.startsWith('/kleine-anfragen')) imageSrc = kaImageSrc;
                 return (
                   <Link href={item.href} key={item.href} className="group">
                     <QuickLinkCard
