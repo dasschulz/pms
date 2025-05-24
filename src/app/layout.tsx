@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import { Work_Sans, Inter } from 'next/font/google';
 import './globals.css';
-import {AppLayout} from '@/components/layout/app-layout';
+import { ConditionalLayout } from '@/components/layout/conditional-layout';
 import { Providers } from '@/components/providers';
 
 const workSans = Work_Sans({
@@ -27,11 +27,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="de" suppressHydrationWarning>
-      <body className={`${workSans.variable} ${inter.variable} antialiased bg-background text-foreground`}>
+      <body className={`${workSans.variable} ${inter.variable} antialiased bg-background text-foreground selection:bg-selection selection:text-selection-foreground`}>
         <Providers>
-          <AppLayout>
+          <ConditionalLayout>
             {children}
-          </AppLayout>
+          </ConditionalLayout>
         </Providers>
       </body>
     </html>

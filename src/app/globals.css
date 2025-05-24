@@ -49,6 +49,10 @@
     --input: 0 60% 97%;
     --ring: 173 100% 35%;
 
+    /* Selection colors */
+    --selection: 0 60% 97%; /* rosa */
+    --selection-foreground: 326 100% 22%; /* parteidunkelrot */
+
     /* Updated chart colors based on theme */
     --chart-1: 0 100% 50%; /* Primary */
     --chart-2: 173 100% 35%;   /* Accent */
@@ -71,50 +75,62 @@
   }
 
   .dark {
-    --background: 36 10% 12%;
-    --foreground: 36 15% 88%;
-
-    --card: 36 10% 18%;
-    --card-foreground: 36 15% 88%;
-
-    --popover: 36 10% 18%;
-    --popover-foreground: 36 15% 88%;
-
-    --primary: 36 45% 55%;
-    --primary-foreground: 36 25% 15%;
-
-    --secondary: 36 35% 25%;
-    --secondary-foreground: 36 20% 75%;
-
-    --muted: 36 10% 22%;
-    --muted-foreground: 36 15% 55%;
-
-    --accent: 6 60% 60%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 60% 50%;
+    /* Base neutrals */
+    --background: 220 5% 12%;          /* charcoal-900 */
+    --foreground: 220 5% 90%;          /* almost-white */
+  
+    /* Cards & surfaces */
+    --card: 220 5% 18%;                /* charcoal-800 */
+    --card-foreground: 220 5% 90%;
+  
+    --popover: 220 5% 20%;             /* charcoal-800 slightly lighter */
+    --popover-foreground: 220 5% 90%;
+  
+    /* Primary & secondary accents */
+    --primary: 220 5% 40%;             /* charcoal-700 */
+    --primary-foreground: 220 5% 95%;
+  
+    --secondary: 220 5% 30%;           /* charcoal-750 */
+    --secondary-foreground: 220 5% 80%;
+  
+    /* Muted / disabled */
+    --muted: 220 5% 25%;               /* charcoal-780 */
+    --muted-foreground: 220 5% 50%;
+  
+    /* Action colors */
+    --accent: 0 100% 50%;              /* vivid red */
+    --accent-foreground: 0 0% 100%;    /* white on red */
+  
+    --destructive: 0 80% 55%;          /* softer red for destructive */
     --destructive-foreground: 0 0% 100%;
-
-    --border: 36 10% 28%;
-    --input: 36 10% 25%;
-    --ring: 36 45% 45%;
-
-    /* Updated chart colors for dark theme */
-    --chart-1: 36 45% 55%; /* Primary Dark */
-    --chart-2: 6 60% 60%;   /* Accent Dark */
-    --chart-3: 36 35% 25%; /* Secondary Dark */
-    --chart-4: 36 45% 45%; /* Primary Darker */
-    --chart-5: 6 60% 50%;   /* Accent Darker */
-
-    --sidebar-background: 36 8% 15%;
-    --sidebar-foreground: 36 12% 85%;
-    --sidebar-primary: 36 45% 55%;
-    --sidebar-primary-foreground: 36 25% 15%;
-    --sidebar-accent: 36 35% 30%;
-    --sidebar-accent-foreground: 36 15% 80%;
-    --sidebar-border: 36 8% 22%;
-    --sidebar-ring: 36 45% 45%;
+  
+    /* Inputs, borders & rings */
+    --border: 220 5% 25%;              /* charcoal-780 for solid borders */
+    --input: 220 5% 22%;               /* dark input background */
+    --ring: 220 5% 45%;                /* for focus outlines */
+  
+    /* Gradients */
+    --gradient-border: linear-gradient(
+      90deg,
+      hsl(0,100%,50%) 0%,
+      hsl(0,80%,60%) 100%
+    );
+    --gradient-hover: linear-gradient(
+      180deg,
+      hsl(220,5%,20%) 0%,
+      hsl(220,5%,25%) 100%
+    );
+  
+    /* Selection */
+    --selection: 0 100% 20%;           /* dark red background */
+    --selection-foreground: 0 0% 100%; /* white text */
+  
+    /* Sidebar (optional darker variant) */
+    --sidebar-background: 220 5% 10%;
+    --sidebar-foreground: 220 5% 85%;
+    --sidebar-border: 220 5% 20%;
   }
+  
 }
 
 @layer base {
@@ -155,5 +171,114 @@
   }
   .font-body {
     @apply font-sans; /* Inter */
+  }
+}
+
+/* Dark Mode Enhanced Styling */
+@layer components {
+  /* Dark mode card borders with gradient and glassmorphism */
+  .dark .card,
+  .dark [data-ui="card"] {
+    border: 1px solid transparent;
+    border-image: var(--gradient-border) 1;
+    /* Glassmorphism effect same as navbar */
+    background: hsl(var(--card) / 0.3);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  @supports (backdrop-filter: blur(16px)) {
+    .dark .card,
+    .dark [data-ui="card"] {
+      background: hsl(var(--card) / 0.3);
+    }
+  }
+
+  /* Light mode card glassmorphism */
+  .card,
+  [data-ui="card"] {
+    /* Glassmorphism effect same as navbar */
+    background: hsl(var(--card) / 0.3);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  @supports (backdrop-filter: blur(16px)) {
+    .card,
+    [data-ui="card"] {
+      background: hsl(var(--card) / 0.3);
+    }
+  }
+
+  /* Dark mode button hover states */
+  .dark .btn-primary,
+  .dark [data-ui="button"][data-variant="primary"] {
+    background: hsl(var(--primary));
+    transition: background 0.2s ease;
+  }
+
+  .dark .btn-primary:hover,
+  .dark [data-ui="button"][data-variant="primary"]:hover {
+    background: var(--gradient-hover);
+  }
+
+  /* Dark mode focus rings */
+  .dark .input:focus,
+  .dark input:focus,
+  .dark textarea:focus,
+  .dark [data-ui="input"]:focus {
+    outline: 0.5px solid hsl(var(--accent));
+    outline-offset: 0;
+  }
+
+  /* Light mode focus rings */
+  .input:focus,
+  input:focus,
+  textarea:focus,
+  [data-ui="input"]:focus {
+    outline: 0.5px solid hsl(var(--accent));
+    outline-offset: 0;
+  }
+
+  /* Dark mode subtle textured gradients for panels/headers */
+  .dark .panel,
+  .dark .header,
+  .dark [data-ui="panel"],
+  .dark [data-ui="header"] {
+    background-image: linear-gradient(
+      rgba(255,255,255,0.02),
+      rgba(0,0,0,0.02)
+    );
+  }
+
+  /* Dark mode adaptive accent hover effect */
+  .dark .btn-accent:hover,
+  .dark [data-ui="button"][data-variant="accent"]:hover {
+    filter: hue-rotate(10deg);
+    transition: filter 0.2s ease;
+  }
+
+  /* Dark mode subtle shadows */
+  .dark .card,
+  .dark .popover,
+  .dark [data-ui="card"],
+  .dark [data-ui="popover"] {
+    box-shadow: 0 2px 8px rgba(255,255,255,0.05);
+  }
+
+  /* Enhanced dark mode button states */
+  .dark .btn-secondary:hover,
+  .dark [data-ui="button"][data-variant="secondary"]:hover {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--secondary)) 0%,
+      hsl(220,5%,35%) 100%
+    );
+  }
+
+  /* Dark mode tertiary elements */
+  .dark .tertiary {
+    background: hsl(220, 5%, 35%);
+    color: hsl(var(--foreground));
   }
 }

@@ -5,16 +5,13 @@ import { Slot } from "@radix-ui/react-slot"
 import type { VariantProps} from "class-variance-authority";
 import { cva } from "class-variance-authority"
 import { PanelLeft } from "lucide-react"
-import { signOut } from "next-auth/react"
-import { Button } from "@/components/ui/button"
-
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import type { ButtonProps as ShadCNButtonProps } from "@/components/ui/button"; // Renamed to avoid conflict
 import { buttonVariants } from "@/components/ui/button" // Keep for styling reference if needed
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -202,6 +199,7 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
+            <SheetTitle className="sr-only">Navigation Menü</SheetTitle>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
@@ -409,12 +407,7 @@ const SidebarFooter = React.forwardRef<
       data-sidebar="footer"
       className={cn("flex flex-col gap-2 p-2", className)}
       {...props}
-    >
-      <Button variant="outline" onClick={() => signOut({ callbackUrl: '/anmelden' })}>
-        Abmelden
-      </Button>
-      {props.children}
-    </div>
+    />
   )
 })
 SidebarFooter.displayName = "SidebarFooter"

@@ -48,7 +48,17 @@ export const navItems: NavItem[] = [
         href: '/kleine-anfragen',
         icon: FileSearch2,
       },
+      {
+        title: 'Schriftliche Fragen',
+        href: '/schriftliche-fragen',
+        icon: FileSearch2,
+      },
     ],
+  },
+  {
+    title: 'Dokumentensuche',
+    href: '/dokumentensuche',
+    icon: FileSearch2,
   },
   {
     title: 'Reden',
@@ -106,6 +116,11 @@ export const bottomNavItems: NavItem[] = [
     title: 'Einstellungen',
     href: '/einstellungen',
     icon: Settings,
+  },
+  {
+    title: 'Abmelden',
+    href: '/abmelden',
+    icon: LogOut,
   },
 ];
 

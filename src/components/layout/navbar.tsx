@@ -25,7 +25,9 @@ export function Navbar({ className }: NavbarProps) {
     >
       <div className="flex items-center gap-4">
         <SidebarTrigger />
-        
+      </div>
+      
+      <div className="flex items-center gap-4">
         {/* Profile section */}
         {session?.user && (
           <div className="flex items-center gap-3">
@@ -43,10 +45,6 @@ export function Navbar({ className }: NavbarProps) {
             </Avatar>
           </div>
         )}
-      </div>
-      
-      <div className="flex items-center gap-4">
-        {/* Add right-side navbar content here if needed */}
       </div>
     </header>
   );

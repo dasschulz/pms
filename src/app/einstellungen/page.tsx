@@ -336,7 +336,7 @@ export default function EinstellungenPage() {
             <div className="flex items-center space-x-4">
               <Avatar className="w-20 h-20">
                 <AvatarImage src={userData.profilePictureUrl} alt="Profilbild" />
-                <AvatarFallback>
+                <AvatarFallback className="bg-gray-200 dark:bg-muted">
                   <User className="w-10 h-10" />
                 </AvatarFallback>
               </Avatar>
