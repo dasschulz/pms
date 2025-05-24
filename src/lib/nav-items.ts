@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle } from 'lucide-react';
+import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays } from 'lucide-react';
 
 export interface NavItem {
   title: string;
@@ -27,6 +27,11 @@ export const navItems: NavItem[] = [
     title: 'News',
     href: '/news',
     icon: Newspaper,
+  },
+  {
+    title: 'Tagesordnung',
+    href: '/tagesordnung',
+    icon: CalendarDays,
   },
   {
     title: 'Fragewesen',

@@ -19,32 +19,25 @@ export default function AnmeldenPage() {
   }, [status, router]);
 
   const images = [
-    "/public/images/anmelden/01.jpg",
-    "/public/images/anmelden/02.jpg",
-    "/public/images/anmelden/03.jpg",
-    "/public/images/anmelden/04.jpg",
-    "/public/images/anmelden/05.jpg",
-    "/public/images/anmelden/06.jpg",
-    "/public/images/anmelden/07.jpg",
-    "/public/images/anmelden/08.jpg",
-    "/public/images/anmelden/09.jpg",
-    "/public/images/anmelden/10.jpg",
-    "https://assets.aceternity.com/cloudinary_bkp/Spotlight_ar5jpr.png",
-    "https://assets.aceternity.com/cloudinary_bkp/Parallax_Scroll_pzlatw_anfkh7.png",
-    "https://assets.aceternity.com/tabs.png",
-    "https://assets.aceternity.com/cloudinary_bkp/Tracing_Beam_npujte.png",
-    "https://assets.aceternity.com/cloudinary_bkp/typewriter-effect.png",
-    "https://assets.aceternity.com/glowing-effect.webp",
-    "https://assets.aceternity.com/hover-border-gradient.png",
-    "https://assets.aceternity.com/cloudinary_bkp/Infinite_Moving_Cards_evhzur.png",
-    "https://assets.aceternity.com/cloudinary_bkp/Lamp_hlq3ln.png",
-    "https://assets.aceternity.com/macbook-scroll.png",
-    "https://assets.aceternity.com/cloudinary_bkp/Meteors_fye3ys.png",
-    "https://assets.aceternity.com/cloudinary_bkp/Moving_Border_yn78lv.png",
-    "https://assets.aceternity.com/multi-step-loader.png",
-    "https://assets.aceternity.com/vortex.png",
-    "https://assets.aceternity.com/wobble-card.png",
-    "https://assets.aceternity.com/world-map.webp",
+    "/images/anmelden/01.jpg",
+    "/images/anmelden/02.jpg",
+    "/images/anmelden/03.jpg",
+    "/images/anmelden/04.jpg",
+    "/images/anmelden/05.jpg",
+    "/images/anmelden/06.jpg",
+    "/images/anmelden/07.jpg",
+    "/images/anmelden/08.jpg",
+    "/images/anmelden/09.jpg",
+    "/images/anmelden/10.jpg",
+    "/images/anmelden/11.jpg",
+    "/images/anmelden/12.jpg",
+    "/images/anmelden/13.jpg",
+    "/images/anmelden/14.jpg",
+    "/images/anmelden/15.jpg",
+    "/images/anmelden/16.jpg",
+    "/images/anmelden/17.jpg",
+    "/images/anmelden/18.jpg",
+    "/images/anmelden/19.jpg",
   ];
 
   if (status === 'loading') {
@@ -56,7 +49,18 @@ export default function AnmeldenPage() {
   }
 
   return (
-    <div className="relative mx-auto flex h-screen w-full flex-col items-center justify-center overflow-x-hidden bg-background">
+    <div 
+      className="relative mx-auto flex h-screen w-full flex-col items-center justify-center overflow-hidden"
+      style={{
+        backgroundColor: 'hsl(326 100% 22%)',
+        backgroundImage: `
+          radial-gradient(circle at 20% 30%, hsl(0 100% 50%) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, hsl(0 100% 50%) 0%, transparent 40%),
+          radial-gradient(circle at 60% 80%, hsl(0 100% 50%) 0%, transparent 45%),
+          radial-gradient(circle at 10% 70%, hsl(0 100% 50%) 0%, transparent 35%)
+        `
+      }}
+    >
       <h1 className="relative z-20 mx-auto max-w-4xl text-center text-3xl font-bold text-balance text-foreground md:text-5xl lg:text-7xl font-work-sans font-black">
         Deine Webapp für den Bundestag:{" "}
         <span className="relative z-20 inline-block rounded-xl bg-primary/20 px-4 py-1 text-white backdrop-blur-sm">
@@ -81,7 +85,7 @@ export default function AnmeldenPage() {
       {/* overlay */}
       <div className="absolute inset-0 z-10 h-full w-full bg-background/80 dark:bg-background/40" />
       <ThreeDMarquee
-        className="pointer-events-none absolute inset-x-0 inset-y-0 h-[120vh] w-screen"
+        className="pointer-events-none absolute inset-0 !h-screen w-full !rounded-none"
         images={images}
       />
 

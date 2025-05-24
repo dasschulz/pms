@@ -1179,13 +1179,19 @@ export default function GegnerRecherchePage() {
                   <Separator className="md:hidden" />
 
                   {/* Right Column: Wikipedia Info (35%) */}
-                  <div className="w-full md:w-[35%] space-y-4">
+                  <motion.div 
+                    className="w-full md:w-[35%] space-y-4"
+                    animate={{
+                      filter: isImageHovering ? "blur(2px)" : "blur(0px)",
+                    }}
+                    transition={{ duration: 0.3 }}
+                  >
                     <h3 className="text-xl font-semibold">Kontroversen & Kritik (Wikipedia)</h3>
                     <div 
                       dangerouslySetInnerHTML={{ __html: selectedPolitician.wikipediaControversiesHtml || '' }} 
                       className="prose prose-sm dark:prose-invert max-w-none overflow-auto pr-2 prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600"
                     />
-                  </div>
+                  </motion.div>
                 </div>
               ) : (
                 // Single-column layout if no Wikipedia data
