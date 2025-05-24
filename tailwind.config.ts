@@ -13,6 +13,15 @@ export default {
         sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', '"Noto Sans"', 'sans-serif', '"Apple Color Emoji"', '"Segoe UI Emoji"', '"Segoe UI Symbol"', '"Noto Color Emoji"'],
         'work-sans': ['var(--font-work-sans)', 'sans-serif'],
       },
+      ringColor: {
+        DEFAULT: 'hsl(var(--accent))',
+      },
+      ringOffsetWidth: {
+        DEFAULT: '0.5px',
+      },
+      ringOffsetColor: {
+        DEFAULT: 'hsl(var(--background))',
+      },
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -98,5 +107,15 @@ export default {
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function({ addUtilities }: any) {
+      const newUtilities = {
+        '.transform-3d': {
+          'transform-style': 'preserve-3d',
+        },
+      }
+      addUtilities(newUtilities)
+    }
+  ],
 } satisfies Config;

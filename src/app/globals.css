@@ -47,7 +47,7 @@
 
     --border: 0 0% 90%;
     --input: 0 60% 97%;
-    --ring: 173 100% 35%;
+    --ring: 0 100% 50%; /* Use accent color for focus ring in light mode */
 
     /* Selection colors */
     --selection: 0 60% 97%; /* rosa */
@@ -107,7 +107,7 @@
     /* Inputs, borders & rings */
     --border: 220 5% 25%;              /* charcoal-780 for solid borders */
     --input: 220 5% 22%;               /* dark input background */
-    --ring: 220 5% 45%;                /* for focus outlines */
+    --ring: 0 0% 0% / 0;               /* transparent ring - no focus ring */
   
     /* Gradients */
     --gradient-border: linear-gradient(
@@ -176,6 +176,16 @@
 
 /* Dark Mode Enhanced Styling */
 @layer components {
+  /* Focus ring styles for light mode */
+  :not(.dark) *:focus-visible {
+    @apply ring-2 ring-accent ring-offset-[0.5px] ring-offset-background outline-none;
+  }
+
+  /* Focus ring styles for dark mode - keeping existing behavior */
+  .dark *:focus-visible {
+    @apply ring-0 outline-none;
+  }
+
   /* Dark mode card borders with gradient and glassmorphism */
   .dark .card,
   .dark [data-ui="card"] {
@@ -272,13 +282,109 @@
     background: linear-gradient(
       180deg,
       hsl(var(--secondary)) 0%,
-      hsl(220,5%,35%) 100%
+      hsl(220, 100%, 55%) 100%
     );
   }
 
   /* Dark mode tertiary elements */
   .dark .tertiary {
-    background: hsl(220, 5%, 35%);
-    color: hsl(var(--foreground));
+    background: hsl(220, 93%, 37%);
+    color: hsl(var(--input));
+  }
+
+  /* Custom Theme Toggle Switch from Uiverse.io by JustCode14 */
+  /* The switch - the box around the slider */
+  .theme-switch {
+    font-size: 12px;
+    position: relative;
+    display: inline-block;
+    width: 3.6em;
+    height: 1.76em;
+    border-radius: 30px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Hide default HTML checkbox */
+  .theme-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  /* The slider */
+  .theme-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--input);
+    transition: 0.4s;
+    border-radius: 30px;
+    overflow: hidden;
+  }
+
+  .theme-slider:before {
+    position: absolute;
+    content: "";
+    height: 1em;
+    width: 1em;
+    border-radius: 20px;
+    left: 0.3em;
+    bottom: 0.3em;
+    transition: 0.4s;
+    transition-timing-function: cubic-bezier(0.81, -0.04, 0.38, 1.5);
+    box-shadow: inset 8px -4px 0px 0px #fff;
+  }
+
+  .theme-switch input:checked + .theme-slider {
+    background-color: #00a6ff;
+  }
+
+  .theme-switch input:checked + .theme-slider:before {
+    transform: translateX(1.6em);
+    box-shadow: inset 15px -4px 0px 15px #ffcf48;
+  }
+
+  .theme-star {
+    background-color: #fff;
+    border-radius: 50%;
+    position: absolute;
+    width: 3px;
+    transition: all 0.4s;
+    height: 3px;
+  }
+
+  .theme-star_1 {
+    left: 1.8em;
+    top: 0.3em;
+  }
+
+  .theme-star_2 {
+    left: 1.6em;
+    top: 0.8em;
+  }
+
+  .theme-star_3 {
+    left: 2.1em;
+    top: 0.6em;
+  }
+
+  .theme-switch input:checked ~ .theme-slider .theme-star {
+    opacity: 0;
+  }
+
+  .theme-cloud {
+    width: 2.5em;
+    position: absolute;
+    bottom: -1em;
+    left: -0.8em;
+    opacity: 0;
+    transition: all 0.4s;
+  }
+
+  .theme-switch input:checked ~ .theme-slider .theme-cloud {
+    opacity: 1;
   }
 }

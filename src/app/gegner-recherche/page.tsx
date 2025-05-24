@@ -16,6 +16,8 @@ import { BiSolidBuildings } from "react-icons/bi";
 import { ImEarth } from "react-icons/im";
 import PdfGenerator from '@/components/ui/PdfGenerator';
 import { PDFDocument, rgb } from 'pdf-lib';
+import { Lens } from '@/components/ui/lens';
+import { motion } from "motion/react";
 
 interface Parliament {
   id: string; // API uses string IDs for parliaments sometimes, e.g. "5"
@@ -750,6 +752,9 @@ export default function GegnerRecherchePage() {
   const [dossierStatus, setDossierStatus] = useState<'idle' | 'generating' | 'completed' | 'error'>('idle');
   const [dossierData, setDossierData] = useState<{ pdfData: string; filename: string } | null>(null);
   
+  // Lens hover state
+  const [isImageHovering, setIsImageHovering] = useState(false);
+  
   const { toast } = useToast();
 
   // Add a direct toast trigger function that doesn't rely on effect scheduling
@@ -1010,24 +1015,37 @@ export default function GegnerRecherchePage() {
                 // Two-column layout if Wikipedia data exists
                 <div className="flex flex-col md:flex-row gap-6">
                   {/* Left Column: Abgeordnetenwatch Info (65%) */}
-                  <div className="w-full md:w-[65%] space-y-6">
+                  <motion.div 
+                    className="w-full md:w-[65%] space-y-6"
+                    animate={{
+                      filter: isImageHovering ? "blur(2px)" : "blur(0px)",
+                    }}
+                    transition={{ duration: 0.3 }}
+                  >
                     <div className="flex flex-col sm:flex-row gap-6">
                       <div className="w-32 h-32 md:w-48 md:h-48 flex-shrink-0">
                         {selectedPolitician.profile_image_url ? (
-                          <div className="relative h-full">
-                            <img 
-                              src={selectedPolitician.profile_image_url} 
-                              alt={`Portrait von ${selectedPolitician.label}`} 
-                              className={`rounded object-cover w-full h-full ${getPartyBorderClass(selectedPolitician.party?.label)}`}
-                            />
-                            {selectedPolitician.image_attribution && (
-                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-1 rounded-b">
-                                <span className="text-[8px] text-gray-300 block text-center">
-                                  {selectedPolitician.image_attribution}
-                                </span>
-                              </div>
-                            )}
-                          </div>
+                          <Lens 
+                            hovering={isImageHovering} 
+                            setHovering={setIsImageHovering}
+                            zoomFactor={2.0}
+                            lensSize={120}
+                          >
+                            <div className="relative h-full">
+                              <img 
+                                src={selectedPolitician.profile_image_url} 
+                                alt={`Portrait von ${selectedPolitician.label}`} 
+                                className={`rounded object-cover w-full h-full ${getPartyBorderClass(selectedPolitician.party?.label)}`}
+                              />
+                              {selectedPolitician.image_attribution && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-1 rounded-b">
+                                  <span className="text-[8px] text-gray-300 block text-center">
+                                    {selectedPolitician.image_attribution}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </Lens>
                         ) : (
                           <div className={`w-full h-full bg-gray-300 rounded flex items-center justify-center ${getPartyBorderClass(selectedPolitician.party?.label)}`}>
                             <span className="text-gray-500">Kein Bild</span>
@@ -1153,7 +1171,7 @@ export default function GegnerRecherchePage() {
                         </div>
                       </>
                     )}
-                  </div>
+                  </motion.div>
 
                   {/* Vertical Divider - visible on md screens and up */} 
                   <div className="hidden md:block w-px bg-gray-300 dark:bg-gray-700 self-stretch"></div>
@@ -1164,7 +1182,7 @@ export default function GegnerRecherchePage() {
                   <div className="w-full md:w-[35%] space-y-4">
                     <h3 className="text-xl font-semibold">Kontroversen & Kritik (Wikipedia)</h3>
                     <div 
-                      dangerouslySetInnerHTML={{ __html: selectedPolitician.wikipediaControversiesHtml }} 
+                      dangerouslySetInnerHTML={{ __html: selectedPolitician.wikipediaControversiesHtml || '' }} 
                       className="prose prose-sm dark:prose-invert max-w-none overflow-auto pr-2 prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600"
                     />
                   </div>
@@ -1175,140 +1193,160 @@ export default function GegnerRecherchePage() {
                   <div className="flex flex-col md:flex-row gap-6">
                     <div className="w-32 h-32 md:w-48 md:h-48 flex-shrink-0">
                       {selectedPolitician.profile_image_url ? (
-                        <div className="relative h-full">
-                          <img 
-                            src={selectedPolitician.profile_image_url} 
-                            alt={`Portrait von ${selectedPolitician.label}`} 
-                            className={`rounded object-cover w-full h-full ${getPartyBorderClass(selectedPolitician.party?.label)}`}
-                          />
-                          {selectedPolitician.image_attribution && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-1 rounded-b">
-                              <span className="text-[8px] text-gray-300 block text-center">
-                                {selectedPolitician.image_attribution}
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                        <Lens 
+                          hovering={isImageHovering} 
+                          setHovering={setIsImageHovering}
+                          zoomFactor={2.0}
+                          lensSize={120}
+                        >
+                          <div className="relative h-full">
+                            <img 
+                              src={selectedPolitician.profile_image_url} 
+                              alt={`Portrait von ${selectedPolitician.label}`} 
+                              className={`rounded object-cover w-full h-full ${getPartyBorderClass(selectedPolitician.party?.label)}`}
+                            />
+                            {selectedPolitician.image_attribution && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-1 rounded-b">
+                                <span className="text-[8px] text-gray-300 block text-center">
+                                  {selectedPolitician.image_attribution}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </Lens>
                       ) : (
                         <div className={`w-full h-full bg-gray-300 rounded flex items-center justify-center ${getPartyBorderClass(selectedPolitician.party?.label)}`}>
                           <span className="text-gray-500">Kein Bild</span>
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 space-y-2">
+                    <motion.div 
+                      className="flex-1 space-y-2"
+                      animate={{
+                        filter: isImageHovering ? "blur(2px)" : "blur(0px)",
+                      }}
+                      transition={{ duration: 0.3 }}
+                    >
                       <p><strong>Name:</strong> {selectedPolitician.label}</p>
                       {selectedPolitician.age && <p><strong>Alter:</strong> {selectedPolitician.age} Jahre</p>}
                       <p><strong>Partei:</strong> {selectedPolitician.party?.label || 'N/A'}</p>
                       {/* <p><strong>Parlament:</strong> {selectedPolitician.parliament_period?.parliament.label || 'N/A'}</p> */}
                       <p><strong>Fraktion:</strong> {selectedPolitician.fraction_membership?.[0]?.fraction.label || 'N/A'}</p>
                       <p><strong>Wahlkreis:</strong> {selectedPolitician.constituency?.name || 'N/A'}</p>
+                    </motion.div>
+                  </div>
+                  <motion.div
+                    animate={{
+                      filter: isImageHovering ? "blur(2px)" : "blur(0px)",
+                    }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Separator />
+                    <h3 className="text-xl font-semibold mb-4">Infos zur aktuellen Legislatur</h3>
+                    <div>
+                      <h4 className="text-lg font-semibold mb-2">Ausschüsse</h4>
+                      {selectedPolitician.committees_wrapped?.error ? (
+                        <p className="text-red-600">{selectedPolitician.committees_wrapped.error.message}</p>
+                      ) : selectedPolitician.committees_wrapped?.data && selectedPolitician.committees_wrapped.data.length > 0 ? (
+                        <ul className="list-disc list-inside space-y-1">
+                          {selectedPolitician.committees_wrapped.data.map(committee => (
+                            <li key={committee.id}>{committee.name} {committee.role && `(${committee.role})`}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>Keine Ausschussmitgliedschaften bekannt.</p>
+                      )}
                     </div>
-                  </div>
-                  <Separator />
-                  <h3 className="text-xl font-semibold mb-4">Infos zur aktuellen Legislatur</h3>
-                  <div>
-                    <h4 className="text-lg font-semibold mb-2">Ausschüsse</h4>
-                    {selectedPolitician.committees_wrapped?.error ? (
-                      <p className="text-red-600">{selectedPolitician.committees_wrapped.error.message}</p>
-                    ) : selectedPolitician.committees_wrapped?.data && selectedPolitician.committees_wrapped.data.length > 0 ? (
-                      <ul className="list-disc list-inside space-y-1">
-                        {selectedPolitician.committees_wrapped.data.map(committee => (
-                          <li key={committee.id}>{committee.name} {committee.role && `(${committee.role})`}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>Keine Ausschussmitgliedschaften bekannt.</p>
-                    )}
-                  </div>
-                  <Separator />
-                  <div>
-                    <h4 className="text-lg font-semibold mb-2">Nebentätigkeiten</h4>
-                    {selectedPolitician.side_jobs_wrapped?.error ? (
-                      <p className="text-red-600">{selectedPolitician.side_jobs_wrapped.error.message}</p>
-                    ) : selectedPolitician.side_jobs_wrapped?.data && selectedPolitician.side_jobs_wrapped.data.length > 0 ? (
-                      <ul className="space-y-2">
-                        {selectedPolitician.side_jobs_wrapped.data.map(job => (
-                          <li key={job.id} className="p-2 border rounded">
-                            <p><strong>Tätigkeit:</strong> {job.label}</p>
-                            {job.organization && <p><strong>Organisation:</strong> {job.organization}</p>}
-                            {job.category && <p><strong>Kategorie:</strong> {job.category}</p>}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>Keine Nebentätigkeiten bekannt.</p>
-                    )}
-                  </div>
-                  <Separator />
-                  <div>
-                    <h4 className="text-lg font-semibold mb-2">Abstimmungsverhalten</h4>
-                    {selectedPolitician.votes_wrapped?.error ? (
-                      <p className="text-red-600">{selectedPolitician.votes_wrapped.error.message}</p>
-                    ) : selectedPolitician.votes_wrapped?.data && selectedPolitician.votes_wrapped.data.length > 0 ? (
-                      <ul className="space-y-2">
-                        {selectedPolitician.votes_wrapped.data.map(vote => (
-                          <li key={vote.id} className="p-3 border rounded hover:bg-gray-50 transition-colors cursor-pointer" 
-                              onClick={() => vote.abgeordnetenwatch_url ? window.open(vote.abgeordnetenwatch_url, '_blank') : null}>
-                            <div className="flex justify-between items-start">
-                              <p className="font-medium">{vote.topic}</p>
-                              {vote.date && <p className="text-sm text-gray-600 whitespace-nowrap ml-2">{formatDate(vote.date)}</p>}
-                            </div>
-                            <div className="mt-2 flex items-center">
-                              <span className="font-semibold mr-2">Entscheidung:</span>
-                              {vote.decision === 'yes' && (
-                                <span className="text-green-600 flex items-center">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                  {getVoteDisplayText(vote.decision)}
-                                </span>
-                              )}
-                              {vote.decision === 'no' && (
-                                <span className="text-red-600 flex items-center">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                  </svg>
-                                  {getVoteDisplayText(vote.decision)}
-                                </span>
-                              )}
-                              {vote.decision === 'abstain' && (
-                                <span className="text-gray-500 flex items-center">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M4 10a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1z" clipRule="evenodd" />
-                                  </svg>
-                                  {getVoteDisplayText(vote.decision)}
-                                </span>
-                              )}
-                              {(vote.decision === 'no_show' || vote.decision === 'no-show') && (
-                                <span className="text-gray-400 flex items-center">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
-                                    <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
-                                  </svg>
-                                  {getVoteDisplayText(vote.decision)}
-                                </span>
-                              )}
-                              {(vote.decision !== 'yes' && vote.decision !== 'no' && vote.decision !== 'abstain' && vote.decision !== 'no_show' && vote.decision !== 'no-show') && (
-                                <span className="text-gray-500">{getVoteDisplayText(vote.decision)}</span>
-                              )}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>Kein Abstimmungsverhalten bekannt.</p>
-                    )}
-                  </div>
-                  <Separator />
-                  {selectedPolitician.wikipediaPoliticalPositionsHtml && (
-                    <div className="mt-6">
-                      <h3 className="text-xl font-semibold mb-2">Positionen über die Jahre</h3>
-                      <div 
-                        dangerouslySetInnerHTML={{ __html: selectedPolitician.wikipediaPoliticalPositionsHtml }} 
-                        className="prose prose-sm dark:prose-invert max-w-none overflow-auto pr-2 prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600"
-                      />
+                    <Separator />
+                    <div>
+                      <h4 className="text-lg font-semibold mb-2">Nebentätigkeiten</h4>
+                      {selectedPolitician.side_jobs_wrapped?.error ? (
+                        <p className="text-red-600">{selectedPolitician.side_jobs_wrapped.error.message}</p>
+                      ) : selectedPolitician.side_jobs_wrapped?.data && selectedPolitician.side_jobs_wrapped.data.length > 0 ? (
+                        <ul className="space-y-2">
+                          {selectedPolitician.side_jobs_wrapped.data.map(job => (
+                            <li key={job.id} className="p-2 border rounded">
+                              <p><strong>Tätigkeit:</strong> {job.label}</p>
+                              {job.organization && <p><strong>Organisation:</strong> {job.organization}</p>}
+                              {job.category && <p><strong>Kategorie:</strong> {job.category}</p>}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>Keine Nebentätigkeiten bekannt.</p>
+                      )}
                     </div>
-                  )}
+                    <Separator />
+                    <div>
+                      <h4 className="text-lg font-semibold mb-2">Abstimmungsverhalten</h4>
+                      {selectedPolitician.votes_wrapped?.error ? (
+                        <p className="text-red-600">{selectedPolitician.votes_wrapped.error.message}</p>
+                      ) : selectedPolitician.votes_wrapped?.data && selectedPolitician.votes_wrapped.data.length > 0 ? (
+                        <ul className="space-y-2">
+                          {selectedPolitician.votes_wrapped.data.map(vote => (
+                            <li key={vote.id} className="p-3 border rounded hover:bg-gray-50 transition-colors cursor-pointer" 
+                                onClick={() => vote.abgeordnetenwatch_url ? window.open(vote.abgeordnetenwatch_url, '_blank') : null}>
+                              <div className="flex justify-between items-start">
+                                <p className="font-medium">{vote.topic}</p>
+                                {vote.date && <p className="text-sm text-gray-600 whitespace-nowrap ml-2">{formatDate(vote.date)}</p>}
+                              </div>
+                              <div className="mt-2 flex items-center">
+                                <span className="font-semibold mr-2">Entscheidung:</span>
+                                {vote.decision === 'yes' && (
+                                  <span className="text-green-600 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                    {getVoteDisplayText(vote.decision)}
+                                  </span>
+                                )}
+                                {vote.decision === 'no' && (
+                                  <span className="text-red-600 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    </svg>
+                                    {getVoteDisplayText(vote.decision)}
+                                  </span>
+                                )}
+                                {vote.decision === 'abstain' && (
+                                  <span className="text-gray-500 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M4 10a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    {getVoteDisplayText(vote.decision)}
+                                  </span>
+                                )}
+                                {(vote.decision === 'no_show' || vote.decision === 'no-show') && (
+                                  <span className="text-gray-400 flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                                      <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                                    </svg>
+                                    {getVoteDisplayText(vote.decision)}
+                                  </span>
+                                )}
+                                {(vote.decision !== 'yes' && vote.decision !== 'no' && vote.decision !== 'abstain' && vote.decision !== 'no_show' && vote.decision !== 'no-show') && (
+                                  <span className="text-gray-500">{getVoteDisplayText(vote.decision)}</span>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p>Kein Abstimmungsverhalten bekannt.</p>
+                      )}
+                    </div>
+                    <Separator />
+                    {selectedPolitician.wikipediaPoliticalPositionsHtml && (
+                      <div className="mt-6">
+                        <h3 className="text-xl font-semibold mb-2">Positionen über die Jahre</h3>
+                        <div 
+                          dangerouslySetInnerHTML={{ __html: selectedPolitician.wikipediaPoliticalPositionsHtml || '' }} 
+                          className="prose prose-sm dark:prose-invert max-w-none overflow-auto pr-2 prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600"
+                        />
+                      </div>
+                    )}
+                  </motion.div>
                 </div>
               )}
 

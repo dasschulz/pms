@@ -41,8 +41,8 @@ export default function DokumentensuchePage() {
   const [results, setResults] = useState<DIPDocument[]>([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
-    documentType: '',
-    wahlperiode: '',
+    documentType: 'all',
+    wahlperiode: 'all',
     dateFrom: '',
     dateTo: '',
     urheber: ''
@@ -68,12 +68,19 @@ export default function DokumentensuchePage() {
     
     setLoading(true);
     try {
+      // Filter out "all" values and empty strings
+      const activeFilters = Object.entries(filters)
+        .filter(([_, value]) => value && value !== 'all')
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {} as Partial<SearchFilters>);
+
+      const searchFilters = {
+        ...activeFilters,
+        ...(activeFilters.documentType && { entitaet: activeFilters.documentType }),
+      };
+
       const params = new URLSearchParams({
         q: searchQuery,
-        f: JSON.stringify({
-          ...filters,
-          ...(filters.documentType && { entitaet: filters.documentType }),
-        }),
+        f: JSON.stringify(searchFilters),
         num: '20',
         start: ((currentPage - 1) * 20).toString()
       });
@@ -171,7 +178,7 @@ export default function DokumentensuchePage() {
                       <SelectValue placeholder="Alle Dokumenttypen" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Alle Dokumenttypen</SelectItem>
+                      <SelectItem value="all">Alle Dokumenttypen</SelectItem>
                       {documentTypes.map(type => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}
@@ -190,7 +197,7 @@ export default function DokumentensuchePage() {
                       <SelectValue placeholder="Alle Wahlperioden" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Alle Wahlperioden</SelectItem>
+                      <SelectItem value="all">Alle Wahlperioden</SelectItem>
                       {wahlperioden.map(wp => (
                         <SelectItem key={wp.value} value={wp.value}>
                           {wp.label}
