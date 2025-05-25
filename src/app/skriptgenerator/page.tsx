@@ -22,8 +22,8 @@ export default function VideoScriptPage() {
 
   return (
     <PageLayout
-      title="Kurz-Videoskript-Generator"
-      description="Erstellen Sie ansprechende Kurz-Videoskripte. Definieren Sie Sprecherattribute, Populismusniveau und Schlüsselthemen, um maßgeschneiderte Inhalte zu generieren."
+      title="Skriptgenerator KI"
+      description="Erstelle ansprechende Kurz-Videoskripte. Definiere Sprecherattribute, Populismusniveau und Schlüsselthemen, um maßgeschneiderte Inhalte zu generieren."
       headerActions={settingsButton} // Pass the button here
     >
       <VideoScriptForm 

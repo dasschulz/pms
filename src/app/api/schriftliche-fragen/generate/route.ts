@@ -12,14 +12,7 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const { topic, context, specificFocus } = await request.json();
-
-    if (!topic?.trim()) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Thema ist erforderlich' 
-      }, { status: 400 });
-    }
+    const { context, specificFocus } = await request.json();
 
     // Build the prompt for AI generation following GOBT rules
     const systemPrompt = `Du bist ein Experte für parlamentarische Schriftliche Fragen nach der Geschäftsordnung des Bundestages (GOBT). 
@@ -31,21 +24,23 @@ WICHTIGE REGELN FÜR SCHRIFTLICHE FRAGEN:
 4. Maximal 1800 Zeichen
 5. Maximal zwei Unterfragen in einem sachlichen Zusammenhang
 6. Fragen müssen sachlich und bestimmt sein
-7. Keine unsachlichen, beleidigenden oder polemischen Formulierungen
+7. Keine unsachlichen, beleidigenden, wertenden oder polemischen Formulierungen
 8. Fragen dürfen nur den Verantwortungsbereich der Bundesregierung betreffen
 9. Keine Dreiecksfragen (Bewertung Dritter durch Bundesregierung)
 10. Quellenangaben in Klammern direkt nach der Textstelle
+11. Maximal ein Satz
+12. Falls möglich, beginnen mit "Welche Kenntnisse hat die Bundesregierung über...", "Welche Informationen liegen der Bundesregierung zu..."
 
 Erstelle eine gültige schriftliche Frage, die alle diese Regeln befolgt.`;
 
-    const userPrompt = `Thema: ${topic}
-${context ? `Kontext: ${context}` : ''}
+    const userPrompt = `${context ? `Kontext: ${context}` : ''}
 ${specificFocus ? `Spezifischer Fokus: ${specificFocus}` : ''}
 
 Erstelle eine schriftliche Frage zu diesem Thema, die alle GOBT-Regeln befolgt. Die Frage sollte:
 - Direkt als Fragesatz beginnen
 - Sachlich und präzise formuliert sein
 - Im Verantwortungsbereich der Bundesregierung liegen
+- Nur einen Satz lang sein
 - Unter 1800 Zeichen bleiben
 - Keine Einleitung oder Begründung enthalten`;
 

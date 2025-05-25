@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession } from "next-auth/react";
 import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
 interface NavbarProps {
   className?: string;
@@ -26,6 +27,9 @@ export function Navbar({ className }: NavbarProps) {
       <div className="flex items-center gap-4">
         <SidebarTrigger />
       </div>
+      
+      {/* Breadcrumbs will take up the central space */}
+      <Breadcrumbs />
       
       <div className="flex items-center gap-4">
         {/* Profile section */}

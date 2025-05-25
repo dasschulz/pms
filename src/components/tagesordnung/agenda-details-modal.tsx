@@ -44,7 +44,7 @@ export function AgendaDetailsModal({ isOpen, onOpenChange, agendaItem }: AgendaD
     }
     
     if (statusLower.includes('überweisung') || statusLower.includes('überwiesen')) {
-      return 'text-gray-600'
+      return 'text-gray-600 dark:text-gray-300'
     }
     
     return 'text-muted-foreground'
@@ -60,39 +60,48 @@ export function AgendaDetailsModal({ isOpen, onOpenChange, agendaItem }: AgendaD
     
     // Remove common status patterns from description
     return description
-      .replace(/Status:\s*(angenommen|abgelehnt|.*?)\s*/gi, '')
+      .replace(/Status:\s*(angenommen|abgelehnt|überwiesen|überweisung.*?)\s*/gi, '')
       .replace(/\s*Status\s*$/gi, '')
+      .replace(/\s*Status:\s*/gi, '')
+      .replace(/Status\s*angenommen/gi, '')
+      .replace(/Status\s*abgelehnt/gi, '')
+      .replace(/Status\s*überwiesen/gi, '')
       .trim()
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className={`sm:max-w-[600px] bg-background/10 backdrop-blur-sm border max-h-[80vh] overflow-y-auto ${
-        isLinkeItem ? 'border-red-500' : 'border-border'
-      }`}>
-        <DialogHeader>
-          <DialogTitle className="text-center text-xl font-bold font-work-sans">
-            Tagesordnungspunkt Details
+      <DialogContent 
+        className={`sm:max-w-[600px] backdrop-blur-sm border max-h-[80vh] overflow-y-auto ${
+          isLinkeItem 
+            ? 'border-red-500 shadow-red-500/20 shadow-2xl' 
+            : 'border shadow-border/20 shadow-2xl'
+        } 
+        bg-[radial-gradient(ellipse_at_top_left,rgba(255,255,255,0.8)_0%,rgba(255,255,255,0.3)_50%,transparent_100%),rgba(255,255,255,0.5)]
+        dark:bg-background/95`}
+      >
+        <DialogHeader className="px-6">
+          <DialogTitle className="text-left text-xl font-bold font-work-sans">
+            {agendaItem.title}
           </DialogTitle>
-          <DialogDescription className="text-center">
-            Vollständige Informationen zum Agenda-Punkt
-          </DialogDescription>
+          {agendaItem.status && (
+            <DialogDescription className={`text-left font-medium ${getStatusColor(agendaItem.status)}`}>
+              {agendaItem.status}
+            </DialogDescription>
+          )}
         </DialogHeader>
         
         <Card className="border-0 shadow-none bg-transparent">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg leading-tight">
-              {agendaItem.title}
-            </CardTitle>
-            {/* Status as subheading with color indicator */}
-            {agendaItem.status && (
-              <div className={`text-sm font-medium mt-2 ${getStatusColor(agendaItem.status)}`}>
-                {agendaItem.status}
+          <CardContent className="space-y-6 pt-6">
+            {/* TOP Number - moved below subheading and above Zeitraum */}
+            {agendaItem.top && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="font-medium">Tagesordnungspunkt {agendaItem.top}</span>
+                </div>
               </div>
             )}
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
+
             {/* Time Information */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
@@ -113,15 +122,6 @@ export function AgendaDetailsModal({ isOpen, onOpenChange, agendaItem }: AgendaD
               </div>
             </div>
 
-            {/* TOP Number - as one line without border */}
-            {agendaItem.top && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium">Tagesordnungspunkt {agendaItem.top}</span>
-                </div>
-              </div>
-            )}
-
             {/* Description - without border */}
             {agendaItem.description && (
               <div className="space-y-2">
@@ -137,21 +137,18 @@ export function AgendaDetailsModal({ isOpen, onOpenChange, agendaItem }: AgendaD
               </div>
             )}
 
-            {/* Additional Information */}
+            {/* Additional Information - converted to direct link */}
             {(agendaItem as any).url && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Weitere Informationen:</span>
-                </div>
-                <div className="ml-6">
                   <a 
                     href={(agendaItem as any).url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline break-all"
+                    className="font-medium text-primary hover:underline"
                   >
-                    {(agendaItem as any).url}
+                    Weitere Informationen
                   </a>
                 </div>
               </div>

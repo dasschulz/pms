@@ -12,6 +12,8 @@ import { Loader2, HelpCircle, FileQuestion, CheckCircle, AlertTriangle, Copy, Do
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { FormLabel, FormDescription } from '@/components/ui/form';
+import { FileText } from 'lucide-react';
 
 interface GeneratedQuestion {
   question: string;
@@ -22,7 +24,6 @@ interface GeneratedQuestion {
 }
 
 export default function SchriftlicheFragenPage() {
-  const [topic, setTopic] = useState('');
   const [context, setContext] = useState('');
   const [specificFocus, setSpecificFocus] = useState('');
   const [generatedQuestion, setGeneratedQuestion] = useState<GeneratedQuestion | null>(null);
@@ -30,7 +31,7 @@ export default function SchriftlicheFragenPage() {
   const [savedQuestions, setSavedQuestions] = useState<GeneratedQuestion[]>([]);
 
   const handleGenerate = async () => {
-    if (!topic.trim()) return;
+    if (!context.trim() && !specificFocus.trim()) return;
     
     setLoading(true);
     try {
@@ -40,7 +41,6 @@ export default function SchriftlicheFragenPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          topic: topic.trim(),
           context: context.trim(),
           specificFocus: specificFocus.trim()
         }),
@@ -204,20 +204,10 @@ export default function SchriftlicheFragenPage() {
           <CardHeader>
             <CardTitle>Frage generieren</CardTitle>
             <CardDescription>
-              Geben Sie das Thema und den Kontext für Ihre schriftliche Frage an
+              Gibt das Thema und den Kontext für deine schriftliche Frage an
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="topic">Thema/Bereich *</Label>
-              <Input
-                id="topic"
-                placeholder="z.B. Klimaschutz, Digitalisierung, Bildungspolitik..."
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
-            </div>
-
             <div>
               <Label htmlFor="context">Kontext/Hintergrund</Label>
               <Textarea
@@ -230,7 +220,7 @@ export default function SchriftlicheFragenPage() {
             </div>
 
             <div>
-              <Label htmlFor="focus">Spezifischer Fokus</Label>
+              <Label htmlFor="focus">Zielstellung</Label>
               <Input
                 id="focus"
                 placeholder="Worauf soll die Frage genau abzielen?"
@@ -241,7 +231,7 @@ export default function SchriftlicheFragenPage() {
 
             <Button 
               onClick={handleGenerate} 
-              disabled={loading || !topic.trim()}
+              disabled={loading || (!context.trim() && !specificFocus.trim())}
               className="w-full"
             >
               {loading ? (
@@ -255,32 +245,20 @@ export default function SchriftlicheFragenPage() {
         </Card>
 
         {/* Generated Question */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Generierte Frage
-              {generatedQuestion && (
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyToClipboard(generatedQuestion.question)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={saveQuestion}
-                  >
-                    Speichern
-                  </Button>
-                </div>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {generatedQuestion ? (
+        {generatedQuestion && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Generierte Frage</CardTitle>
+                <CardDescription>
+                  Überprüfe und optimiere die generierte Frage.
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => generatedQuestion && copyToClipboard(generatedQuestion.question)}>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-4">
                 <Textarea
                   value={generatedQuestion.question}
@@ -347,14 +325,9 @@ export default function SchriftlicheFragenPage() {
                   </Alert>
                 )}
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileQuestion className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Generieren Sie eine Frage, um sie hier zu sehen</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Saved Questions */}

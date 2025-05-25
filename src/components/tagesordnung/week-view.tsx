@@ -78,7 +78,7 @@ export function WeekView({ currentWeek, agendaData, onDateSelect }: WeekViewProp
     
     if (statusLower.includes('überweisung') || statusLower.includes('überwiesen')) {
       return (
-        <Badge className="bg-gray-500/20 text-gray-600 border-gray-500/30 text-[10px] px-1 py-0 h-4">
+        <Badge className="bg-gray-500/20 text-gray-600 dark:text-gray-300 border-gray-500/30 text-[10px] px-1 py-0 h-4">
           Überwiesen
         </Badge>
       )
@@ -128,23 +128,29 @@ export function WeekView({ currentWeek, agendaData, onDateSelect }: WeekViewProp
           <div
             key={index}
             className={cn(
-              "text-center p-3 rounded-lg border cursor-pointer transition-colors",
+              "text-center p-3 rounded-lg border cursor-pointer transition-colors group",
               isToday(day) 
                 ? "bg-primary text-primary-foreground border-primary" 
-                : "hover:bg-muted border-border"
+                : "hover:bg-[hsl(0,100%,50%)] border-border"
             )}
             onClick={() => onDateSelect(day)}
           >
-            <div className="text-sm font-medium">
+            <div className={cn(
+              "text-sm font-medium",
+              isToday(day) ? "text-primary-foreground" : "text-foreground group-hover:text-white"
+            )}>
               {format(day, 'EEEE', { locale: de })}
             </div>
             <div className={cn(
               "text-lg font-bold",
-              isToday(day) ? "text-primary-foreground" : "text-foreground"
+              isToday(day) ? "text-primary-foreground" : "text-foreground group-hover:text-white"
             )}>
               {format(day, 'd', { locale: de })}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className={cn(
+              "text-xs",
+              isToday(day) ? "text-primary-foreground" : "text-muted-foreground group-hover:text-white"
+            )}>
               {format(day, 'MMM', { locale: de })}
             </div>
           </div>
@@ -175,16 +181,20 @@ export function WeekView({ currentWeek, agendaData, onDateSelect }: WeekViewProp
                     <div
                       key={eventIndex}
                       className={cn(
-                        "bg-card border rounded p-2 text-xs hover:shadow-sm transition-shadow cursor-pointer",
+                        "bg-card border rounded p-2 text-xs hover:shadow-sm hover:border-[hsl(173,100%,35%)] transition-all cursor-pointer",
                         getEventBorderClass(event)
                       )}
                       onClick={() => handleEventClick(event)}
                     >
-                      <div className="flex items-start justify-between gap-1 mb-1">
-                        <div className="font-medium text-xs leading-tight line-clamp-2 flex-1">
+                      <div className="space-y-1 mb-1">
+                        {getStatusBadge(event.status) && (
+                          <div className="flex justify-start">
+                            {getStatusBadge(event.status)}
+                          </div>
+                        )}
+                        <div className="font-medium text-xs leading-tight">
                           {event.title}
                         </div>
-                        {getStatusBadge(event.status)}
                       </div>
                       
                       {event.start && (
@@ -213,15 +223,6 @@ export function WeekView({ currentWeek, agendaData, onDateSelect }: WeekViewProp
           )
         })}
       </div>
-
-      {/* Summary */}
-      {agendaData && agendaData.length > 0 && (
-        <div className="mt-4 p-3 bg-muted rounded-lg">
-          <div className="text-sm text-muted-foreground">
-            <strong>{agendaData.length}</strong> Tagesordnungspunkte für KW {currentWeek.week}/{currentWeek.year}
-          </div>
-        </div>
-      )}
 
       <AgendaDetailsModal 
         isOpen={isModalOpen}

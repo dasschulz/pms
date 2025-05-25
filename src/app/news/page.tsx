@@ -205,8 +205,8 @@ export default function NewsPage() {
 
   return (
     <PageLayout
-      title="Aktuelles (Nachrichten)"
-      description="Bleiben Sie auf dem Laufenden mit aktuellen Google News-Ergebnissen zu Ihnen, Ihren Politikbereichen und DIE LINKE."
+      title="Aktuelle Nachrichten"
+      description="Bleib auf dem Laufenden mit aktuellen Google News-Ergebnissen zu dir, deinen Politikbereichen und DIE LINKE."
     >
       <Dialog open={!!selectedNewsItem} onOpenChange={(isOpen) => {
         if (!isOpen) {

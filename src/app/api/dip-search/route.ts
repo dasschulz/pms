@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const DIP_BASE_URL = 'https://search.dip.bundestag.de/api/v1';
+// API key from environment variable (.env.local)
+// To get a personal API key, email: infoline.id3@bundestag.de
+const DIP_API_KEY = process.env.DIP_API_KEY;
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,14 +13,13 @@ export async function GET(request: NextRequest) {
     const num = searchParams.get('num') || '20';
     const start = searchParams.get('start') || '0';
 
-    if (!query) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Suchbegriff ist erforderlich' 
-      }, { status: 400 });
+    if (!DIP_API_KEY) {
+      return NextResponse.json({
+        success: false,
+        error: 'DIP API-Schlüssel nicht konfiguriert. Bitte DIP_API_KEY in .env.local hinzufügen.'
+      }, { status: 500 });
     }
 
-    // Parse filters
     let parsedFilters: any = {};
     if (filters) {
       try {
@@ -27,39 +29,48 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Build search parameters for DIP API
+    let apiPath = '/drucksache-text';
+    let isDrucksacheSearch = true;
+
+    if (parsedFilters.documentType === 'Plenarprotokoll') {
+      apiPath = '/plenarprotokoll-text';
+      isDrucksacheSearch = false;
+    } else if (parsedFilters.documentType === 'Drucksache') {
+      // apiPath is already '/drucksache-text'
+      // isDrucksacheSearch is already true
+    }
+
     const dipParams = new URLSearchParams({
-      q: query,
-      num: num,
-      start: start,
-      format: 'json'
+      rows: num,
+      offset: start,
+      format: 'json',
+      apikey: DIP_API_KEY
     });
 
-    // Add filters to the DIP API call
-    if (parsedFilters.documentType && parsedFilters.documentType !== '') {
-      dipParams.append('entitaet', parsedFilters.documentType);
+    if (query) {
+      dipParams.append('f.titel', query);
     }
     
     if (parsedFilters.wahlperiode && parsedFilters.wahlperiode !== '') {
-      dipParams.append('wahlperiode', parsedFilters.wahlperiode);
+      dipParams.append('f.wahlperiode', parsedFilters.wahlperiode);
     }
 
     if (parsedFilters.dateFrom && parsedFilters.dateFrom !== '') {
-      dipParams.append('datum.start', parsedFilters.dateFrom);
+      dipParams.append('f.datum.start', parsedFilters.dateFrom);
     }
 
     if (parsedFilters.dateTo && parsedFilters.dateTo !== '') {
-      dipParams.append('datum.end', parsedFilters.dateTo);
+      dipParams.append('f.datum.end', parsedFilters.dateTo);
     }
 
-    if (parsedFilters.urheber && parsedFilters.urheber !== '') {
-      dipParams.append('urheber', parsedFilters.urheber);
+    if (isDrucksacheSearch && parsedFilters.urheber && parsedFilters.urheber !== '') {
+      dipParams.append('f.urheber', parsedFilters.urheber);
     }
 
-    console.log('DIP API URL:', `${DIP_BASE_URL}/search?${dipParams.toString()}`);
+    const apiUrl = `${DIP_BASE_URL}${apiPath}?${dipParams.toString()}`;
+    console.log('DIP API URL:', apiUrl);
 
-    // Make request to DIP API
-    const response = await fetch(`${DIP_BASE_URL}/search?${dipParams.toString()}`, {
+    const response = await fetch(apiUrl, {
       headers: {
         'Accept': 'application/json',
         'User-Agent': 'MdB-App/1.0'
@@ -68,21 +79,44 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       console.error('DIP API error:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('DIP API raw error response:', errorText);
+      
+      if (response.status === 401) {
+        return NextResponse.json({
+          success: false,
+          error: 'API-Schlüssel ungültig oder abgelaufen. Bitte wenden Sie sich an infoline.id3@bundestag.de für einen neuen Schlüssel.'
+        }, { status: 401 });
+      }
+      
       return NextResponse.json({
         success: false,
         error: `DIP API Fehler: ${response.status} ${response.statusText}`
       }, { status: response.status });
     }
 
-    const dipData = await response.json();
-    console.log('DIP API response:', dipData);
+    const responseText = await response.text();
+    console.log('DIP API raw response:', responseText);
 
-    // Transform the response to match our interface
+    let dipData;
+    try {
+      dipData = JSON.parse(responseText);
+    } catch (jsonError) {
+      console.error('Failed to parse DIP API response as JSON:', jsonError);
+      console.error('DIP API raw response that failed parsing:', responseText);
+      return NextResponse.json({
+        success: false,
+        error: 'Fehler beim Verarbeiten der DIP API Antwort'
+      }, { status: 500 });
+    }
+    
+    console.log('DIP API parsed response:', dipData);
+
     const transformedDocuments = dipData.documents?.map((doc: any) => ({
       id: doc.id || '',
       title: doc.titel || doc.title || 'Ohne Titel',
       subtitle: doc.untertitel || doc.subtitle,
-      documentType: doc.typ || doc.documentType || 'Unbekannt',
+      documentType: doc.dokumentart || doc.typ || 'Unbekannt',
       date: doc.datum || doc.date || '',
       drucksachetyp: doc.drucksachetyp,
       nummer: doc.nummer || doc.number,

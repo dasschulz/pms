@@ -93,27 +93,15 @@ export function TagesordnungCalendar() {
 
   return (
     <div className="space-y-4">
-      {/* Header Controls */}
+      {/* Single Integrated Card */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
-              Bundestag Tagesordnung
-            </CardTitle>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              {getBerlinTime()}
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+        <CardHeader className="pb-2">
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             {/* View Mode Tabs */}
-            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="[&>[role=tablist]]:bg-[hsl(0,100%,50%)] [&>[role=tablist]]:text-white dark:[&>[role=tablist]]:bg-muted dark:[&>[role=tablist]]:text-muted-foreground">
               <TabsList>
-                <TabsTrigger value="day">Tag</TabsTrigger>
-                <TabsTrigger value="week">Woche</TabsTrigger>
+                <TabsTrigger value="day" className="data-[state=active]:bg-white data-[state=active]:text-[hsl(0,100%,50%)] dark:data-[state=active]:bg-muted-foreground dark:data-[state=active]:text-muted">Tag</TabsTrigger>
+                <TabsTrigger value="week" className="data-[state=active]:bg-white data-[state=active]:text-[hsl(0,100%,50%)] dark:data-[state=active]:bg-muted-foreground dark:data-[state=active]:text-muted">Woche</TabsTrigger>
               </TabsList>
             </Tabs>
 
@@ -128,16 +116,12 @@ export function TagesordnungCalendar() {
               <Button variant="outline" size="sm" onClick={() => navigateWeek('next')}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <div className="text-sm font-medium px-3 py-1 bg-muted rounded">
+              <div className="text-sm font-medium px-3 py-1 bg-[hsl(0,100%,50%)] text-white dark:bg-muted dark:text-muted-foreground rounded">
                 {getNavigationLabel()}
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Calendar Content */}
-      <Card>
+        </CardHeader>
         <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center h-64">

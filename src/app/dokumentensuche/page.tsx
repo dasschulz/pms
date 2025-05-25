@@ -20,7 +20,15 @@ interface DIPDocument {
   nummer?: string;
   wahlperiode?: string;
   herausgeber?: string;
-  fundstelle?: string;
+  fundstelle?: {
+    id?: string;
+    pdf_url?: string;
+    dokumentnummer?: string;
+    datum?: string;
+    drucksachetyp?: string;
+    herausgeber?: string;
+    seite?: string;
+  };
   urheber?: Array<{
     titel: string;
   }>;
@@ -73,10 +81,30 @@ export default function DokumentensuchePage() {
         .filter(([_, value]) => value && value !== 'all')
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {} as Partial<SearchFilters>);
 
-      const searchFilters = {
-        ...activeFilters,
-        ...(activeFilters.documentType && { entitaet: activeFilters.documentType }),
-      };
+      // Build proper search filters for DIP API
+      const searchFilters: any = {};
+      
+      // Map documentType to entitaet for DIP API
+      if (activeFilters.documentType) {
+        searchFilters.documentType = activeFilters.documentType;
+      }
+      
+      // Add other filters directly
+      if (activeFilters.wahlperiode) {
+        searchFilters.wahlperiode = activeFilters.wahlperiode;
+      }
+      
+      if (activeFilters.dateFrom) {
+        searchFilters.dateFrom = activeFilters.dateFrom;
+      }
+      
+      if (activeFilters.dateTo) {
+        searchFilters.dateTo = activeFilters.dateTo;
+      }
+      
+      if (activeFilters.urheber) {
+        searchFilters.urheber = activeFilters.urheber;
+      }
 
       const params = new URLSearchParams({
         q: searchQuery,
@@ -120,7 +148,7 @@ export default function DokumentensuchePage() {
         <div>
           <h1 className="text-3xl font-bold">Dokumentensuche</h1>
           <p className="text-muted-foreground">
-            Durchsuchen Sie das Informationssystem für Parlamentsmaterialien (DIP)
+            Durchsuche das Informationssystem für Parlamentsmaterialien (DIP)
           </p>
         </div>
       </div>
@@ -133,7 +161,7 @@ export default function DokumentensuchePage() {
             <span>Suche</span>
           </CardTitle>
           <CardDescription>
-            Suchen Sie nach Drucksachen, Plenarprotokollen, Aktivitäten und Vorgängen
+            Suche nach Drucksachen, Plenarprotokollen, Aktivitäten und Vorgängen
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -278,7 +306,7 @@ export default function DokumentensuchePage() {
                       </Badge>
                     </div>
                     
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mt-2">
                       {doc.date && (
                         <div className="flex items-center space-x-1">
                           <Calendar className="h-4 w-4" />
@@ -299,6 +327,13 @@ export default function DokumentensuchePage() {
                           <span>Nr. {doc.nummer}</span>
                         </div>
                       )}
+
+                      {doc.fundstelle?.dokumentnummer &&
+                        <div className="flex items-center space-x-1">
+                          <FileText className="h-4 w-4" />
+                          <span>Drs.-Nr.: {doc.fundstelle.dokumentnummer}</span>
+                        </div>
+                      }
                       
                       {doc.urheber && doc.urheber.length > 0 && (
                         <div className="flex items-center space-x-1">
@@ -312,10 +347,21 @@ export default function DokumentensuchePage() {
                     </div>
                     
                     {doc.fundstelle && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        <Scale className="h-4 w-4 inline mr-1" />
-                        {doc.fundstelle}
-                      </p>
+                      <div className="mt-3 flex items-center gap-x-4">
+                        {doc.fundstelle.pdf_url && (
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { doc.fundstelle?.pdf_url && window.open(doc.fundstelle.pdf_url, '_blank')}}
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            PDF öffnen
+                          </Button>
+                        )}
+                        {doc.fundstelle.seite && 
+                          <span className="text-xs text-muted-foreground">Seite: {doc.fundstelle.seite}</span>
+                        }
+                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -352,7 +398,7 @@ export default function DokumentensuchePage() {
             <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Keine Ergebnisse gefunden</h3>
             <p className="text-muted-foreground">
-              Versuchen Sie es mit anderen Suchbegriffen oder passen Sie die Filter an.
+              Versuche es mit anderen Suchbegriffen oder passe die Filter an.
             </p>
           </CardContent>
         </Card>

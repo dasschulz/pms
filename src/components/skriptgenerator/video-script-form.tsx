@@ -153,7 +153,7 @@ export function VideoScriptForm({ isSettingsModalOpen, onSettingsModalOpenChange
       />
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleClientSubmit)} className="space-y-8">
-          <FormSection title="Inhaltlicher Fokus" description="Geben Sie die Schlüsselthemen für das Videoskript an.">
+          <FormSection title="Inhaltlicher Fokus" description="Gib die Schlüsselthemen für das Videoskript an.">
             <FormField
               control={form.control}
               name="keyTopics"
@@ -162,7 +162,7 @@ export function VideoScriptForm({ isSettingsModalOpen, onSettingsModalOpenChange
                   <FormLabel>Schlüsselthemen</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Listen Sie die Hauptthemen, Argumente oder Punkte für das Video auf. Seien Sie spezifisch."
+                      placeholder="Liste die Hauptthemen, Argumente oder Punkte für das Video auf. Sei spezifisch."
                       {...field}
                       rows={4}
                     />
@@ -183,7 +183,7 @@ export function VideoScriptForm({ isSettingsModalOpen, onSettingsModalOpenChange
       <AiResultDisplay
         content={generationState.result?.script}
         error={generationState.error}
-        defaultMessage="Ihr generiertes Videoskript wird hier erscheinen."
+        defaultMessage="Dein generiertes Videoskript wird hier erscheinen."
       />
     </>
   );

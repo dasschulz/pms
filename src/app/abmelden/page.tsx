@@ -26,11 +26,10 @@ export default function AbmeldenPage() {
   }, [session, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-        <p className="text-muted-foreground">Sie werden abgemeldet...</p>
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+      <h1 className="text-2xl font-semibold mb-2">Abmeldung</h1>
+      <p className="text-muted-foreground">Du wirst abgemeldet...</p>
     </div>
   );
 }

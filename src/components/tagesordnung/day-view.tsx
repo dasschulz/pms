@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { BundestagAgendaItem } from '@/lib/bundestag-api'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -19,10 +19,25 @@ interface DayViewProps {
   onDateChange: (date: Date) => void
 }
 
+// Helper to estimate content height for a card (more conservative, no description)
+const estimateContentHeight = (event: BundestagAgendaItem): number => {
+  let height = 30 // Base padding and line heights
+  if (event.title) {
+    height += Math.ceil(event.title.length / 35) * 16 // Approx 16px per line (35 chars/line)
+  }
+  if (event.start || event.top || event.status) {
+    height += 18 // For the combined info line
+  }
+  // Removed description from height calculation
+  return Math.max(height, 50) // Minimum content height of 50px (reduced)
+}
+
 export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps) {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [selectedAgendaItem, setSelectedAgendaItem] = useState<BundestagAgendaItem | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [initialScrollDone, setInitialScrollDone] = useState(false);
+  const eventCardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
   // Update current time every minute
   useEffect(() => {
@@ -67,23 +82,235 @@ export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps
     return format(date, 'EEEE, d. MMMM yyyy', { locale: de })
   }
 
+  const handleEventClick = (event: BundestagAgendaItem) => {
+    setSelectedAgendaItem(event)
+    setIsModalOpen(true)
+  }
+
+  const calculateLayoutParameters = (events: BundestagAgendaItem[]) => {
+    if (events.length === 0) {
+      return {
+        eventPositions: [],
+        pixelsPerHour: 80,
+        uniformCardHeight: 60, // Still calculated but cards render with position.height for now
+        timelineHeight: 24 * 80,
+      }
+    }
+
+    let shortestDurationHours = Infinity
+    let maxContentHeight = 0
+
+    for (const event of events) {
+      try {
+        const start = parseISO(event.start)
+        let duration = 0.5
+        if (event.end) {
+          const end = parseISO(event.end)
+          if (start && !isNaN(start.getTime()) && end && !isNaN(end.getTime())) {
+            const startHour = start.getHours() + start.getMinutes() / 60
+            const endHour = end.getHours() + end.getMinutes() / 60
+            if (endHour > startHour) duration = Math.max(0.5, endHour - startHour)
+          }
+        }
+        shortestDurationHours = Math.min(shortestDurationHours, duration)
+        const contentHeight = estimateContentHeight(event)
+        maxContentHeight = Math.max(maxContentHeight, contentHeight)
+      } catch { /* skip */ }
+    }
+
+    const uniformCardHeight = Math.max(maxContentHeight, 50)
+    if (shortestDurationHours === Infinity) shortestDurationHours = 0.5
+    const minVisualHeightForShortestEvent = 60
+    let calculatedPph = minVisualHeightForShortestEvent / shortestDurationHours
+    const pixelsPerHour = Math.max(60, Math.min(calculatedPph, 180))
+
+    const positions: Array<{
+      top: number // Store as number for easier calculations
+      height: number // Store as number
+      left: number // Proportion 0.0 to 1.0
+      width: number // Proportion 0.0 to 1.0
+      event: BundestagAgendaItem
+    }> = []
+
+    const sortedEvents = [...events].sort((a, b) => {
+      try {
+        return parseISO(a.start).getTime() - parseISO(b.start).getTime()
+      } catch {
+        return 0
+      }
+    })
+    const occupiedSlots: Array<{ start: number; end: number }> = [] // Tracks vertical occupation
+    const EVENT_GAP = 8
+
+    for (const event of sortedEvents) {
+      try {
+        const start = parseISO(event.start)
+        if (!start || isNaN(start.getTime())) throw new Error("Invalid start time")
+        const startHour = start.getHours() + start.getMinutes() / 60
+
+        let duration = 0.5
+        if (event.end) {
+          const end = parseISO(event.end)
+          if (end && !isNaN(end.getTime())) {
+            const endHour = end.getHours() + end.getMinutes() / 60
+            if (endHour > startHour) duration = Math.max(0.5, endHour - startHour)
+          }
+        }
+
+        const idealPixelPositionTop = startHour * pixelsPerHour
+        const timelineSlotHeight = duration * pixelsPerHour
+
+        let actualPixelPositionTop = idealPixelPositionTop
+        let currentEventLeft = 0.0
+        let currentEventWidth = 1.0
+
+        // Check for conflicts and potential side-by-side placement
+        let predecessorToShareWith: (typeof positions[0]) | null = null
+        for (let i = positions.length - 1; i >= 0; i--) {
+          const prevPos = positions[i]
+          // Check for significant vertical overlap AND if prevPos is full width
+          const verticalOverlap = Math.max(0, Math.min(idealPixelPositionTop + timelineSlotHeight, prevPos.top + prevPos.height) - Math.max(idealPixelPositionTop, prevPos.top));
+          
+          if (verticalOverlap > 0.5 * Math.min(timelineSlotHeight, prevPos.height)) { // Require at least 50% overlap of the shorter item
+            if (prevPos.width === 1.0) { 
+              predecessorToShareWith = prevPos
+              break
+            } 
+            // If prevPos is already 0.5, and we want to allow current to be placed next to it without push down
+            // This would be for a third item, which current logic doesn't turn into 33% columns.
+            // For now, if it significantly overlaps a half-width item, it will be pushed down.
+          }
+        }
+
+        if (predecessorToShareWith) {
+          // Place side-by-side
+          predecessorToShareWith.width = 0.5
+          // predecessorToShareWith.left remains 0.0
+          currentEventLeft = 0.5
+          currentEventWidth = 0.5
+          actualPixelPositionTop = idealPixelPositionTop // Place at its natural start time, NO PUSH DOWN
+        } else {
+          // No side-by-side, proceed with vertical push-down logic if necessary
+          let testTop = idealPixelPositionTop
+          let attempts = 0
+          const maxAttempts = Math.max(10, sortedEvents.length) 
+          
+          while (attempts < maxAttempts) {
+            let hasOverlapWithPlacedItems = false
+            for (const placedPosition of positions) {
+              // Check overlap with ALL placed items, considering their left/width for future multi-column checks
+              // For now, since we only do 2 columns, this mostly simplifies to vertical check if widths are full or current is full
+              const horizontalOverlap = (currentEventLeft < placedPosition.left + placedPosition.width) && 
+                                      (currentEventLeft + currentEventWidth > placedPosition.left);
+              const verticalOverlapForPush = (testTop < placedPosition.top + placedPosition.height) && 
+                                           (testTop + timelineSlotHeight > placedPosition.top);
+
+              if (horizontalOverlap && verticalOverlapForPush) {
+                hasOverlapWithPlacedItems = true
+                testTop = placedPosition.top + placedPosition.height + EVENT_GAP // Push below the item it overlapped with
+                break // Recalculate overlaps from the new testTop
+              }
+            }
+            if (!hasOverlapWithPlacedItems) break
+            attempts++
+          }
+          actualPixelPositionTop = testTop
+        }
+        
+        positions.push({
+          top: actualPixelPositionTop,
+          height: timelineSlotHeight,
+          left: currentEventLeft,
+          width: currentEventWidth,
+          event,
+        })
+        // For occupiedSlots, we only care about the vertical span for push-down decisions of full-width items
+        // If an item is placed side-by-side, it doesn't extend the *overall* occupied vertical range for push-down purposes
+        // But if it's pushed down, it does. This needs careful thought for multi-column.
+        // For simple 2-column, if an item ISN'T placed side-by-side, its full vertical slot is marked.
+        if (currentEventWidth === 1.0) { // Only full-width items strictly define new occupied vertical slots for pushdown
+            occupiedSlots.push({ start: actualPixelPositionTop, end: actualPixelPositionTop + timelineSlotHeight })
+            occupiedSlots.sort((a, b) => a.start - b.start) 
+        }
+
+      } catch (e) {
+        // Fallback for events with errors
+        const lastOccupiedEnd = occupiedSlots.length > 0 ? Math.max(...occupiedSlots.map(slot => slot.end)) : 0
+        const fallbackPositionTop = lastOccupiedEnd + EVENT_GAP
+        const fallbackSlotHeight = 0.5 * pixelsPerHour
+        positions.push({
+          top: fallbackPositionTop, height: fallbackSlotHeight, left: 0, width: 1, event
+        })
+        occupiedSlots.push({ start: fallbackPositionTop, end: fallbackPositionTop + fallbackSlotHeight })
+        occupiedSlots.sort((a, b) => a.start - b.start)
+      }
+    }
+    let maxEventBottom = 0;
+    if (positions.length > 0) {
+        positions.forEach(pos => {
+            const bottom = pos.top + pos.height;
+            if (bottom > maxEventBottom) maxEventBottom = bottom;
+        });
+    }
+    const timelineHeight = Math.max(24 * pixelsPerHour, maxEventBottom + 100);
+
+    return { eventPositions: positions, pixelsPerHour, uniformCardHeight, timelineHeight }
+  }
+
+  const dayEvents = getEventsForDate(selectedDate)
+  const { eventPositions, pixelsPerHour, uniformCardHeight, timelineHeight } = calculateLayoutParameters(dayEvents)
+
+  useEffect(() => {
+    if (eventPositions && eventPositions.length > 0 && !initialScrollDone) {
+      // Find the event with the smallest `top` value
+      let firstEventTop = Infinity;
+      let firstEventId: string | null = null;
+
+      eventPositions.forEach(pos => {
+        if (pos.top < firstEventTop) {
+          firstEventTop = pos.top;
+          firstEventId = pos.event.id; // Assuming events have a unique ID
+        }
+      });
+
+      if (firstEventId) {
+        const firstEventRef = eventCardRefs.current.get(firstEventId);
+        if (firstEventRef) {
+          // Use a timeout to ensure the element is fully rendered and layout is stable
+          setTimeout(() => {
+            firstEventRef.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start', // or 'center'
+              inline: 'nearest'
+            });
+            setInitialScrollDone(true);
+          }, 100); // Small delay
+        }
+      }
+    }
+    // Reset scroll flag if selectedDate changes, to allow re-scrolling for new day
+  }, [eventPositions, initialScrollDone, selectedDate]); 
+
+  // Reset initialScrollDone when selectedDate changes to allow scrolling for new day
+  useEffect(() => {
+    setInitialScrollDone(false);
+  }, [selectedDate]);
+
   const getCurrentTimePosition = () => {
     if (!isToday(selectedDate)) return null
-    
     const now = new Date()
     const berlinTime = new Date(now.toLocaleString("en-US", {timeZone: "Europe/Berlin"}))
     const hours = berlinTime.getHours()
     const minutes = berlinTime.getMinutes()
-    
-    // Calculate position as percentage of the day (0-100%)
-    const totalMinutes = hours * 60 + minutes
-    const percentage = (totalMinutes / (24 * 60)) * 100
+    const totalHours = hours + minutes / 60
+    const pixelPosition = totalHours * pixelsPerHour // Use dynamic pixelsPerHour
     
     return {
-      percentage,
+      pixels: pixelPosition,
       time: format(berlinTime, 'HH:mm', { locale: de })
     }
   }
+  const currentTimePos = getCurrentTimePosition()
 
   const getStatusBadge = (status?: string) => {
     if (!status) return null
@@ -111,7 +338,7 @@ export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps
     
     if (statusLower.includes('überweisung') || statusLower.includes('überwiesen')) {
       return (
-        <Badge className="bg-gray-500/20 text-gray-600 border-gray-500/30 text-xs">
+        <Badge className="bg-gray-500/20 text-gray-600 dark:text-gray-300 border-gray-500/30 text-xs">
           Überwiesen
         </Badge>
       )
@@ -146,102 +373,6 @@ export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps
     // Past items: normal border
     return "border-l-border border-l-4"
   }
-
-  const handleEventClick = (event: BundestagAgendaItem) => {
-    setSelectedAgendaItem(event)
-    setIsModalOpen(true)
-  }
-
-  const dayEvents = getEventsForDate(selectedDate)
-  const currentTimePos = getCurrentTimePosition()
-
-  const getEventPosition = (startTime: string, endTime?: string, index: number = 0, allEvents: BundestagAgendaItem[] = []) => {
-    try {
-      const start = parseISO(startTime)
-      const startMinutes = start.getHours() * 60 + start.getMinutes()
-      const startPercentage = (startMinutes / (24 * 60)) * 100
-      
-      let duration = 60 // Default 1 hour
-      if (endTime) {
-        const end = parseISO(endTime)
-        const endMinutes = end.getHours() * 60 + end.getMinutes()
-        duration = Math.max(30, endMinutes - startMinutes) // Minimum 30 minutes
-      }
-      
-      // Calculate minimum height based on content
-      const minHeightMinutes = 45 // Minimum 45 minutes for readability
-      const actualDuration = Math.max(duration, minHeightMinutes)
-      const durationPercentage = (actualDuration / (24 * 60)) * 100
-      
-      // Check for overlaps with previous events
-      let adjustedTop = startPercentage
-      const currentEventEnd = startPercentage + durationPercentage
-      
-      // Check if this event overlaps with any previous events
-      for (let i = 0; i < index; i++) {
-        const prevEvent = allEvents[i]
-        try {
-          const prevStart = parseISO(prevEvent.start)
-          const prevStartMinutes = prevStart.getHours() * 60 + prevStart.getMinutes()
-          const prevStartPercentage = (prevStartMinutes / (24 * 60)) * 100
-          
-          let prevDuration = 60
-          if (prevEvent.end) {
-            const prevEnd = parseISO(prevEvent.end)
-            const prevEndMinutes = prevEnd.getHours() * 60 + prevEnd.getMinutes()
-            prevDuration = Math.max(30, prevEndMinutes - prevStartMinutes)
-          }
-          const prevActualDuration = Math.max(prevDuration, minHeightMinutes)
-          const prevDurationPercentage = (prevActualDuration / (24 * 60)) * 100
-          const prevEventEnd = prevStartPercentage + prevDurationPercentage
-          
-          // If there's an overlap, adjust the position
-          if (adjustedTop < prevEventEnd && adjustedTop + durationPercentage > prevStartPercentage) {
-            adjustedTop = Math.max(adjustedTop, prevEventEnd + 0.5) // Add small gap
-          }
-        } catch {
-          // Skip if can't parse previous event
-        }
-      }
-      
-      return {
-        top: `${adjustedTop}%`,
-        height: `${Math.max(durationPercentage, 6)}%` // Minimum 6% height for visibility
-      }
-    } catch {
-      return {
-        top: `${index * 8}%`, // Fallback: space events vertically
-        height: '6%'
-      }
-    }
-  }
-
-  // Dynamic height calculation based on events with better spacing
-  const calculateTimelineHeight = () => {
-    if (dayEvents.length === 0) return 800
-    
-    // Calculate the end time of the last event to determine timeline height
-    let lastEventTime = dayEvents.reduce((latest, event) => {
-      try {
-        const eventEnd = event.end ? parseISO(event.end) : parseISO(event.start)
-        const eventHour = eventEnd.getHours()
-        return Math.max(latest, eventHour + 3) // Add 3 hours buffer
-      } catch {
-        return latest
-      }
-    }, 8) // Minimum 8 AM start
-    
-    // Account for potential overlapping adjustments
-    const eventsWithPotentialOverlaps = dayEvents.length > 3
-    if (eventsWithPotentialOverlaps) {
-      lastEventTime += Math.ceil(dayEvents.length / 3) // Add extra space for overlaps
-    }
-    
-    const minHeight = Math.max(lastEventTime * 60, 800) // 60px per hour, minimum 800px
-    return Math.min(minHeight, 1800) // Maximum 1800px
-  }
-
-  const timelineHeight = calculateTimelineHeight()
 
   return (
     <div className="p-4">
@@ -285,7 +416,7 @@ export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps
             <div
               key={hour}
               className="absolute left-0 right-0 border-t border-border/30"
-              style={{ top: `${(hour / 24) * 100}%` }}
+              style={{ top: `${hour * pixelsPerHour}px` }}
             >
               <div className="absolute left-2 -top-2 text-xs text-muted-foreground bg-background px-1 min-w-[3rem]">
                 {hour.toString().padStart(2, '0')}:00
@@ -297,7 +428,7 @@ export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps
           {currentTimePos && (
             <div
               className="absolute left-0 right-0 z-20"
-              style={{ top: currentTimePos.percentage + '%' }}
+              style={{ top: `${currentTimePos.pixels}px` }}
             >
               <div className="h-0.5 bg-red-500 relative">
                 <div className="absolute left-2 -top-1 w-3 h-3 bg-red-500 rounded-full"></div>
@@ -309,7 +440,7 @@ export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps
           )}
           
           {/* Events */}
-          <div className="absolute left-20 right-4 top-0 bottom-0">
+          <div className="absolute left-16 right-0 top-0 bottom-0">
             {dayEvents.length === 0 ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center text-muted-foreground">
@@ -318,48 +449,79 @@ export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps
                 </div>
               </div>
             ) : (
-              dayEvents.map((event, index) => {
-                const position = getEventPosition(event.start, event.end, index, dayEvents)
+              eventPositions.map((position, index) => {
+                const event = position.event
                 
                 return (
                   <Card
-                    key={index}
+                    ref={(el) => { 
+                      if (event.id) { // Ensure event.id exists
+                        if (el) {
+                          eventCardRefs.current.set(event.id, el);
+                        } else {
+                          eventCardRefs.current.delete(event.id);
+                        }
+                      }
+                    }}
+                    key={event.id || index}
                     className={cn(
                       "absolute left-0 right-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer z-10",
                       getEventBorderClass(event)
                     )}
-                    style={position}
+                    style={{ 
+                      top: `${position.top}px`, 
+                      height: `${position.height}px`, // Still using time-proportional height for card render
+                      left: `${position.left * 100}%`, 
+                      width: `${position.width * 100}%` 
+                    }}
                     onClick={() => handleEventClick(event)}
                   >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-sm leading-tight line-clamp-2">
+                    <CardHeader className="px-2 pt-2 pb-0 overflow-hidden">
+                      <div className="flex items-start justify-between gap-2 min-h-0">
+                        <CardTitle className="text-sm leading-tight line-clamp-2 flex-1 min-w-0">
                           {event.title}
                         </CardTitle>
-                        {getStatusBadge(event.status)}
+                        <div className="flex-shrink-0">
+                          {getStatusBadge(event.status)}
+                        </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-1">
+                    <CardContent className="px-2 pt-0 pb-1 overflow-hidden">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0 text-xs text-muted-foreground overflow-hidden">
                         {event.start && (
-                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                          <div className="flex items-center gap-1 flex-shrink-0">
                             <Clock className="h-3 w-3" />
-                            {formatTime(event.start)}
-                            {event.end && ` - ${formatTime(event.end)}`}
+                            <span>
+                              {formatTime(event.start)}
+                              {event.end && ` - ${formatTime(event.end)}`}
+                            </span>
                           </div>
+                        )}
+                        
+                        {event.top && event.start && (
+                          <span className="text-muted-foreground/70">•</span>
                         )}
                         
                         {event.top && (
-                          <div className="text-xs text-muted-foreground">
-                            TOP: {event.top}
-                          </div>
+                          <span className="truncate">
+                            {event.top.toString().replace(/^TOP:?\s*/i, 'TOP: ')}
+                          </span>
                         )}
                         
-                        {event.description && (
-                          <div className="text-xs text-muted-foreground line-clamp-2">
-                            {event.description}
-                          </div>
+                        {event.status && (event.start || event.top) && (
+                          <span className="text-muted-foreground/70">•</span>
                         )}
+                        
+                        {event.status && (
+                          <span className="whitespace-nowrap">
+                            Status:
+                          </span>
+                        )}
+                         {event.status && (
+                           <span className="flex-1 min-w-0 truncate">
+                             {event.status} 
+                           </span>
+                         )}
                       </div>
                     </CardContent>
                   </Card>
@@ -369,15 +531,6 @@ export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps
           </div>
         </div>
       </div>
-
-      {/* Day Summary */}
-      {dayEvents.length > 0 && (
-        <div className="mt-4 p-3 bg-muted rounded-lg">
-          <div className="text-sm text-muted-foreground">
-            <strong>{dayEvents.length}</strong> Termine am {formatFullDate(selectedDate)}
-          </div>
-        </div>
-      )}
 
       <AgendaDetailsModal 
         isOpen={isModalOpen}

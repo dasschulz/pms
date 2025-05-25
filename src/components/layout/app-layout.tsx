@@ -19,7 +19,7 @@ import {
   SidebarInset,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { navItems, bottomNavItems, type NavItem } from "@/lib/nav-items";
+import { navItems, bottomNavItems, signOutNavItem, type NavItem } from "@/lib/nav-items";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger as ShadCNAccordionTrigger } from "@/components/ui/accordion";
@@ -133,14 +133,22 @@ function SidebarNav() {
   };
 
   return (
-    <div className="flex flex-col flex-grow">
-      <SidebarMenu className="px-2">
-        {navItems.map((item, index) => renderNavItem(item, index))}
-      </SidebarMenu>
+    <div className="flex flex-col flex-grow h-full">
+      <ScrollArea className="flex-grow">
+        <SidebarMenu className="px-2 pt-2">
+          {navItems.map((item, index) => renderNavItem(item, index))}
+        </SidebarMenu>
 
-      <div className="mt-auto px-2">
-        <SidebarMenu>
+        {bottomNavItems.length > 0 && (
+          <SidebarMenu className="px-2 mt-2">
             {bottomNavItems.map((item, index) => renderNavItem(item, index))}
+          </SidebarMenu>
+        )}
+      </ScrollArea>
+      
+      <div className="mt-auto px-2 pb-2">
+        <SidebarMenu>
+          {renderNavItem(signOutNavItem, navItems.length + bottomNavItems.length)}
         </SidebarMenu>
       </div>
     </div>
@@ -173,14 +181,9 @@ export function AppLayout({ children }: PropsWithChildren) {
         <SidebarHeader className="p-0">
           {/* Das erste NavItem (isHeader=true) rendert das Logo im SidebarNav */}
         </SidebarHeader>
-        <SidebarContent className="p-0">
-          <ScrollArea className="h-full">
-            <SidebarNav />
-          </ScrollArea>
+        <SidebarContent className="p-0 flex flex-col">
+          <SidebarNav />
         </SidebarContent>
-        <SidebarFooter className="p-2">
-          {/* BottomNavItems werden im SidebarNav gerendert */}
-        </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col">
         <Navbar />

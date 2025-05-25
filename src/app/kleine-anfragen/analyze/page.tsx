@@ -5,7 +5,7 @@ export default function AnalyzeMinorInquiryPage() {
   return (
     <PageLayout
       title="Antwort auf Kleine Anfrage analysieren"
-      description="Geben Sie den Text einer Kleinen Anfrage und die dazugehörige Antwort ein, um Schlüsseldaten zu extrahieren, potenzielle Probleme zu identifizieren und Zusammenfassungen zu generieren."
+      description="Gib den Text einer Kleinen Anfrage und die dazugehörige Antwort ein, um Schlüsseldaten zu extrahieren, potenzielle Probleme zu identifizieren und Zusammenfassungen zu generieren."
     >
       <AnalyzeMinorInquiryForm />
     </PageLayout>

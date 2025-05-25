@@ -282,14 +282,14 @@
     background: linear-gradient(
       180deg,
       hsl(var(--secondary)) 0%,
-      hsl(220, 100%, 55%) 100%
+      hsl(220,5%,35%) 100%
     );
   }
 
   /* Dark mode tertiary elements */
   .dark .tertiary {
-    background: hsl(220, 93%, 37%);
-    color: hsl(var(--input));
+    background: hsl(220, 5%, 35%);
+    color: hsl(var(--foreground));
   }
 
   /* Custom Theme Toggle Switch from Uiverse.io by JustCode14 */

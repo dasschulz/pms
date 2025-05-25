@@ -122,11 +122,12 @@ export const bottomNavItems: NavItem[] = [
     href: '/einstellungen',
     icon: Settings,
   },
-  {
-    title: 'Abmelden',
-    href: '/abmelden',
-    icon: LogOut,
-  },
 ];
+
+export const signOutNavItem: NavItem = {
+  title: 'Abmelden',
+  href: '/abmelden',
+  icon: LogOut,
+};
 
     
