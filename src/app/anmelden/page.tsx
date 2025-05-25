@@ -50,7 +50,7 @@ export default function AnmeldenPage() {
 
   return (
     <div 
-      className="relative mx-auto flex h-screen w-full flex-col items-center justify-center overflow-hidden"
+      className="dark relative mx-auto flex h-screen w-full flex-col items-center justify-center overflow-hidden"
       style={{
         backgroundColor: 'hsl(326 100% 22%)',
         backgroundImage: `
@@ -84,10 +84,14 @@ export default function AnmeldenPage() {
 
       {/* overlay */}
       <div className="absolute inset-0 z-10 h-full w-full bg-background/80 dark:bg-background/40" />
-      <ThreeDMarquee
-        className="pointer-events-none absolute inset-0 !h-screen w-full !rounded-none"
-        images={images}
-      />
+      
+      {/* ThreeDMarquee Container - properly constrained */}
+      <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
+        <ThreeDMarquee
+          className="pointer-events-none !h-[80vh] !w-[80vw] !rounded-none"
+          images={images}
+        />
+      </div>
 
       <LoginModal 
         isOpen={isLoginModalOpen} 
