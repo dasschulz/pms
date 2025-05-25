@@ -197,13 +197,26 @@ export async function POST(req: NextRequest) {
 
     // Update the record only if there are fields to update
     if (Object.keys(updateFields).length > 0) {
-      const updateResult = await base('Users').update([
-        {
-          id: userRecord.id,
-          fields: updateFields
+      try {
+        const updateResult = await base('Users').update([
+          {
+            id: userRecord.id,
+            fields: updateFields
+          }
+        ]);
+        console.log('POST: Update successful, result:', updateResult[0].id);
+      } catch (updateError) {
+        console.error('POST: Airtable update error:', updateError);
+        // Check if it's a field validation error
+        if (updateError instanceof Error && updateError.message.includes('INVALID_VALUE_FOR_COLUMN')) {
+          return NextResponse.json({ 
+            error: 'Ungültiger Wert für ein Feld. Möglicherweise stimmt der Landesverband nicht mit den verfügbaren Optionen überein.',
+            details: updateError.message,
+            fieldsAttempted: updateFields
+          }, { status: 400 });
         }
-      ]);
-      console.log('POST: Update successful, result:', updateResult[0].id);
+        throw updateError; // Re-throw if it's not a field validation error
+      }
     } else {
       console.log('POST: No fields to update');
     }
@@ -217,9 +230,12 @@ export async function POST(req: NextRequest) {
     console.error('Airtable API Error updating user details:', error);
     // Include more detailed error information
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
     return NextResponse.json({ 
       error: 'Fehler beim Aktualisieren der Benutzerdaten',
-      details: errorMessage 
+      details: errorMessage,
+      stack: process.env.NODE_ENV === 'development' ? errorStack : undefined
     }, { status: 500 });
   }
 } 

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin } from 'lucide-react';
 
 export interface NavItem {
   title: string;
@@ -34,7 +34,13 @@ export const navItems: NavItem[] = [
     icon: CalendarDays,
   },
   {
+    title: 'Touranfragen',
+    href: '/touranfragen',
+    icon: MapPin,
+  },
+  {
     title: 'Fragewesen',
+    href: '/fragewesen',
     icon: FileSearch2,
     isChidren: true,
     children: [
@@ -67,6 +73,7 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Reden',
+    href: '/reden',
     icon: Mic2,
     isChidren: true,
     children: [
@@ -77,13 +84,14 @@ export const navItems: NavItem[] = [
       },
       {
         title: 'Meine Reden',
-        href: '/reden',
+        href: '/meine-reden',
         icon: Mic2,
       },
     ],
   },
   {
     title: 'Kommunikation',
+    href: '/kommunikation',
     icon: FileText,
     isChidren: true,
     children: [
@@ -93,14 +101,37 @@ export const navItems: NavItem[] = [
         icon: FileText,
       },
       {
+        title: 'Bürgerpost',
+        href: '/buergerpost',
+        icon: Mail,
+      },
+    ],
+  },
+  {
+    title: 'Social Media',
+    href: '/social-media',
+    icon: Share2,
+    isChidren: true,
+    children: [
+      {
         title: 'Skriptgenerator',
         href: '/skriptgenerator',
         icon: Video,
       },
       {
-        title: 'Bürgerpost',
-        href: '/buergerpost',
-        icon: Mail,
+        title: 'Redaktionsplan',
+        href: '/redaktionsplan',
+        icon: Calendar,
+      },
+      {
+        title: 'Tracking',
+        href: '/tracking',
+        icon: TrendingUp,
+      },
+      {
+        title: 'Sharepics',
+        href: '/sharepics',
+        icon: Image,
       },
     ],
   },

@@ -9,6 +9,21 @@ import * as path from 'path';
 // Import fontkit using require for compatibility
 const fontkit = require('fontkit');
 
+// Helper function to add page numbers
+async function addPageNumber(page: any, pageNumber: number, totalPages: number, pageWidth: number, marginBottom: number, interRegular: any, textColor: any) {
+  const pageText = `Seite ${pageNumber} von ${totalPages}`;
+  const pageTextWidth = interRegular.widthOfTextAtSize(pageText, 10);
+  const pageTextX = (pageWidth - pageTextWidth) / 2; // Center horizontally
+  
+  page.drawText(pageText, {
+    x: pageTextX,
+    y: marginBottom - 30, // Same height as logo area
+    size: 10,
+    font: interRegular,
+    color: textColor,
+  });
+}
+
 // Helper function to add logo to page
 async function addLogoToPage(page: any, pdfDoc: any, pageWidth: number, marginRight: number, marginBottom: number, brandColor: any, interBold: any) {
   try {
@@ -140,15 +155,46 @@ const processPlaintextStructure = (text: string) => {
   return segments;
 };
 
+// Helper function to clean up text spacing issues
+function cleanupTextSpacing(text: string): string {
+  return text
+    // Fix extra spaces inside parentheses: (  text  ) -> (text)
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')')
+    // Fix extra spaces inside square brackets: [  text  ] -> [text]
+    .replace(/\[\s+/g, '[')
+    .replace(/\s+\]/g, ']')
+    // Fix multiple consecutive spaces
+    .replace(/\s{2,}/g, ' ')
+    // Fix spaces before punctuation
+    .replace(/\s+([,.!?;:])/g, '$1')
+    // Trim leading/trailing spaces
+    .trim();
+}
+
 // Function to detect heading levels in plaintext
 const detectHeadingLevel = (text: string): {level: number, cleanText: string} => {
-  const trimmed = text.trim();
+  const trimmed = cleanupTextSpacing(text.trim());
   
   // Handle markdown-style headings with multiple #
   const hashMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
   if (hashMatch) {
     const level = Math.min(hashMatch[1].length, 3); // Cap at level 3
-    return {level, cleanText: hashMatch[2]};
+    return {level, cleanText: cleanupTextSpacing(hashMatch[2])};
+  }
+  
+  // Handle **bold** headings - common in AI-generated content
+  const boldHeadingMatch = trimmed.match(/^\*\*(.*?)\*\*$/);
+  if (boldHeadingMatch) {
+    const cleanText = cleanupTextSpacing(boldHeadingMatch[1]);
+    // Determine level based on content characteristics
+    if (cleanText === cleanText.toUpperCase() && cleanText.length > 3) {
+      return {level: 1, cleanText}; // All caps = level 1
+    } else if (cleanText.includes('.') && cleanText.length < 80) {
+      return {level: 2, cleanText}; // Numbered headings = level 2
+    } else {
+      return {level: 3, cleanText}; // Others = level 3
+    }
   }
   
   // HAUPTÜBERSCHRIFT: All caps text (level 1)
@@ -174,20 +220,20 @@ function extractFootnotes(text: string): { processedText: string, footnotes: Arr
   const footnotes: Array<{id: string, content: string}> = [];
   const footnoteRefs: Set<string> = new Set();
   
-  // First pass: find all footnote references [^number]
-  const refMatches = text.matchAll(/\[\^(\d+)\]/g);
+  // First pass: find all footnote references [number] (handle various spacing patterns)
+  const refMatches = text.matchAll(/\[\s*(\d+)\s*\]/g);
   for (const match of refMatches) {
     footnoteRefs.add(match[1]);
   }
   
-  // Second pass: extract footnote definitions (second occurrence of each number)
+  // Second pass: extract footnote definitions
   let processedText = text;
-  const footnotePattern = /\[\^(\d+)\]:\s*([^\n]*(?:\n(?!\[\^)\s*[^\n]*)*)/g;
+  const footnotePattern = /\[\s*(\d+)\s*\]:\s*([^\n]*(?:\n(?!\[\s*\d+\s*\])\s*[^\n]*)*)/g;
   
   let match;
   while ((match = footnotePattern.exec(text)) !== null) {
     const footnoteId = match[1];
-    const footnoteContent = match[2].trim();
+    const footnoteContent = cleanupTextSpacing(match[2].trim()); // Clean up footnote content
     
     footnotes.push({
       id: footnoteId,
@@ -197,6 +243,9 @@ function extractFootnotes(text: string): { processedText: string, footnotes: Arr
     // Remove the footnote definition from the main text
     processedText = processedText.replace(match[0], '');
   }
+  
+  // Clean up extra spaces around footnote references in the main text
+  processedText = processedText.replace(/\[\s*(\d+)\s*\]/g, '[^$1]');
   
   // Sort footnotes by number
   footnotes.sort((a, b) => parseInt(a.id) - parseInt(b.id));
@@ -208,18 +257,21 @@ function extractFootnotes(text: string): { processedText: string, footnotes: Arr
 const processTextWithMarkdownAndFootnotes = (text: string) => {
   const segments: Array<{text: string, isBold: boolean, isItalic: boolean, isFootnoteRef?: boolean, footnoteId?: string}> = [];
   
+  // Clean up the input text first
+  const cleanText = cleanupTextSpacing(text);
+  
   let currentPos = 0;
   let currentText = '';
   let inBold = false;
   
-  for (let i = 0; i < text.length; i++) {
+  for (let i = 0; i < cleanText.length; i++) {
     // Check for footnote reference [^number]
-    if (text[i] === '[' && i + 1 < text.length && text[i + 1] === '^') {
-      const footnoteMatch = text.slice(i).match(/^\[\^(\d+)\]/);
+    if (cleanText[i] === '[' && i + 1 < cleanText.length && cleanText[i + 1] === '^') {
+      const footnoteMatch = cleanText.slice(i).match(/^\[\^(\d+)\]/);
       if (footnoteMatch) {
         // Save current text segment
         if (currentText) {
-          segments.push({text: currentText, isBold: inBold, isItalic: false});
+          segments.push({text: cleanupTextSpacing(currentText), isBold: inBold, isItalic: false});
           currentText = '';
         }
         
@@ -238,22 +290,44 @@ const processTextWithMarkdownAndFootnotes = (text: string) => {
     }
     
     // Check for **bold** formatting
-    if (text[i] === '*' && i + 1 < text.length && text[i + 1] === '*') {
+    if (cleanText[i] === '*' && i + 1 < cleanText.length && cleanText[i + 1] === '*') {
       // Found ** - toggle bold
       if (currentText) {
-        segments.push({text: currentText, isBold: inBold, isItalic: false});
+        segments.push({text: cleanupTextSpacing(currentText), isBold: inBold, isItalic: false});
         currentText = '';
       }
       inBold = !inBold;
       i++; // Skip the second *
+    } else if (cleanText[i] === '*' && !inBold) {
+      // Single * for italic - start italic
+      if (currentText) {
+        segments.push({text: cleanupTextSpacing(currentText), isBold: inBold, isItalic: false});
+        currentText = '';
+      }
+      // Look for the closing *
+      let closingPos = -1;
+      for (let j = i + 1; j < cleanText.length; j++) {
+        if (cleanText[j] === '*' && (j + 1 >= cleanText.length || cleanText[j + 1] !== '*')) {
+          closingPos = j;
+          break;
+        }
+      }
+      if (closingPos !== -1) {
+        // Extract italic text
+        const italicText = cleanText.substring(i + 1, closingPos);
+        segments.push({text: cleanupTextSpacing(italicText), isBold: inBold, isItalic: true});
+        i = closingPos; // Skip to after the closing *
+      } else {
+        currentText += cleanText[i];
+      }
     } else {
-      currentText += text[i];
+      currentText += cleanText[i];
     }
   }
   
   // Add remaining text
   if (currentText) {
-    segments.push({text: currentText, isBold: inBold, isItalic: false});
+    segments.push({text: cleanupTextSpacing(currentText), isBold: inBold, isItalic: false});
   }
   
   return segments;
@@ -461,11 +535,13 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
     
     // Color definitions
     const brandColor = rgb(111/255, 0/255, 60/255); // #6F003C
-    const textColor = rgb(0.6, 0.6, 0.6); // 40% black (lighter)
+    const textColor = rgb(0.2, 0.2, 0.2); // Darker text color (was 0.6, 0.6, 0.6)
     const bulletColor = rgb(111/255, 0/255, 60/255); // Red squares for bullets
     
     let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
     let yPosition = pageHeight - marginTop;
+    let pageNumber = 1;
+    const pages: any[] = [currentPage]; // Track all pages for numbering
     
     // Add logo to first page
     await addLogoToPage(currentPage, pdfDoc, pageWidth, marginRight, marginBottom, brandColor, interBold);
@@ -543,14 +619,16 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
     // Store footnotes for each page
     let currentPageFootnotes: Array<{id: string, content: string}> = [];
     
-    // Filter out duplicate dossier titles
+    // Filter out duplicate dossier titles and separators
     const filteredParagraphs = paragraphs.filter(paragraph => {
       const trimmed = paragraph.trim();
       return !(
         trimmed.includes(`${politicianName} (`) && trimmed.includes('Dossier') ||
         trimmed.match(/^#+\s*.*Dossier.*$/i) ||
         trimmed === `${politicianName} - Dossier` ||
-        trimmed === `Feinddossier: ${politicianName}`
+        trimmed === `Feinddossier: ${politicianName}` ||
+        trimmed === '---' || // Remove separator lines
+        trimmed.match(/^-{3,}$/) // Remove multiple dashes
       );
     });
     
@@ -568,7 +646,7 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
       let currentFontSize = 12; // Body text: 12pt
       let currentLineHeight = 18; // 150% of 12pt
       let currentColor = textColor;
-      let textToRender = paragraph.trim();
+      let textToRender = cleanupTextSpacing(paragraph.trim()); // Clean up spacing before processing
       let textWidth = bodyWidth; // 70% width for body text
       
       // Detect heading level using plaintext structure
@@ -601,9 +679,11 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
         currentColor = brandColor;
         textWidth = pageWidth - marginLeft - marginRight; // Full width for headings
         yPosition -= 8; // Extra spacing before H3
-      } else if (textToRender.startsWith('- ') || textToRender.startsWith('* ')) {
+      } else if (textToRender.startsWith('- ') || textToRender.startsWith('* ') || 
+                 textToRender.match(/^[\u2022\u2023\u25E6\u2043\u2219]\s/) || // Unicode bullets
+                 textToRender.match(/^[•·▪▫]\s/)) { // Common bullet characters
         // Bullet points with red squares
-        textToRender = textToRender.replace(/^[-*]\s*/, '');
+        textToRender = textToRender.replace(/^[-*\u2022\u2023\u25E6\u2043\u2219•·▪▫]\s*/, '');
         currentFontSize = 12; // Body text size
         currentLineHeight = 18; // 150% line height
         currentFont = interRegular;
@@ -630,6 +710,9 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
         // Indent text after bullet
         const bulletIndent = 15;
         let xOffset = marginLeft + bulletIndent;
+        let lineStartX = marginLeft + bulletIndent;
+        let currentLineWidth = 0;
+        const maxLineWidth = textWidth - bulletIndent;
         
         for (const segment of segments) {
           let font = currentFont;
@@ -639,10 +722,13 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
           if (segment.isBold) {
             font = interBold;
           }
+          if (segment.isItalic) {
+            font = interItalic;
+          }
           
           if (segment.isFootnoteRef && segment.footnoteId) {
             // Handle footnote reference
-            const footnoteRef = `[${segment.footnoteId}]`;
+            const footnoteRef = `${segment.footnoteId}`;
             const refWidth = interRegular.widthOfTextAtSize(footnoteRef, 8);
             
             // Check if we need a new page
@@ -652,8 +738,20 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
               currentPageFootnotes = [];
               
               currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+              pageNumber++;
+              pages.push(currentPage);
               await addLogoToPage(currentPage, pdfDoc, pageWidth, marginRight, marginBottom, brandColor, interBold);
               yPosition = pageHeight - marginTop;
+              xOffset = lineStartX;
+              currentLineWidth = 0;
+            }
+            
+            // Check if footnote reference fits on current line
+            if (currentLineWidth + refWidth > maxLineWidth) {
+              // Move to next line
+              yPosition -= currentLineHeight;
+              xOffset = lineStartX;
+              currentLineWidth = 0;
             }
             
             // Draw footnote reference as superscript
@@ -666,6 +764,7 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
             });
             
             xOffset += refWidth + 2;
+            currentLineWidth += refWidth + 2;
             
             // Add footnote to current page footnotes if not already added
             const footnoteContent = footnotes.find(f => f.id === segment.footnoteId);
@@ -673,23 +772,39 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
               currentPageFootnotes.push(footnoteContent);
             }
           } else {
-            // Regular text segment
-            const wrappedLines = wrapText(segment.text, textWidth - bulletIndent, size, font);
+            // Regular text segment - wrap properly
+            const words = segment.text.split(' ');
             
-            for (const line of wrappedLines) {
-              // Check if we need a new page
-              if (yPosition < marginBottom + currentLineHeight) {
-                // Add footnotes to current page before creating new page
-                addFootnotesToPage(currentPage, currentPageFootnotes, pageWidth, marginLeft, marginBottom, interRegular, brandColor);
-                currentPageFootnotes = [];
+            for (const word of words) {
+              if (!word) continue;
+              
+              const wordWidth = font.widthOfTextAtSize(word + ' ', size);
+              
+              // Check if word fits on current line
+              if (currentLineWidth + wordWidth > maxLineWidth && currentLineWidth > 0) {
+                // Move to next line
+                yPosition -= currentLineHeight;
+                xOffset = lineStartX;
+                currentLineWidth = 0;
                 
-                currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-                await addLogoToPage(currentPage, pdfDoc, pageWidth, marginRight, marginBottom, brandColor, interBold);
-                yPosition = pageHeight - marginTop;
-                xOffset = marginLeft + bulletIndent; // Reset x offset for new page
+                // Check if we need a new page
+                if (yPosition < marginBottom + currentLineHeight) {
+                  // Add footnotes to current page before creating new page
+                  addFootnotesToPage(currentPage, currentPageFootnotes, pageWidth, marginLeft, marginBottom, interRegular, brandColor);
+                  currentPageFootnotes = [];
+                  
+                  currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+                  pageNumber++;
+                  pages.push(currentPage);
+                  await addLogoToPage(currentPage, pdfDoc, pageWidth, marginRight, marginBottom, brandColor, interBold);
+                  yPosition = pageHeight - marginTop;
+                  xOffset = lineStartX;
+                  currentLineWidth = 0;
+                }
               }
               
-              currentPage.drawText(line, {
+              // Draw the word
+              currentPage.drawText(word + ' ', {
                 x: xOffset,
                 y: yPosition,
                 size: size,
@@ -697,8 +812,8 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
                 color: color,
               });
               
-              yPosition -= currentLineHeight;
-              xOffset = marginLeft + bulletIndent; // Reset x offset for next line
+              xOffset += wordWidth;
+              currentLineWidth += wordWidth;
             }
           }
         }
@@ -738,6 +853,9 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
           if (segment.isBold) {
             font = interBold;
           }
+          if (segment.isItalic) {
+            font = interItalic;
+          }
           
           if (segment.isFootnoteRef && segment.footnoteId) {
             // Handle footnote reference
@@ -751,6 +869,8 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
               currentPageFootnotes = [];
               
               currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+              pageNumber++;
+              pages.push(currentPage);
               await addLogoToPage(currentPage, pdfDoc, pageWidth, marginRight, marginBottom, brandColor, interBold);
               yPosition = pageHeight - marginTop;
               xOffset = marginLeft;
@@ -806,6 +926,8 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
                   currentPageFootnotes = [];
                   
                   currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+                  pageNumber++;
+                  pages.push(currentPage);
                   await addLogoToPage(currentPage, pdfDoc, pageWidth, marginRight, marginBottom, brandColor, interBold);
                   yPosition = pageHeight - marginTop;
                   xOffset = marginLeft;
@@ -843,6 +965,8 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
             currentPageFootnotes = [];
             
             currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+            pageNumber++;
+            pages.push(currentPage);
             await addLogoToPage(currentPage, pdfDoc, pageWidth, marginRight, marginBottom, brandColor, interBold);
             yPosition = pageHeight - marginTop;
           }
@@ -868,6 +992,12 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
     // Add any remaining footnotes to the last page
     if (currentPageFootnotes.length > 0) {
       addFootnotesToPage(currentPage, currentPageFootnotes, pageWidth, marginLeft, marginBottom, interRegular, brandColor);
+    }
+
+    // Add page numbers to all pages
+    const totalPages = pages.length;
+    for (let i = 0; i < totalPages; i++) {
+      await addPageNumber(pages[i], i + 1, totalPages, pageWidth, marginBottom, interRegular, textColor);
     }
 
     console.log('Saving PDF document...');

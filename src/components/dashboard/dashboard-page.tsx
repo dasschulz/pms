@@ -47,7 +47,7 @@ export async function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Schnellzugriff Werkzeuge</CardTitle>
-              <CardDescription>Navigieren Sie zu den Hauptfunktionen der Suite.</CardDescription>
+              <CardDescription>Navigiere zu den Hauptfunktionen der Suite.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
               {[...coreFeatures, ...inquiryFeatures].map((item) => {
@@ -62,7 +62,7 @@ export async function DashboardPage() {
                     <QuickLinkCard
                       title={item.title}
                       Icon={item.icon}
-                      description={`Greifen Sie auf das ${item.title.toLowerCase()} Werkzeug zu.`}
+                      description={`Greife auf das ${item.title.toLowerCase()} Werkzeug zu.`}
                       imageSrc={imageSrc}
                     />
                   </Link>
@@ -76,7 +76,7 @@ export async function DashboardPage() {
             <Card>
                 <CardHeader>
                 <CardTitle>Letzte Aktivitäten</CardTitle>
-                <CardDescription>Übersicht Ihrer zuletzt generierten Dokumente.</CardDescription>
+                <CardDescription>Übersicht deiner zuletzt generierten Dokumente.</CardDescription>
                 </CardHeader>
                 <CardContent>
                 <p className="text-sm text-muted-foreground">Keine kürzlichen Aktivitäten. Generierte Dokumente werden hier erscheinen.</p>

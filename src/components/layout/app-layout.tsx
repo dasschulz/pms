@@ -40,6 +40,7 @@ function SidebarNav() {
 
   const renderNavItem = (item: NavItem, index: number, isSubItem = false) => {
     const isActive = item.href === pathname || (item.children && item.children.some(child => child.href === pathname));
+    const isParentPageActive = item.href === pathname;
 
     if (item.isHeader) {
       return (
@@ -54,32 +55,54 @@ function SidebarNav() {
       const defaultAccordionValue = isParentActive && sidebarState === "expanded" ? item.title : undefined;
 
       return (
-        <Accordion type="single" collapsible className="w-full px-0" key={index} defaultValue={defaultAccordionValue}>
-          <AccordionItem value={item.title} className="border-none">
-            <AccordionTriggerNoChevron
-              className={cn(
-                "w-full flex items-center justify-between hover:no-underline hover:bg-sidebar-accent rounded-md px-2 py-2 text-sm group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-0",
-                sidebarState === "collapsed" ? "justify-center" : "",
-                isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
-              )}
-              showChevron={sidebarState === "expanded"}
-            >
-              <div className={cn("flex items-center gap-2", sidebarState === "collapsed" ? "justify-center w-full" : "")}>
-                <item.icon className="h-5 w-5 shrink-0" />
-                {sidebarState === "expanded" && <span className="truncate">{item.title}</span>}
-              </div>
-            </AccordionTriggerNoChevron>
-            {sidebarState === "expanded" && (
-              <AccordionContent className="pt-1 pb-0 pl-4">
-                <SidebarMenu>
-                  {item.children.map((child, childIndex) => (
-                    renderNavItem(child, childIndex, true)
-                  ))}
-                </SidebarMenu>
-              </AccordionContent>
-            )}
-          </AccordionItem>
-        </Accordion>
+        <div key={index} className="w-full">
+          {/* Parent category link */}
+          {item.href && (
+            <SidebarMenuItem>
+              <Link href={item.href} passHref={false}>
+                <SidebarMenuButton
+                  variant="default"
+                  className={cn(
+                    "w-full justify-start h-9 mb-1",
+                    isParentPageActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+                    sidebarState === "collapsed" ? "px-0 justify-center" : "px-2"
+                  )}
+                  tooltip={sidebarState === "collapsed" ? item.title : undefined}
+                  isActive={isParentPageActive}
+                >
+                  <div className={cn("flex items-center gap-2 w-full", sidebarState === "collapsed" ? "justify-center" : "")}>
+                    <item.icon className={cn("h-5 w-5 shrink-0", sidebarState === "collapsed" ? "mx-auto" : "")} />
+                    {sidebarState === "expanded" && <span className="truncate">{item.title}</span>}
+                  </div>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          )}
+          
+          {/* Accordion for children */}
+          {sidebarState === "expanded" && (
+            <Accordion type="single" collapsible className="w-full px-0" defaultValue={defaultAccordionValue}>
+              <AccordionItem value={item.title} className="border-none">
+                <AccordionTriggerNoChevron
+                  className={cn(
+                    "w-full flex items-center justify-between hover:no-underline hover:bg-sidebar-accent rounded-md px-2 py-1 text-sm text-muted-foreground",
+                    "ml-2 text-xs"
+                  )}
+                  showChevron={true}
+                >
+                  <span className="truncate">Alle {item.title} Tools</span>
+                </AccordionTriggerNoChevron>
+                <AccordionContent className="pt-1 pb-0 pl-4">
+                  <SidebarMenu>
+                    {item.children.map((child, childIndex) => (
+                      renderNavItem(child, childIndex, true)
+                    ))}
+                  </SidebarMenu>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+        </div>
       );
     }
 

@@ -34,7 +34,7 @@ WICHTIGE REGELN FÜR SCHRIFTLICHE FRAGEN:
 Erstelle eine gültige schriftliche Frage, die alle diese Regeln befolgt.`;
 
     const userPrompt = `${context ? `Kontext: ${context}` : ''}
-${specificFocus ? `Spezifischer Fokus: ${specificFocus}` : ''}
+${specificFocus ? `Zielstellung: ${specificFocus}` : ''}
 
 Erstelle eine schriftliche Frage zu diesem Thema, die alle GOBT-Regeln befolgt. Die Frage sollte:
 - Direkt als Fragesatz beginnen

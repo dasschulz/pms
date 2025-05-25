@@ -1220,11 +1220,7 @@ export default function MySpeechesPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-6">
-                    {/* Session info (normal size) */}
-                    <p className="mb-4 text-base leading-tight">
-                      WP {speech.electoralPeriodNumber} | {speech.sessionNumber}. Sitzung | {speech.officialTitle}
-                    </p>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 justify-center">
                       {speech.videoFileURI && (
                         <Button 
                           variant="outline" 

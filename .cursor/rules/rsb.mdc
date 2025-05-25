@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+always use functional code. keep your output short and concise.
+rember we are using different themes for frontend on one hand and /backend/.. on the other hand. style changes in general should never override backend and vice versa. when implementing an element in frontend, ask user how it should be displayed in backend and vice versa; implement css styles for all cases. we use one theme in frontend and light/dark theme in backend.

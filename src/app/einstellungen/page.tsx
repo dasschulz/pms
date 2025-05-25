@@ -7,12 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CachedAvatar } from "@/components/ui/cached-avatar";
 import { User, Upload, Eye, EyeOff, Lock, Shield, AlertTriangle } from "lucide-react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useTheme } from "next-themes";
 import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { useProfilePicture } from "@/hooks/use-profile-picture";
 
 interface UserData {
   name: string;
@@ -38,6 +40,7 @@ interface PasswordValidation {
 export default function EinstellungenPage() {
   const { theme, setTheme } = useTheme();
   const { data: session } = useSession();
+  const { clearCache } = useProfilePicture();
   const [isLoading, setIsLoading] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -216,6 +219,9 @@ export default function EinstellungenPage() {
         const base64String = reader.result as string;
         const profilePictureUrl = base64String;
         
+        // Clear old cached image before saving new one
+        clearCache(userData.profilePictureUrl);
+        
         // Save to Airtable
         await saveUserData({ profilePictureUrl });
         
@@ -334,12 +340,13 @@ export default function EinstellungenPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center space-x-4">
-              <Avatar className="w-20 h-20">
-                <AvatarImage src={userData.profilePictureUrl} alt="Profilbild" />
-                <AvatarFallback className="bg-gray-200 dark:bg-muted">
-                  <User className="w-10 h-10" />
-                </AvatarFallback>
-              </Avatar>
+              <CachedAvatar 
+                src={userData.profilePictureUrl}
+                alt="Profilbild"
+                fallbackText={userData.name}
+                size="lg"
+                className="w-20 h-20"
+              />
               <div className="flex flex-col space-y-2">
                 <Button
                   onClick={() => fileInputRef.current?.click()}
@@ -415,22 +422,22 @@ export default function EinstellungenPage() {
                   <SelectValue placeholder="Wähle deinen Landesverband" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="baden-wuerttemberg">Baden-Württemberg</SelectItem>
-                  <SelectItem value="bayern">Bayern</SelectItem>
-                  <SelectItem value="berlin">Berlin</SelectItem>
-                  <SelectItem value="brandenburg">Brandenburg</SelectItem>
-                  <SelectItem value="bremen">Bremen</SelectItem>
-                  <SelectItem value="hamburg">Hamburg</SelectItem>
-                  <SelectItem value="hessen">Hessen</SelectItem>
-                  <SelectItem value="mecklenburg-vorpommern">Mecklenburg-Vorpommern</SelectItem>
-                  <SelectItem value="niedersachsen">Niedersachsen</SelectItem>
-                  <SelectItem value="nordrhein-westfalen">Nordrhein-Westfalen</SelectItem>
-                  <SelectItem value="rheinland-pfalz">Rheinland-Pfalz</SelectItem>
-                  <SelectItem value="saarland">Saarland</SelectItem>
-                  <SelectItem value="sachsen">Sachsen</SelectItem>
-                  <SelectItem value="sachsen-anhalt">Sachsen-Anhalt</SelectItem>
-                  <SelectItem value="schleswig-holstein">Schleswig-Holstein</SelectItem>
-                  <SelectItem value="thueringen">Thüringen</SelectItem>
+                  <SelectItem value="Baden-Württemberg">Baden-Württemberg</SelectItem>
+                  <SelectItem value="Bayern">Bayern</SelectItem>
+                  <SelectItem value="Berlin">Berlin</SelectItem>
+                  <SelectItem value="Brandenburg">Brandenburg</SelectItem>
+                  <SelectItem value="Bremen">Bremen</SelectItem>
+                  <SelectItem value="Hamburg">Hamburg</SelectItem>
+                  <SelectItem value="Hessen">Hessen</SelectItem>
+                  <SelectItem value="Mecklenburg-Vorpommern">Mecklenburg-Vorpommern</SelectItem>
+                  <SelectItem value="Niedersachsen">Niedersachsen</SelectItem>
+                  <SelectItem value="Nordrhein-Westfalen">Nordrhein-Westfalen</SelectItem>
+                  <SelectItem value="Rheinland-Pfalz">Rheinland-Pfalz</SelectItem>
+                  <SelectItem value="Saarland">Saarland</SelectItem>
+                  <SelectItem value="Sachsen">Sachsen</SelectItem>
+                  <SelectItem value="Sachsen-Anhalt">Sachsen-Anhalt</SelectItem>
+                  <SelectItem value="Schleswig-Holstein">Schleswig-Holstein</SelectItem>
+                  <SelectItem value="Thüringen">Thüringen</SelectItem>
                 </SelectContent>
               </Select>
             </div>

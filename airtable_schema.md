@@ -837,3 +837,187 @@ Gegner                    fldzzro62bWdYNPbA       text
 Attachments               fldTBQN0hQi2NO5aK       multipleAttachment
 
 Date                      fldhzIEIMtrdXs0fz       date
+
+Table: Touranfragen_Links (tbll0t9kKKVETKdEf)
+
+Field Name
+
+Field ID
+
+Type
+
+ID
+
+fldeQP7iFNuCRj8Ag
+
+autoNumber
+
+UserID
+
+fldfrSragMq11rvIK
+
+foreignKey
+
+UserID (from UserID)
+
+fldqekKuSY7yNKKjm
+
+lookup
+
+Name (from UserID)
+
+fldQw2LVGWy55Vx0f
+
+lookup
+
+Token
+
+fldhDLsm7Almp93rG
+
+text
+
+Created
+
+fldPzZDOU6oYOyyy2
+
+date
+
+Active
+
+fldYlGa9IvadIq4fa
+
+checkbox
+
+Usage Count
+
+fldJCCENTDGpIx9E3
+
+number
+
+Table: Touranfragen (tblinZK7BIS1mcVEY)
+
+Field Name
+
+Field ID
+
+Type
+
+ID
+
+fldvCfh11crOQlAlK
+
+autoNumber
+
+UserID
+
+fld8uUcxvNXhDK7LH
+
+foreignKey
+
+Name (from UserID)
+
+fld8fubtqrbDfZ0wQ
+
+lookup
+
+UserID (from UserID)
+
+flduGoQoVorVQT31z
+
+lookup
+
+Created
+
+fldWrdBxZaji8kolJ
+
+date
+
+Kreisverband
+
+fld8NImGR6qwjBhAk
+
+text
+
+Landesverband
+
+fldiZn3zPwVkmWWY4
+
+select
+
+Kandidat Name
+
+fld0IS6U6m43olPfi
+
+text
+
+Zeitraum Von
+
+fld2zy6eMwGTQ7HH1
+
+date
+
+Zeitraum Bis
+
+fldlEKjvIarwHi2pv
+
+date
+
+Zeitraum Alle
+
+fldl2gXZmtHgUcEBL
+
+multilineText
+
+Themen
+
+fldnOaf9I682TU25B
+
+multilineText
+
+Video
+
+fldgTYsteEfqMJHsq
+
+checkbox
+
+Ansprechpartner 1 Name
+
+fld5p4hepIrQZ7CHj
+
+text
+
+Ansprechpartner 2 Name
+
+fldie0gsNnkswywAZ
+
+text
+
+Ansprechpartner 1 Phone
+
+fldFI0WMTeivA8DpL
+
+phoneNumber
+
+Ansprechpartner 2 Phone copy
+
+fld94M1AyKOF3JMWz
+
+phoneNumber
+
+Programmvorschlag
+
+fldRXXQQRKG1smGSe
+
+checkbox
+
+Status
+
+fldyhLlNNth3FeHYK
+
+select
+
+Token Used
+
+fldCzYmjZyZ7TXqJy
+
+text

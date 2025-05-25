@@ -1,37 +1,37 @@
 import React from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mic2, FolderOpen } from 'lucide-react';
+import { FileText, Mail } from 'lucide-react';
 
-const redenFeatures = [
+const kommunikationFeatures = [
   {
-    title: 'Redenschreiber',
-    description: 'Erstellen Sie überzeugende Reden mit KI-Unterstützung für verschiedene Anlässe',
-    href: '/redenschreiber',
-    icon: Mic2,
-    color: 'bg-red-500',
+    title: 'PM-Generator',
+    description: 'Erstellen Sie professionelle Pressemitteilungen mit KI-Unterstützung',
+    href: '/pressemitteilung',
+    icon: FileText,
+    color: 'bg-emerald-500',
   },
   {
-    title: 'Meine Reden',
-    description: 'Verwalten, bearbeiten und organisieren Sie alle Ihre gespeicherten Reden',
-    href: '/meine-reden',
-    icon: FolderOpen,
-    color: 'bg-indigo-500',
+    title: 'Bürgerpost',
+    description: 'Verwalten und beantworten Sie Anfragen von Bürgern effizient',
+    href: '/buergerpost',
+    icon: Mail,
+    color: 'bg-cyan-500',
   },
 ];
 
-export default function RedenOverviewPage() {
+export default function KommunikationPage() {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Reden</h1>
+        <h1 className="text-3xl font-bold mb-2">Kommunikation</h1>
         <p className="text-muted-foreground text-lg">
-          Alle Tools für die Erstellung und Verwaltung Ihrer Reden
+          Alle Tools für professionelle Kommunikation und Öffentlichkeitsarbeit
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {redenFeatures.map((feature, index) => (
+        {kommunikationFeatures.map((feature, index) => (
           <Link key={index} href={feature.href} className="block group">
             <Card className="h-full transition-all duration-200 hover:shadow-lg hover:scale-105 cursor-pointer">
               <CardHeader>

@@ -1,9 +1,8 @@
 "use client";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CachedAvatar } from "@/components/ui/cached-avatar";
 import { useSession } from "next-auth/react";
-import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 
@@ -38,15 +37,12 @@ export function Navbar({ className }: NavbarProps) {
             <div className="hidden sm:block text-sm font-medium text-foreground/90">
               {session.user.name || "Unbekannte/r Nutzer/in"}
             </div>
-            <Avatar className="h-8 w-8">
-              <AvatarImage 
-                src={session.user.image || undefined} 
-                alt={session.user.name || "Profilbild"} 
-              />
-              <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                <User className="h-4 w-4" />
-              </AvatarFallback>
-            </Avatar>
+            <CachedAvatar 
+              src={session.user.image || undefined}
+              alt={session.user.name || "Profilbild"}
+              fallbackText={session.user.name || undefined}
+              size="md"
+            />
           </div>
         )}
       </div>
