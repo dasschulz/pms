@@ -1,20 +1,22 @@
 "use client";
 
-import { PageLayout } from "@/components/page-layout";
+import { useState, useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CachedAvatar } from "@/components/ui/cached-avatar";
-import { User, Upload, Eye, EyeOff, Lock, Shield, AlertTriangle } from "lucide-react";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { useTheme } from "next-themes";
-import { useEffect, useState, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { Textarea } from "@/components/ui/textarea";
+import { PageLayout } from "@/components/page-layout";
+import { User, Mail, MapPin, Hash, Building, Camera, Lock, Eye, EyeOff, AlertTriangle, Shield, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { useProfilePicture } from "@/hooks/use-profile-picture";
+import { StationAutocomplete } from "@/components/ui/station-autocomplete";
 
 interface UserData {
   name: string;
@@ -22,6 +24,7 @@ interface UserData {
   wahlkreis: string;
   plz: string;
   landesverband: string;
+  heimatbahnhof: string;
   profilePictureUrl?: string;
 }
 
@@ -55,6 +58,7 @@ export default function EinstellungenPage() {
     wahlkreis: "",
     plz: "",
     landesverband: "",
+    heimatbahnhof: "",
     profilePictureUrl: ""
   });
 
@@ -90,6 +94,7 @@ export default function EinstellungenPage() {
             wahlkreis: data.wahlkreis || "",
             plz: data.plz || "",
             landesverband: data.landesverband || "",
+            heimatbahnhof: data.heimatbahnhof || "",
             profilePictureUrl: data.profilePictureUrl || ""
           });
         }
@@ -241,6 +246,7 @@ export default function EinstellungenPage() {
     setIsLoading(true);
     try {
       const dataToSave = { ...userData, ...overrides };
+      console.log('💾 Settings: Saving user data:', dataToSave);
       
       const response = await fetch('/api/user-details', {
         method: 'POST',
@@ -250,15 +256,23 @@ export default function EinstellungenPage() {
         body: JSON.stringify(dataToSave),
       });
 
+      console.log('💾 Settings: Response status:', response.status);
+      console.log('💾 Settings: Response ok:', response.ok);
+
       if (!response.ok) {
-        throw new Error('Failed to save user data');
+        const errorData = await response.json();
+        console.error('💾 Settings: API error response:', errorData);
+        throw new Error(errorData.error || 'Failed to save user data');
       }
+
+      const responseData = await response.json();
+      console.log('💾 Settings: Success response:', responseData);
 
       if (!overrides.profilePictureUrl) {
         toast.success("Änderungen erfolgreich gespeichert");
       }
     } catch (error) {
-      console.error('Error saving user data:', error);
+      console.error('💾 Settings: Error saving user data:', error);
       toast.error("Fehler beim Speichern der Änderungen");
     } finally {
       setIsLoading(false);
@@ -332,42 +346,71 @@ export default function EinstellungenPage() {
   return (
     <PageLayout title="Einstellungen" description="Verwalte deine persönlichen Einstellungen und Kontoinformationen.">
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Profile Picture Section */}
+        {/* Studio Settings Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Profilbild</CardTitle>
-            <CardDescription>Lade ein Profilbild hoch oder ändere dein aktuelles Bild.</CardDescription>
+            <CardTitle>Studio-Einstellungen</CardTitle>
+            <CardDescription>Verwalte dein Profilbild und Studio-spezifische Einstellungen.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <CachedAvatar 
-                src={userData.profilePictureUrl}
-                alt="Profilbild"
-                fallbackText={userData.name}
-                size="lg"
-                className="w-20 h-20"
-              />
-              <div className="flex flex-col space-y-2">
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="outline"
-                  disabled={isLoading}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Neues Bild hochladen
-                </Button>
-                <p className="text-sm text-muted-foreground">
-                  JPG, PNG oder GIF. Maximal 5MB.
-                </p>
+          <CardContent className="space-y-6">
+            {/* Profilbild Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Profilbild</h3>
+              <div className="flex items-center space-x-4">
+                <CachedAvatar 
+                  src={userData.profilePictureUrl}
+                  alt="Profilbild"
+                  fallbackText={userData.name}
+                  size="lg"
+                  className="w-20 h-20"
+                />
+                <div className="flex flex-col space-y-2">
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    variant="outline"
+                    disabled={isLoading}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Neues Bild hochladen
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    JPG, PNG oder GIF. Maximal 5MB.
+                  </p>
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleProfilePictureUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
               </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleProfilePictureUpload}
-                accept="image/*"
-                className="hidden"
-              />
             </div>
+
+            {/* Studio Settings Fields */}
+            <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="space-y-2">
+                <Label htmlFor="wahlkreis">Wahlkreis</Label>
+                <Input
+                  id="wahlkreis"
+                  value={userData.wahlkreis}
+                  onChange={(e) => setUserData(prev => ({ ...prev, wahlkreis: e.target.value }))}
+                  placeholder="Dein Wahlkreis"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="plz">PLZ (Wahlkreis, für Wetteranzeige im Dashboard)</Label>
+                <Input
+                  id="plz"
+                  value={userData.plz}
+                  onChange={(e) => setUserData(prev => ({ ...prev, plz: e.target.value }))}
+                  placeholder="Deine PLZ"
+                />
+              </div>
+            </div>
+            <Button onClick={() => saveUserData()} disabled={isLoading}>
+              {isLoading ? "Speichere..." : "Änderungen speichern"}
+            </Button>
           </CardContent>
         </Card>
 
@@ -398,48 +441,22 @@ export default function EinstellungenPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="wahlkreis">Wahlkreis</Label>
-              <Input
-                id="wahlkreis"
-                value={userData.wahlkreis}
-                onChange={(e) => setUserData(prev => ({ ...prev, wahlkreis: e.target.value }))}
-                placeholder="Dein Wahlkreis"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="plz">PLZ (Wahlkreis, für Wetteranzeige im Dashboard)</Label>
-              <Input
-                id="plz"
-                value={userData.plz}
-                onChange={(e) => setUserData(prev => ({ ...prev, plz: e.target.value }))}
-                placeholder="Deine PLZ"
+              <StationAutocomplete
+                label="Heimatbahnhof"
+                value={userData.heimatbahnhof}
+                onChange={(value) => setUserData(prev => ({ ...prev, heimatbahnhof: value }))}
+                placeholder="Deinen Heimatbahnhof suchen..."
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="landesverband">Landesverband</Label>
-              <Select value={userData.landesverband} onValueChange={(value) => setUserData(prev => ({ ...prev, landesverband: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Wähle deinen Landesverband" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Baden-Württemberg">Baden-Württemberg</SelectItem>
-                  <SelectItem value="Bayern">Bayern</SelectItem>
-                  <SelectItem value="Berlin">Berlin</SelectItem>
-                  <SelectItem value="Brandenburg">Brandenburg</SelectItem>
-                  <SelectItem value="Bremen">Bremen</SelectItem>
-                  <SelectItem value="Hamburg">Hamburg</SelectItem>
-                  <SelectItem value="Hessen">Hessen</SelectItem>
-                  <SelectItem value="Mecklenburg-Vorpommern">Mecklenburg-Vorpommern</SelectItem>
-                  <SelectItem value="Niedersachsen">Niedersachsen</SelectItem>
-                  <SelectItem value="Nordrhein-Westfalen">Nordrhein-Westfalen</SelectItem>
-                  <SelectItem value="Rheinland-Pfalz">Rheinland-Pfalz</SelectItem>
-                  <SelectItem value="Saarland">Saarland</SelectItem>
-                  <SelectItem value="Sachsen">Sachsen</SelectItem>
-                  <SelectItem value="Sachsen-Anhalt">Sachsen-Anhalt</SelectItem>
-                  <SelectItem value="Schleswig-Holstein">Schleswig-Holstein</SelectItem>
-                  <SelectItem value="Thüringen">Thüringen</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="landesverband"
+                value={userData.landesverband}
+                disabled
+                className="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                placeholder="Nicht festgelegt"
+              />
             </div>
             <Button onClick={() => saveUserData()} disabled={isLoading}>
               {isLoading ? "Speichere..." : "Änderungen speichern"}

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeatherCard } from "./weather-card";
+import { TrainCard } from "./train-card";
 import { QuickLinkCard } from "./quicklink-card";
 import { navItems } from "@/lib/nav-items";
 import Link from "next/link";
@@ -73,6 +74,7 @@ export async function DashboardPage() {
         </div>
         <div className="md:col-span-1 space-y-6">
             <WeatherCard city="Berlin" electoralDistrict="Musterwahlkreis" />
+            <TrainCard />
             <Card>
                 <CardHeader>
                 <CardTitle>Letzte Aktivitäten</CardTitle>

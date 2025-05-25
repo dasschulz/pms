@@ -5,6 +5,7 @@ import { CachedAvatar } from "@/components/ui/cached-avatar";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
+import { useRouter } from "next/navigation";
 
 interface NavbarProps {
   className?: string;
@@ -12,6 +13,11 @@ interface NavbarProps {
 
 export function Navbar({ className }: NavbarProps) {
   const { data: session } = useSession();
+  const router = useRouter();
+  
+  const handleProfileClick = () => {
+    router.push('/einstellungen');
+  };
   
   return (
     <header 
@@ -33,7 +39,18 @@ export function Navbar({ className }: NavbarProps) {
       <div className="flex items-center gap-4">
         {/* Profile section */}
         {session?.user && (
-          <div className="flex items-center gap-3">
+          <div 
+            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity rounded-lg px-2 py-1"
+            onClick={handleProfileClick}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleProfileClick();
+              }
+            }}
+          >
             <div className="hidden sm:block text-sm font-medium text-foreground/90">
               {session.user.name || "Unbekannte/r Nutzer/in"}
             </div>
