@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -23,13 +24,16 @@ import {
   Minus,
   Camera,
   Plus,
-  Menu
+  Menu,
+  Check,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types/videoplanung";
 import { Fragment } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTasks } from "@/hooks/use-tasks";
 
 interface TaskStatusTableProps {
   status: string;
@@ -37,7 +41,6 @@ interface TaskStatusTableProps {
   onTaskClick: (task: Task) => void;
   onTaskMove: (taskId: string, newStatus: string, newSortOrder: number) => void;
   onTaskUpdate?: (taskId: string, updates: Partial<Task>) => void;
-  onCreateSubtask?: (parentTaskId: string) => void;
   isCollapsed?: boolean;
 }
 
@@ -107,14 +110,17 @@ export function TaskStatusTable({
   onTaskClick, 
   onTaskMove, // TODO: Implement drag-and-drop functionality
   onTaskUpdate,
-  onCreateSubtask,
   isCollapsed = false 
 }: TaskStatusTableProps) {
   const { toast } = useToast();
+  const { createTask } = useTasks();
   const [collapsed, setCollapsed] = useState(isCollapsed);
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [creatingSubtaskFor, setCreatingSubtaskFor] = useState<string | null>(null);
+  const [newSubtaskName, setNewSubtaskName] = useState<string>('');
+  const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
 
   const handleTaskSelect = (taskId: string) => {
     const newSelected = new Set(selectedTasks);
@@ -150,6 +156,68 @@ export function TaskStatusTable({
     }
   };
 
+  const handleCreateSubtask = (parentTaskId: string) => {
+    setCreatingSubtaskFor(parentTaskId);
+    setNewSubtaskName('');
+    setIsCreatingSubtask(true);
+    // Ensure parent task is expanded
+    setExpandedTasks(prev => new Set([...prev, parentTaskId]));
+  };
+
+  const handleSaveSubtask = async () => {
+    if (!creatingSubtaskFor || !newSubtaskName.trim()) return;
+    
+    setIsCreatingSubtask(true);
+    try {
+      // Find the parent task to inherit some properties
+      const parentTask = tasks.find(t => t.id === creatingSubtaskFor);
+      
+      await createTask({
+        name: newSubtaskName.trim(),
+        detailview: '',
+        nextJob: parentTask?.nextJob || status,
+        priority: 'Normal',
+        isSubtask: true,
+        parentTaskId: creatingSubtaskFor
+      });
+      
+      toast({
+        title: "Unteraufgabe erstellt",
+        description: "Die neue Unteraufgabe wurde erfolgreich erstellt.",
+      });
+      handleCancelSubtask();
+    } catch (error) {
+      toast({
+        title: "Fehler beim Erstellen",
+        description: "Die Unteraufgabe konnte nicht erstellt werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingSubtask(false);
+    }
+  };
+
+  const handleCancelSubtask = () => {
+    setCreatingSubtaskFor(null);
+    setNewSubtaskName('');
+    setIsCreatingSubtask(false);
+  };
+
+  const handleSubtaskKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveSubtask();
+    } else if (e.key === 'Escape') {
+      handleCancelSubtask();
+    }
+  };
+
+  // Handle clicking outside to cancel subtask creation
+  const handleTableClick = () => {
+    if (creatingSubtaskFor) {
+      handleCancelSubtask();
+    }
+  };
+
   const mainTasks = tasks.filter(task => !task.isSubtask);
   const getSubtasks = (parentId: string) => 
     tasks.filter(task => task.isSubtask && task.parentTaskId?.includes(parentId));
@@ -180,7 +248,7 @@ export function TaskStatusTable({
         </div>
 
         {!collapsed && (
-          <div className="bg-background">
+          <div className="bg-background" onClick={handleTableClick}>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -258,19 +326,17 @@ export function TaskStatusTable({
                               )}
                               
                               {/* Plus button for creating subtasks - appears on hover */}
-                              {onCreateSubtask && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onCreateSubtask(task.id);
-                                  }}
-                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <Plus className="h-3 w-3 text-muted-foreground" />
-                                </Button>
-                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCreateSubtask(task.id);
+                                }}
+                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Plus className="h-3 w-3 text-muted-foreground" />
+                              </Button>
                             </div>
                           </div>
                         </TableCell>
@@ -299,91 +365,224 @@ export function TaskStatusTable({
                         </TableCell>
                       </TableRow>
                       
-                      {/* Subtasks */}
-                      {isExpanded && subtasks.map((subtask) => (
-                        <TableRow
-                          key={subtask.id}
-                          className="cursor-pointer hover:bg-muted/50 bg-muted/20"
-                        >
+                      {/* Inline subtask creation row */}
+                      {creatingSubtaskFor === task.id && (
+                        <TableRow className="bg-muted/30 animate-in slide-in-from-top-2 duration-200">
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-1 ml-6">
                               <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                              <Checkbox
-                                checked={selectedTasks.has(subtask.id)}
-                                onCheckedChange={() => handleTaskSelect(subtask.id)}
-                              />
                             </div>
                           </TableCell>
                           <TableCell></TableCell>
-                          <TableCell className="font-medium text-sm pl-8">
-                            <div className="flex items-center gap-2 group">
-                              <Camera className={cn("h-4 w-4", getCameraIconColor(subtask.nextJob))} />
-                              <div className="flex items-center gap-2 flex-1">
-                                <span 
-                                  className="cursor-pointer hover:bg-muted px-2 py-1 rounded"
-                                  onClick={(e) => handleNameClick(subtask, e)}
-                                >
-                                  {subtask.name}
-                                </span>
-                                
-                                {/* Description indicator */}
-                                {subtask.detailview && subtask.detailview.trim() && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Menu className="h-3 w-3 text-muted-foreground cursor-help" />
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="max-w-xs">
-                                      <p className="text-sm">
-                                        {subtask.detailview.length > 800 
-                                          ? subtask.detailview.substring(0, 800) + '...' 
-                                          : subtask.detailview
-                                        }
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                                
-                                {/* Plus button for creating subtasks - appears on hover */}
-                                {onCreateSubtask && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onCreateSubtask(subtask.id);
-                                    }}
-                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <Plus className="h-3 w-3 text-muted-foreground" />
-                                  </Button>
-                                )}
-                              </div>
+                          <TableCell className="font-medium text-sm pl-8" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-2">
+                              <Camera className="h-4 w-4 text-gray-400" />
+                              <Input
+                                value={newSubtaskName}
+                                onChange={(e) => setNewSubtaskName(e.target.value)}
+                                onKeyDown={handleSubtaskKeyPress}
+                                placeholder="Neue Unteraufgabe..."
+                                className="flex-1"
+                                autoFocus
+                                disabled={isCreatingSubtask}
+                              />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleSaveSubtask}
+                                disabled={!newSubtaskName.trim() || isCreatingSubtask}
+                                className="h-6 w-6 p-0"
+                              >
+                                <Check className="h-3 w-3 text-green-600" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleCancelSubtask}
+                                disabled={isCreatingSubtask}
+                                className="h-6 w-6 p-0"
+                              >
+                                <X className="h-3 w-3 text-red-600" />
+                              </Button>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <Calendar className="h-3 w-3" />
-                              {formatDate(subtask.fälligkeitsdatum)}
+                              -
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={cn("text-xs", getStatusColor(subtask.nextJob))}>
-                              {subtask.nextJob}
+                            <Badge className={cn("text-xs", getStatusColor(task.nextJob))}>
+                              {task.nextJob}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              {getPriorityIcon(subtask.priority)}
-                              <span className="text-xs">{subtask.priority}</span>
+                              {getPriorityIcon('Normal')}
+                              <span className="text-xs">Normal</span>
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <Clock className="h-3 w-3" />
-                              {formatDate(subtask.publishDate)}
+                              -
                             </div>
                           </TableCell>
                         </TableRow>
+                      )}
+                      
+                      {/* Subtasks */}
+                      {isExpanded && subtasks.map((subtask) => (
+                        <Fragment key={subtask.id}>
+                          <TableRow
+                            className="cursor-pointer hover:bg-muted/50 bg-muted/20"
+                          >
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-1 ml-6">
+                                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                                <Checkbox
+                                  checked={selectedTasks.has(subtask.id)}
+                                  onCheckedChange={() => handleTaskSelect(subtask.id)}
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell></TableCell>
+                            <TableCell className="font-medium text-sm pl-8">
+                              <div className="flex items-center gap-2 group">
+                                <Camera className={cn("h-4 w-4", getCameraIconColor(subtask.nextJob))} />
+                                <div className="flex items-center gap-2 flex-1">
+                                  <span 
+                                    className="cursor-pointer hover:bg-muted px-2 py-1 rounded"
+                                    onClick={(e) => handleNameClick(subtask, e)}
+                                  >
+                                    {subtask.name}
+                                  </span>
+                                  
+                                  {/* Description indicator */}
+                                  {subtask.detailview && subtask.detailview.trim() && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Menu className="h-3 w-3 text-muted-foreground cursor-help" />
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="max-w-xs">
+                                        <p className="text-sm">
+                                          {subtask.detailview.length > 800 
+                                            ? subtask.detailview.substring(0, 800) + '...' 
+                                            : subtask.detailview
+                                          }
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                  
+                                  {/* Plus button for creating subtasks - appears on hover */}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCreateSubtask(subtask.id);
+                                    }}
+                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <Plus className="h-3 w-3 text-muted-foreground" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(subtask.fälligkeitsdatum)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={cn("text-xs", getStatusColor(subtask.nextJob))}>
+                                {subtask.nextJob}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {getPriorityIcon(subtask.priority)}
+                                <span className="text-xs">{subtask.priority}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {formatDate(subtask.publishDate)}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          
+                          {/* Inline subtask creation row for subtasks */}
+                          {creatingSubtaskFor === subtask.id && (
+                            <TableRow className="bg-muted/40 animate-in slide-in-from-top-2 duration-200">
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center gap-1 ml-12">
+                                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                                </div>
+                              </TableCell>
+                              <TableCell></TableCell>
+                              <TableCell className="font-medium text-sm pl-14" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center gap-2">
+                                  <Camera className="h-4 w-4 text-gray-400" />
+                                  <Input
+                                    value={newSubtaskName}
+                                    onChange={(e) => setNewSubtaskName(e.target.value)}
+                                    onKeyDown={handleSubtaskKeyPress}
+                                    placeholder="Neue Unteraufgabe..."
+                                    className="flex-1"
+                                    autoFocus
+                                    disabled={isCreatingSubtask}
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={handleSaveSubtask}
+                                    disabled={!newSubtaskName.trim() || isCreatingSubtask}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <Check className="h-3 w-3 text-green-600" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={handleCancelSubtask}
+                                    disabled={isCreatingSubtask}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <X className="h-3 w-3 text-red-600" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Calendar className="h-3 w-3" />
+                                  -
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={cn("text-xs", getStatusColor(subtask.nextJob))}>
+                                  {subtask.nextJob}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  {getPriorityIcon('Normal')}
+                                  <span className="text-xs">Normal</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  -
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
                       ))}
                     </Fragment>
                   );

@@ -16,7 +16,6 @@ export function VideoPlanningBoard() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
-  const [parentTaskForSubtask, setParentTaskForSubtask] = useState<string | null>(null);
 
   const groupedTasks = statusOrder.reduce((acc, status) => {
     acc[status] = tasks?.filter((task: Task) => task.nextJob === status) || [];
@@ -29,11 +28,6 @@ export function VideoPlanningBoard() {
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
     setIsTaskModalOpen(true);
-  };
-
-  const handleCreateSubtask = (parentTaskId: string) => {
-    setParentTaskForSubtask(parentTaskId);
-    setIsNewTaskModalOpen(true);
   };
 
   const handleTaskMove = async (taskId: string, newStatus: string, newSortOrder: number) => {
@@ -87,7 +81,6 @@ export function VideoPlanningBoard() {
 
   const handleCloseNewTaskModal = () => {
     setIsNewTaskModalOpen(false);
-    setParentTaskForSubtask(null);
   };
 
   if (isLoading) {
@@ -176,7 +169,6 @@ export function VideoPlanningBoard() {
           isOpen={isNewTaskModalOpen}
           onClose={handleCloseNewTaskModal}
           mode="create"
-          parentTaskId={parentTaskForSubtask || undefined}
         />
       </div>
     );
@@ -192,7 +184,6 @@ export function VideoPlanningBoard() {
           onTaskClick={handleTaskClick}
           onTaskMove={handleTaskMove}
           onTaskUpdate={handleTaskUpdate}
-          onCreateSubtask={handleCreateSubtask}
           isCollapsed={status === 'Erledigt'}
         />
       ))}
