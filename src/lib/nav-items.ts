@@ -39,12 +39,22 @@ export const navItems: NavItem[] = [
     icon: MapPin,
   },
   {
+    title: 'Dokumentensuche',
+    href: '/dokumentensuche',
+    icon: FileSearch2,
+  },
+  {
+    title: 'Tscheka',
+    href: '/gegner-recherche',
+    icon: FileSearch2,
+  },
+  {
     title: 'Fragewesen',
     icon: FileSearch2,
     isChidren: true,
     children: [
       {
-        title: 'Anfrage erstellen',
+        title: 'Kleine Anfragen',
         href: '/kleine-anfragen/generate',
         icon: FileSearch2,
       },
@@ -63,12 +73,12 @@ export const navItems: NavItem[] = [
         href: '/schriftliche-fragen',
         icon: FileSearch2,
       },
+      {
+        title: 'IFG-Anfragen',
+        href: '/ifg',
+        icon: FileSearch2,
+      },
     ],
-  },
-  {
-    title: 'Dokumentensuche',
-    href: '/dokumentensuche',
-    icon: FileSearch2,
   },
   {
     title: 'Reden',
@@ -130,11 +140,6 @@ export const navItems: NavItem[] = [
         icon: Image,
       },
     ],
-  },
-  {
-    title: 'Gegner-Recherche',
-    href: '/gegner-recherche',
-    icon: FileSearch2,
   },
 ];
 
