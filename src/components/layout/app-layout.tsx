@@ -25,6 +25,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger as ShadCNAccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { Navbar } from "./navbar";
+import { ChevronDown } from "lucide-react";
 
 // Custom Party Icon SVG - Wird für Sidebar Header und Header-Platzhalter verwendet
 // const PartyIcon = () => (
@@ -37,10 +38,31 @@ import { Navbar } from "./navbar";
 function SidebarNav() {
   const pathname = usePathname();
   const { state: sidebarState } = useSidebar();
+  const [openAccordionValue, setOpenAccordionValue] = React.useState<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    // Find if any child of any accordion is active and open that accordion
+    let activeParentTitle: string | undefined = undefined;
+    navItems.forEach(item => {
+      if (item.isChidren && item.children && item.children.some(child => child.href === pathname)) {
+        activeParentTitle = item.title;
+      }
+    });
+    if (sidebarState === "expanded") {
+      setOpenAccordionValue(activeParentTitle);
+    } else {
+      // Collapse accordion when sidebar collapses, but preserve which one was active
+      // if (activeParentTitle) setOpenAccordionValue(undefined); // Optional: fully close on sidebar collapse
+    }
+  }, [pathname, sidebarState]);
+
+  const handleAccordionChange = (value: string) => {
+    setOpenAccordionValue(prevValue => (prevValue === value ? undefined : value));
+  };
 
   const renderNavItem = (item: NavItem, index: number, isSubItem = false) => {
     const isActive = item.href === pathname || (item.children && item.children.some(child => child.href === pathname));
-    const isParentPageActive = item.href === pathname;
+    const isParentPageActive = item.href === pathname; // For items that were parent pages
 
     if (item.isHeader) {
       return (
@@ -51,53 +73,44 @@ function SidebarNav() {
     }
 
     if (item.isChidren && item.children) {
-      const isParentActive = item.children.some(child => child.href === pathname);
-      const defaultAccordionValue = isParentActive && sidebarState === "expanded" ? item.title : undefined;
+      const isCurrentlyOpen = openAccordionValue === item.title;
 
       return (
         <div key={index} className="w-full">
-          {/* Parent category link */}
-          {item.href && (
-            <SidebarMenuItem>
-              <Link href={item.href} passHref={false}>
-                <SidebarMenuButton
-                  variant="default"
-                  className={cn(
-                    "w-full justify-start h-9 mb-1",
-                    isParentPageActive && "bg-sidebar-accent text-sidebar-accent-foreground",
-                    sidebarState === "collapsed" ? "px-0 justify-center" : "px-2"
-                  )}
-                  tooltip={sidebarState === "collapsed" ? item.title : undefined}
-                  isActive={isParentPageActive}
-                >
-                  <div className={cn("flex items-center gap-2 w-full", sidebarState === "collapsed" ? "justify-center" : "")}>
-                    <item.icon className={cn("h-5 w-5 shrink-0", sidebarState === "collapsed" ? "mx-auto" : "")} />
-                    {sidebarState === "expanded" && <span className="truncate">{item.title}</span>}
-                  </div>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          )}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              variant="default"
+              className={cn(
+                "w-full justify-start h-9 mb-1",
+                // isActive && !isSubItem && "bg-sidebar-accent text-sidebar-accent-foreground", // Parent items are not active themselves anymore
+                sidebarState === "collapsed" ? "px-0 justify-center" : "px-2"
+              )}
+              tooltip={sidebarState === "collapsed" ? item.title : undefined}
+              onClick={() => sidebarState === "expanded" && handleAccordionChange(item.title)}
+              aria-expanded={isCurrentlyOpen}
+            >
+              <div className={cn("flex items-center gap-2 w-full", sidebarState === "collapsed" ? "justify-center" : "")}>
+                <item.icon className={cn("h-5 w-5 shrink-0", sidebarState === "collapsed" ? "mx-auto" : "")} />
+                {sidebarState === "expanded" && <span className="truncate flex-1">{item.title}</span>}
+                {sidebarState === "expanded" && item.children && (
+                  <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isCurrentlyOpen ? "rotate-180" : "")} />
+                )}
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           
-          {/* Accordion for children */}
           {sidebarState === "expanded" && (
-            <Accordion type="single" collapsible className="w-full px-0" defaultValue={defaultAccordionValue}>
-              <AccordionItem value={item.title} className="border-none">
-                <AccordionTriggerNoChevron
-                  className={cn(
-                    "w-full flex items-center justify-between hover:no-underline hover:bg-sidebar-accent rounded-md px-2 py-1 text-sm text-muted-foreground",
-                    "ml-2 text-xs"
+            <Accordion type="single" collapsible className="w-full px-0" value={openAccordionValue} onValueChange={handleAccordionChange}>
+              <AccordionItem value={item.title} className="border-none overflow-hidden">
+                {/* AccordionTrigger is now part of the SidebarMenuButton above */}
+                <AccordionContent className="pt-1 pb-0 pl-2">
+                  {isCurrentlyOpen && (
+                    <SidebarMenu className="border-l border-sidebar-border ml-[10px] pl-2">
+                      {item.children.map((child, childIndex) => (
+                        renderNavItem(child, childIndex, true)
+                      ))}
+                    </SidebarMenu>
                   )}
-                  showChevron={true}
-                >
-                  <span className="truncate">Alle {item.title} Tools</span>
-                </AccordionTriggerNoChevron>
-                <AccordionContent className="pt-1 pb-0 pl-4">
-                  <SidebarMenu>
-                    {item.children.map((child, childIndex) => (
-                      renderNavItem(child, childIndex, true)
-                    ))}
-                  </SidebarMenu>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -106,19 +119,21 @@ function SidebarNav() {
       );
     }
 
+    // For direct links (not parent categories)
     const commonProps = {
       variant: "default" as const,
       className: cn(
         "w-full justify-start h-9",
         isActive && !isSubItem && "bg-sidebar-accent text-sidebar-accent-foreground",
-        sidebarState === "collapsed" ? "px-0 justify-center" : "px-2"
+        sidebarState === "collapsed" ? "px-0 justify-center" : "px-2",
+        isSubItem ? "h-8 text-sm ml-2" : "" // Indent sub-items slightly
       ),
       tooltip: sidebarState === "collapsed" ? item.title : undefined,
     };
 
     const content = (
       <div className={cn("flex items-center gap-2 w-full", sidebarState === "collapsed" ? "justify-center" : "")}>
-        <item.icon className={cn("h-5 w-5 shrink-0", sidebarState === "collapsed" ? "mx-auto" : "")} />
+        <item.icon className={cn("h-5 w-5 shrink-0", sidebarState === "collapsed" ? "mx-auto" : (isSubItem ? "ml-1" : "")) } />
         {sidebarState === "expanded" && <span className="truncate">{item.title}</span>}
       </div>
     );
@@ -129,12 +144,6 @@ function SidebarNav() {
           <Link href={item.href || "#"} passHref={false}>
             <SidebarMenuSubButton
               {...commonProps}
-              className={cn(
-                "w-full justify-start h-8 text-sm", 
-                isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
-                sidebarState === "collapsed" ? "px-0 justify-center" : "px-2",
-                commonProps.className 
-              )}
               isActive={isActive}
             >
               {content}
@@ -177,25 +186,6 @@ function SidebarNav() {
     </div>
   );
 }
-
-const AccordionTriggerNoChevron = React.forwardRef<
-  React.ElementRef<typeof ShadCNAccordionTrigger>,
-  React.ComponentPropsWithoutRef<typeof ShadCNAccordionTrigger> & { showChevron?: boolean }
->(({ className, children, showChevron = true, ...props }, ref) => (
-  <ShadCNAccordionTrigger
-    ref={ref}
-    className={cn(
-      "py-2 hover:no-underline",
-      !showChevron && "[&>svg.lucide-chevron-down]:hidden",
-      className
-    )}
-    {...props}
-  >
-    {children}
-  </ShadCNAccordionTrigger>
-));
-AccordionTriggerNoChevron.displayName = "AccordionTriggerNoChevron";
-
 
 export function AppLayout({ children }: PropsWithChildren) {
   return (

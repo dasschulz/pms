@@ -40,7 +40,6 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Fragewesen',
-    href: '/fragewesen',
     icon: FileSearch2,
     isChidren: true,
     children: [
@@ -73,7 +72,6 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Reden',
-    href: '/reden',
     icon: Mic2,
     isChidren: true,
     children: [
@@ -91,7 +89,6 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Kommunikation',
-    href: '/kommunikation',
     icon: FileText,
     isChidren: true,
     children: [
@@ -109,7 +106,6 @@ export const navItems: NavItem[] = [
   },
   {
     title: 'Social Media',
-    href: '/social-media',
     icon: Share2,
     isChidren: true,
     children: [
