@@ -276,13 +276,13 @@ export function TrainCard({ className }: TrainCardProps) {
                 {formatTime(journey.departure)} → {formatTime(journey.arrival)}
               </span>
               {journey.delay > 0 && (
-                <Badge variant="destructive" className="text-xs">
+                <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5">
                   +{journey.delay}min
                 </Badge>
               )}
               {/* Platform information */}
               {journey.departurePlatform && (
-                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                   Gleis {journey.departurePlatform}
                 </Badge>
               )}
@@ -350,12 +350,12 @@ export function TrainCard({ className }: TrainCardProps) {
                     <div className="flex items-center space-x-2">
                       <span className="font-medium">{leg.origin.name}</span>
                       {leg.origin.platform && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[11px] px-1.5 py-0.5">
                           Gl. {leg.origin.platform}
                         </Badge>
                       )}
                       {leg.delay.departure > 0 && (
-                        <Badge variant="destructive" className="text-xs">
+                        <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5">
                           +{leg.delay.departure}min
                         </Badge>
                       )}
@@ -398,12 +398,12 @@ export function TrainCard({ className }: TrainCardProps) {
                     <div className="flex items-center space-x-2">
                       <span className="font-medium">{leg.destination.name}</span>
                       {leg.destination.platform && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[11px] px-1.5 py-0.5">
                           Gl. {leg.destination.platform}
                         </Badge>
                       )}
                       {leg.delay.arrival > 0 && (
-                        <Badge variant="destructive" className="text-xs">
+                        <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5">
                           +{leg.delay.arrival}min
                         </Badge>
                       )}
@@ -460,7 +460,7 @@ export function TrainCard({ className }: TrainCardProps) {
 
   if (isLoading && !connections) {
     return (
-      <Card className={className}>
+      <Card className={`shadow-lg ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Train className="w-5 h-5" />
@@ -481,7 +481,7 @@ export function TrainCard({ className }: TrainCardProps) {
 
   if (error && !connections) {
     return (
-      <Card className={className}>
+      <Card className={`shadow-lg ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Train className="w-5 h-5" />
@@ -522,7 +522,7 @@ export function TrainCard({ className }: TrainCardProps) {
   const hasData = nextToBerlin || nextFromBerlin;
 
   return (
-    <Card className={className}>
+    <Card className={`shadow-lg ${className}`}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
