@@ -32,7 +32,13 @@ import {
   Plus,
   Menu,
   Check,
-  X
+  X,
+  AlignLeft,
+  GitFork,
+  ArrowUpDown,
+  Trash2,
+  Flag,
+  ArrowRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types/videoplanung";
@@ -52,7 +58,7 @@ interface TaskStatusTableProps {
 }
 
 // Color schemes for different statuses
-const getStatusColor = (status: string) => {
+export const getStatusColor = (status: string) => {
   switch (status) {
     case 'Brainstorming':
       return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -108,7 +114,7 @@ const getPriorityIcon = (priority: string) => {
 
 const formatDate = (dateString: string | null) => {
   if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('de-DE');
+  return format(new Date(dateString), "dd.MM.yyyy", { locale: de });
 };
 
 export function TaskStatusTable({ 
@@ -130,6 +136,18 @@ export function TaskStatusTable({
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
   const [editingField, setEditingField] = useState<{taskId: string, field: string} | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  // Bulk actions state
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState<string | null>(null);
+
+  // New task creation state
+  const [isCreatingNewTask, setIsCreatingNewTask] = useState(false);
+  const [newTaskName, setNewTaskName] = useState('');
+  const [isNewTaskActive, setIsNewTaskActive] = useState(false);
+  const [isSavingNewTask, setIsSavingNewTask] = useState(false);
 
   const handleTaskSelect = (taskId: string) => {
     const newSelected = new Set(selectedTasks);
@@ -139,6 +157,7 @@ export function TaskStatusTable({
       newSelected.add(taskId);
     }
     setSelectedTasks(newSelected);
+    setShowBulkActions(newSelected.size > 0);
   };
 
   const handleTaskExpand = (taskId: string) => {
@@ -225,21 +244,243 @@ export function TaskStatusTable({
     }
   };
 
-  // Handle clicking outside to cancel subtask creation
   const handleTableClick = () => {
-    if (creatingSubtaskFor) {
-      handleCancelSubtask();
-    }
-    if (editingField) {
-      handleFieldCancel();
+    // Clear any editing state when clicking on table background
+    setEditingField(null);
+    setEditingValue('');
+    
+    // Also revert new task creation if active
+    if (isCreatingNewTask) {
+      handleNewTaskCancel();
     }
   };
 
-  const mainTasks = tasks.filter(task => !task.isSubtask);
+  // Bulk action handlers
+  const handleBulkDelete = async () => {
+    if (!onTaskUpdate || selectedTasks.size === 0) return;
+    
+    setBulkActionLoading('delete');
+    try {
+      // Note: This would typically be a bulk delete API call
+      // For now, we'll delete each task individually
+      const deletePromises = Array.from(selectedTasks).map(taskId => 
+        onTaskUpdate(taskId, { nextJob: 'Erledigt' } as Partial<Task>)
+      );
+      
+      await Promise.all(deletePromises);
+      
+      toast({
+        title: "Aufgaben gelöscht",
+        description: `${selectedTasks.size} Aufgabe(n) wurden erfolgreich gelöscht.`,
+      });
+      
+      setSelectedTasks(new Set());
+      setShowBulkActions(false);
+    } catch (error) {
+      toast({
+        title: "Fehler beim Löschen",
+        description: "Die Aufgaben konnten nicht gelöscht werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkActionLoading(null);
+    }
+  };
+
+  const handleBulkStatusChange = async (newStatus: string) => {
+    if (!onTaskUpdate || selectedTasks.size === 0) return;
+    
+    setBulkActionLoading('status');
+    try {
+      const updatePromises = Array.from(selectedTasks).map(taskId => 
+        onTaskUpdate(taskId, { nextJob: newStatus } as Partial<Task>)
+      );
+      
+      await Promise.all(updatePromises);
+      
+      toast({
+        title: "Status aktualisiert",
+        description: `${selectedTasks.size} Aufgabe(n) wurden zu "${newStatus}" verschoben.`,
+      });
+      
+      setSelectedTasks(new Set());
+      setShowBulkActions(false);
+    } catch (error) {
+      toast({
+        title: "Fehler beim Aktualisieren",
+        description: "Der Status konnte nicht aktualisiert werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkActionLoading(null);
+    }
+  };
+
+  const handleBulkPriorityChange = async (newPriority: string) => {
+    if (!onTaskUpdate || selectedTasks.size === 0) return;
+    
+    setBulkActionLoading('priority');
+    try {
+      const updatePromises = Array.from(selectedTasks).map(taskId => 
+        onTaskUpdate(taskId, { priority: newPriority } as Partial<Task>)
+      );
+      
+      await Promise.all(updatePromises);
+      
+      toast({
+        title: "Priorität aktualisiert",
+        description: `${selectedTasks.size} Aufgabe(n) haben jetzt die Priorität "${newPriority}".`,
+      });
+      
+      setSelectedTasks(new Set());
+      setShowBulkActions(false);
+    } catch (error) {
+      toast({
+        title: "Fehler beim Aktualisieren",
+        description: "Die Priorität konnte nicht aktualisiert werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkActionLoading(null);
+    }
+  };
+
+  // New task creation handlers
+  const handleNewTaskActivate = () => {
+    setIsNewTaskActive(true);
+    setIsCreatingNewTask(true);
+  };
+
+  const handleNewTaskSave = async () => {
+    if (!newTaskName.trim()) return;
+    
+    setIsSavingNewTask(true);
+    try {
+      const taskData = {
+        name: newTaskName.trim(),
+        detailview: '',
+        nextJob: status,
+        priority: 'Normal',
+        isSubtask: false
+      };
+      
+      await createTask(taskData);
+      
+      toast({
+        title: "Aufgabe erstellt",
+        description: "Die neue Aufgabe wurde erfolgreich erstellt.",
+      });
+      
+      handleNewTaskCancel();
+    } catch (error) {
+      console.error('Error creating new task:', error);
+      toast({
+        title: "Fehler beim Erstellen",
+        description: "Die Aufgabe konnte nicht erstellt werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingNewTask(false);
+    }
+  };
+
+  const handleNewTaskCancel = () => {
+    setIsCreatingNewTask(false);
+    setIsNewTaskActive(false);
+    setNewTaskName('');
+    setIsSavingNewTask(false);
+  };
+
+  const handleNewTaskKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNewTaskSave();
+    } else if (e.key === 'Escape') {
+      handleNewTaskCancel();
+    }
+  };
+
   const getSubtasks = (parentId: string) => 
     tasks.filter(task => task.isSubtask && task.parentTaskId?.includes(parentId));
 
   const statusColorClass = getStatusColor(status);
+
+  // Sorting functionality
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field and default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortedTasks = (tasksToSort: Task[]) => {
+    if (!sortField) return tasksToSort;
+
+    return [...tasksToSort].sort((a, b) => {
+      let aValue: any = a[sortField as keyof Task];
+      let bValue: any = b[sortField as keyof Task];
+
+      // Handle different field types
+      switch (sortField) {
+        case 'name':
+          aValue = (aValue || '').toLowerCase();
+          bValue = (bValue || '').toLowerCase();
+          break;
+        case 'fälligkeitsdatum':
+        case 'publishDate':
+          aValue = aValue ? new Date(aValue).getTime() : 0;
+          bValue = bValue ? new Date(bValue).getTime() : 0;
+          break;
+        case 'priority':
+          // Convert priority to numeric value for sorting
+          const priorityOrder = { 'Dringend': 4, 'Hoch': 3, 'Normal': 2, 'Niedrig': 1, '-': 0 };
+          aValue = priorityOrder[aValue as keyof typeof priorityOrder] || 0;
+          bValue = priorityOrder[bValue as keyof typeof priorityOrder] || 0;
+          break;
+        case 'nextJob':
+          // Sort by status order
+          const statusOrder = ['Brainstorming', 'Skript', 'Dreh', 'Schnitt', 'Veröffentlichung', 'Erledigt'];
+          aValue = statusOrder.indexOf(aValue) !== -1 ? statusOrder.indexOf(aValue) : 999;
+          bValue = statusOrder.indexOf(bValue) !== -1 ? statusOrder.indexOf(bValue) : 999;
+          break;
+        default:
+          aValue = aValue || '';
+          bValue = bValue || '';
+      }
+
+      let result = 0;
+      if (aValue < bValue) result = -1;
+      else if (aValue > bValue) result = 1;
+
+      return sortDirection === 'desc' ? -result : result;
+    });
+  };
+
+  const renderSortableHeader = (label: string, field: string, className?: string) => {
+    const isCurrentField = sortField === field;
+    return (
+      <TableHead 
+        className={cn("cursor-pointer hover:bg-muted/50 select-none", className)}
+        onClick={() => handleSort(field)}
+      >
+        <div className="flex items-center gap-1">
+          <span>{label}</span>
+          {isCurrentField ? (
+            sortDirection === 'asc' ? (
+              <ArrowUp className="h-3 w-3" />
+            ) : (
+              <ArrowDown className="h-3 w-3" />
+            )
+          ) : (
+            <ArrowUpDown className="h-3 w-3 opacity-50" />
+          )}
+        </div>
+      </TableHead>
+    );
+  };
 
   const handleFieldEdit = (taskId: string, field: string, currentValue: string) => {
     console.log('Frontend: handleFieldEdit called:', { taskId, field, currentValue });
@@ -304,7 +545,7 @@ export function TaskStatusTable({
   };
 
   // Helper function to render editable date field
-  const renderEditableDate = (task: Task, field: 'fälligkeitsdatum' | 'publishDate', icon: React.ReactNode) => {
+  const renderEditableDate = (task: Task, field: 'fälligkeitsdatum' | 'publishDate', _iconPlaceholder: React.ReactNode) => {
     const isEditing = editingField?.taskId === task.id && editingField?.field === field;
     const value = task[field];
     const displayValue = value ? formatDate(value) : '-';
@@ -315,25 +556,25 @@ export function TaskStatusTable({
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <Popover open={true} onOpenChange={(open) => {
             if (!open) {
-              // Save and close when popover closes
               setEditingField(null);
               setEditingValue('');
             }
           }}>
             <PopoverTrigger asChild>
               <Button
-                variant="outline"
-                size="sm"
+                variant="ghost"
                 className={cn(
-                  "w-32 h-6 justify-start text-left font-normal text-xs",
+                  "w-full h-9 justify-start text-left font-normal text-sm rounded",
+                  "px-0",
+                  "hover:bg-transparent focus:bg-transparent text-current hover:text-current",
+                  "focus-visible:ring-0 focus-visible:ring-offset-0",
                   !dateValue && "text-muted-foreground"
                 )}
               >
-                <CalendarIcon className="mr-1 h-3 w-3" />
                 {dateValue ? (
                   format(dateValue, "dd.MM.yyyy", { locale: de })
                 ) : (
-                  <span>Datum wählen</span>
+                  <span className="text-muted-foreground">Datum wählen</span>
                 )}
               </Button>
             </PopoverTrigger>
@@ -345,7 +586,6 @@ export function TaskStatusTable({
                   try {
                     const updates: Partial<Task> = {};
                     (updates as any)[field] = date ? date.toISOString().split('T')[0] : null;
-                    console.log('Frontend: Saving date update via calendar:', { taskId: task.id, field, date, updates });
                     await onTaskUpdate?.(task.id, updates);
                     toast({
                       title: "Aufgabe aktualisiert",
@@ -373,15 +613,16 @@ export function TaskStatusTable({
     
     return (
       <div 
-        className="flex items-center gap-1 text-sm text-muted-foreground cursor-pointer hover:bg-muted px-1 py-0.5 rounded"
+        className={cn(
+          "w-full h-9 text-sm rounded cursor-pointer",
+          "flex items-center justify-start font-normal text-left"
+        )}
         onClick={(e) => {
           e.stopPropagation();
-          console.log('Frontend: Starting date edit for:', { taskId: task.id, field, value });
           handleFieldEdit(task.id, field, value || '');
         }}
       >
-        {icon}
-        {displayValue}
+        <span>{displayValue}</span>
       </div>
     );
   };
@@ -400,8 +641,6 @@ export function TaskStatusTable({
               // Save immediately
               try {
                 const updates: Partial<Task> = { nextJob: value as Task['nextJob'] };
-                console.log('Frontend: Saving nextJob update:', { taskId: task.id, value, updates });
-                console.log('Frontend: nextJob value details:', { value, type: typeof value, stringified: JSON.stringify(value) });
                 await onTaskUpdate?.(task.id, updates);
                 toast({
                   title: "Aufgabe aktualisiert",
@@ -419,12 +658,23 @@ export function TaskStatusTable({
               }
             }}
           >
-            <SelectTrigger className="w-full h-6 text-xs">
-              <SelectValue />
+            <SelectTrigger className={cn(
+              "h-9 px-3 py-2 text-sm w-full border border-input",
+              getStatusColor(editingValue),
+              "hover:opacity-80"
+            )}>
+              <SelectValue placeholder="Status wählen" />
             </SelectTrigger>
             <SelectContent>
               {nextJobOptions.map((option) => (
-                <SelectItem key={option} value={option} className="text-xs">
+                <SelectItem 
+                  key={option} 
+                  value={option} 
+                  className={cn(
+                    "text-sm data-[highlighted]:opacity-75 focus:bg-transparent",
+                    getStatusColor(option)
+                  )}
+                >
                   {option}
                 </SelectItem>
               ))}
@@ -434,16 +684,25 @@ export function TaskStatusTable({
       );
     }
     
+    // Display as a non-interactive, styled Select-like element when not editing
     return (
-      <Badge 
-        className={cn("text-xs cursor-pointer hover:opacity-80", getStatusColor(task.nextJob || 'Brainstorming'))}
+      <div 
+        className={cn(
+          "h-9 px-3 py-2 text-sm w-full",
+          "flex items-center justify-center",
+          getStatusColor(task.nextJob || 'Brainstorming'),
+          "rounded-md border border-input",
+          "cursor-pointer hover:opacity-80"
+        )}
         onClick={(e) => {
           e.stopPropagation();
           handleFieldEdit(task.id, 'nextJob', task.nextJob || 'Brainstorming');
         }}
       >
-        {task.nextJob || 'Brainstorming'}
-      </Badge>
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{task.nextJob || 'Brainstorming'}</span>
+        {/* Optional: Add a down-arrow icon here to make it look more like a select */}
+        {/* <ChevronDown className="h-4 w-4 opacity-50" /> */}
+      </div>
     );
   };
 
@@ -461,8 +720,6 @@ export function TaskStatusTable({
               // Save immediately
               try {
                 const updates: Partial<Task> = { priority: value as Task['priority'] };
-                console.log('Frontend: Saving priority update:', { taskId: task.id, value, updates });
-                console.log('Frontend: priority value details:', { value, type: typeof value, stringified: JSON.stringify(value) });
                 await onTaskUpdate?.(task.id, updates);
                 toast({
                   title: "Aufgabe aktualisiert",
@@ -480,12 +737,16 @@ export function TaskStatusTable({
               }
             }}
           >
-            <SelectTrigger className="w-full h-6 text-xs">
-              <SelectValue />
+            <SelectTrigger className={cn(
+              "w-full h-9 px-3 py-2 text-sm", // Adjusted for md size
+              // Apply a base background and border similar to a "soft" variant
+              "bg-background border border-input hover:bg-muted"
+            )}>
+              <SelectValue placeholder="Priorität wählen" />
             </SelectTrigger>
             <SelectContent>
               {priorityOptions.map((option) => (
-                <SelectItem key={option} value={option} className="text-xs">
+                <SelectItem key={option} value={option} className="text-sm">
                   {option}
                 </SelectItem>
               ))}
@@ -497,17 +758,24 @@ export function TaskStatusTable({
     
     return (
       <div 
-        className="flex items-center gap-1 cursor-pointer hover:bg-muted px-1 py-0.5 rounded"
+        className={cn(
+          "w-full h-9 text-sm cursor-pointer rounded", // Removed hover:bg-muted, kept px-3 for icon
+          "flex items-center justify-start font-normal text-left" // Removed px-3
+        )}
         onClick={(e) => {
           e.stopPropagation();
           handleFieldEdit(task.id, 'priority', task.priority || 'Normal');
         }}
       >
         {getPriorityIcon(task.priority || 'Normal')}
-        <span className="text-xs">{task.priority || 'Normal'}</span>
+        <span className="ml-2">{task.priority || 'Normal'}</span> {/* Adjust margin for icon spacing */}
       </div>
     );
   };
+
+  // Separate main tasks from subtasks
+  const mainTasks = tasks.filter(task => !task.isSubtask);
+  const sortedMainTasks = getSortedTasks(mainTasks);
 
   return (
     <TooltipProvider>
@@ -534,20 +802,20 @@ export function TaskStatusTable({
 
         {!collapsed && (
           <div className="bg-background" onClick={handleTableClick}>
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12"></TableHead>
                   <TableHead className="w-12"></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="w-32">Fälligkeitsdatum</TableHead>
-                  <TableHead className="w-32">Nächster Job</TableHead>
-                  <TableHead className="w-24">Priorität</TableHead>
-                  <TableHead className="w-32">VÖ-Datum</TableHead>
+                  {renderSortableHeader("Name", "name")}
+                  {renderSortableHeader("Fälligkeit", "fälligkeitsdatum", "w-28")}
+                  {renderSortableHeader("Nächster Job", "nextJob", "w-32")}
+                  {renderSortableHeader("Priorität", "priority", "w-32")}
+                  {renderSortableHeader("VÖ-Datum", "publishDate", "w-28")}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mainTasks.map((task) => {
+                {sortedMainTasks.map((task) => {
                   const subtasks = getSubtasks(task.id);
                   const isExpanded = expandedTasks.has(task.id);
                   
@@ -585,19 +853,34 @@ export function TaskStatusTable({
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2 group">
                             <Camera className={cn("h-4 w-4", getCameraIconColor(task.nextJob))} />
+                            
+                            <div className="w-4 h-4 flex items-center justify-center">
+                              {creatingSubtaskFor === task.id ? (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </div>
+
                             <div className="flex items-center gap-2 flex-1">
                               <span 
-                                className="cursor-pointer hover:bg-muted px-2 py-1 rounded"
+                                className="cursor-pointer hover:bg-muted px-2 py-1 rounded text-sm"
                                 onClick={(e) => handleNameClick(task, e)}
                               >
                                 {task.name}
                               </span>
                               
-                              {/* Description indicator */}
+                              {/* Description indicator - now always visible if applicable */}
                               {task.detailview && task.detailview.trim() && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Menu className="h-3 w-3 text-muted-foreground cursor-help" />
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      className="h-6 w-6 p-0 transition-opacity ml-1"
+                                    >
+                                      <AlignLeft className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
                                   </TooltipTrigger>
                                   <TooltipContent side="top" className="max-w-xs">
                                     <p className="text-sm">
@@ -610,7 +893,19 @@ export function TaskStatusTable({
                                 </Tooltip>
                               )}
                               
-                              {/* Plus button for creating subtasks - appears on hover */}
+                              {/* Has Subtasks indicator - always visible if applicable */}
+                              {subtasks.length > 0 && (
+                                <Button 
+                                  size="icon" 
+                                  variant="ghost" 
+                                  className="h-6 w-6 p-0 transition-opacity ml-1" 
+                                  disabled // Non-interactive, just an indicator
+                                >
+                                  <GitFork className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              )}
+                              
+                              {/* Plus button for creating subtasks - now always visible */}
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -618,7 +913,7 @@ export function TaskStatusTable({
                                   e.stopPropagation();
                                   handleCreateSubtask(task.id);
                                 }}
-                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="h-6 w-6 p-0 transition-opacity"
                               >
                                 <Plus className="h-3 w-3 text-muted-foreground" />
                               </Button>
@@ -626,7 +921,7 @@ export function TaskStatusTable({
                           </div>
                         </TableCell>
                         <TableCell>
-                          {renderEditableDate(task, 'fälligkeitsdatum', <Calendar className="h-3 w-3" />)}
+                          {renderEditableDate(task, 'fälligkeitsdatum', <CalendarIcon className="h-3 w-3" />)}
                         </TableCell>
                         <TableCell>
                           {renderEditableStatus(task)}
@@ -642,12 +937,12 @@ export function TaskStatusTable({
                       {/* Inline subtask creation row */}
                       {creatingSubtaskFor === task.id && (
                         <TableRow className="bg-muted/30 animate-in slide-in-from-top-2 duration-200">
-                          <TableCell onClick={(e) => e.stopPropagation()}>
+                          <TableCell onClick={(e) => e.stopPropagation()} className="w-12">
                             <div className="flex items-center gap-1 ml-6">
                               <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                             </div>
                           </TableCell>
-                          <TableCell></TableCell>
+                          <TableCell className="w-12"></TableCell>
                           <TableCell className="font-medium text-sm pl-8" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-2">
                               <Camera className="h-4 w-4 text-gray-400" />
@@ -681,26 +976,24 @@ export function TaskStatusTable({
                               </Button>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Calendar className="h-3 w-3" />
+                          <TableCell className="w-28">
+                            <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
                               -
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <Badge className={cn("text-xs", getStatusColor(task.nextJob))}>
-                              {task.nextJob}
-                            </Badge>
+                          <TableCell className="w-32">
+                            <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
+                              -
+                            </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="w-32">
                             <div className="flex items-center gap-1">
                               {getPriorityIcon('Normal')}
                               <span className="text-xs">Normal</span>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Clock className="h-3 w-3" />
+                          <TableCell className="w-28">
+                            <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
                               -
                             </div>
                           </TableCell>
@@ -726,19 +1019,34 @@ export function TaskStatusTable({
                             <TableCell className="font-medium text-sm pl-8">
                               <div className="flex items-center gap-2 group">
                                 <Camera className={cn("h-4 w-4", getCameraIconColor(subtask.nextJob))} />
+                                
+                                <div className="w-4 h-4 flex items-center justify-center">
+                                  {creatingSubtaskFor === subtask.id ? (
+                                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                  )}
+                                </div>
+
                                 <div className="flex items-center gap-2 flex-1">
                                   <span 
-                                    className="cursor-pointer hover:bg-muted px-2 py-1 rounded"
+                                    className="cursor-pointer hover:bg-muted px-2 py-1 rounded text-sm"
                                     onClick={(e) => handleNameClick(subtask, e)}
                                   >
                                     {subtask.name}
                                   </span>
                                   
-                                  {/* Description indicator */}
+                                  {/* Description indicator - now always visible if applicable */}
                                   {subtask.detailview && subtask.detailview.trim() && (
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <Menu className="h-3 w-3 text-muted-foreground cursor-help" />
+                                        <Button 
+                                          size="icon" 
+                                          variant="ghost" 
+                                          className="h-6 w-6 p-0 transition-opacity ml-1"
+                                        >
+                                          <AlignLeft className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
                                       </TooltipTrigger>
                                       <TooltipContent side="top" className="max-w-xs">
                                         <p className="text-sm">
@@ -751,7 +1059,19 @@ export function TaskStatusTable({
                                     </Tooltip>
                                   )}
                                   
-                                  {/* Plus button for creating subtasks - appears on hover */}
+                                  {/* Has Subtasks indicator - always visible if applicable */}
+                                  {getSubtasks(subtask.id).length > 0 && (
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      className="h-6 w-6 p-0 transition-opacity ml-1" 
+                                      disabled // Non-interactive, just an indicator
+                                    >
+                                      <GitFork className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Plus button for creating subtasks - now always visible */}
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -759,7 +1079,7 @@ export function TaskStatusTable({
                                       e.stopPropagation();
                                       handleCreateSubtask(subtask.id);
                                     }}
-                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="h-6 w-6 p-0 transition-opacity"
                                   >
                                     <Plus className="h-3 w-3 text-muted-foreground" />
                                   </Button>
@@ -767,7 +1087,7 @@ export function TaskStatusTable({
                               </div>
                             </TableCell>
                             <TableCell>
-                              {renderEditableDate(subtask, 'fälligkeitsdatum', <Calendar className="h-3 w-3" />)}
+                              {renderEditableDate(subtask, 'fälligkeitsdatum', <CalendarIcon className="h-3 w-3" />)}
                             </TableCell>
                             <TableCell>
                               {renderEditableStatus(subtask)}
@@ -783,13 +1103,13 @@ export function TaskStatusTable({
                           {/* Inline subtask creation row for subtasks */}
                           {creatingSubtaskFor === subtask.id && (
                             <TableRow className="bg-muted/40 animate-in slide-in-from-top-2 duration-200">
-                              <TableCell onClick={(e) => e.stopPropagation()}>
-                                <div className="flex items-center gap-1 ml-12">
+                              <TableCell onClick={(e) => e.stopPropagation()} className="w-12">
+                                <div className="flex items-center gap-1 ml-6">
                                   <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                                 </div>
                               </TableCell>
                               <TableCell></TableCell>
-                              <TableCell className="font-medium text-sm pl-14" onClick={(e) => e.stopPropagation()}>
+                              <TableCell className="font-medium text-sm pl-8" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center gap-2">
                                   <Camera className="h-4 w-4 text-gray-400" />
                                   <Input
@@ -822,26 +1142,24 @@ export function TaskStatusTable({
                                   </Button>
                                 </div>
                               </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <Calendar className="h-3 w-3" />
+                              <TableCell className="w-28">
+                                <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
                                   -
                                 </div>
                               </TableCell>
-                              <TableCell>
-                                <Badge className={cn("text-xs", getStatusColor(subtask.nextJob))}>
-                                  {subtask.nextJob}
-                                </Badge>
+                              <TableCell className="w-32">
+                                <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
+                                  -
+                                </div>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="w-32">
                                 <div className="flex items-center gap-1">
                                   {getPriorityIcon('Normal')}
                                   <span className="text-xs">Normal</span>
                                 </div>
                               </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <Clock className="h-3 w-3" />
+                              <TableCell className="w-28">
+                                <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
                                   -
                                 </div>
                               </TableCell>
@@ -853,7 +1171,123 @@ export function TaskStatusTable({
                   );
                 })}
                 
-                {tasks.length === 0 && (
+                {/* New Task Creation Row */}
+                {!isCreatingNewTask ? (
+                  <TableRow 
+                    className="cursor-pointer hover:bg-muted/30 opacity-60 hover:opacity-100 transition-opacity duration-200"
+                    onClick={handleNewTaskActivate}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+                        <Checkbox disabled className="opacity-50" />
+                      </div>
+                    </TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Camera className="h-4 w-4 text-muted-foreground/50" />
+                        <div className="w-4 h-4"></div>
+                        <span className="text-muted-foreground italic text-sm">Neue Aufgabe hinzufügen...</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-start text-sm text-muted-foreground/50 h-9 w-full">
+                        -
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center text-sm text-muted-foreground/50 h-9 w-full">
+                        -
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-muted-foreground/50">
+                        {getPriorityIcon('Normal')}
+                        <span className="text-sm">Normal</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
+                        -
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  <TableRow className="bg-muted/20 animate-in slide-in-from-top-2 duration-200">
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1">
+                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                        <Checkbox disabled />
+                      </div>
+                    </TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className="font-medium" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <Camera className={cn("h-4 w-4", getCameraIconColor(status))} />
+                        <div className="w-4 h-4"></div>
+                        <div className="flex items-center gap-2 flex-1">
+                          <Input
+                            value={newTaskName}
+                            onChange={(e) => setNewTaskName(e.target.value)}
+                            onKeyDown={handleNewTaskKeyPress}
+                            onClick={(e) => e.stopPropagation()}
+                            placeholder="Aufgabenname eingeben..."
+                            className="flex-1"
+                            autoFocus
+                            disabled={isSavingNewTask}
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleNewTaskSave}
+                            disabled={!newTaskName.trim() || isSavingNewTask}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Check className="h-3 w-3 text-green-600" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleNewTaskCancel}
+                            disabled={isSavingNewTask}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="h-3 w-3 text-red-600" />
+                          </Button>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
+                        -
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className={cn(
+                        "h-9 px-3 py-2 text-sm w-full",
+                        "flex items-center justify-center",
+                        getStatusColor(status),
+                        "rounded-md border border-input"
+                      )}>
+                        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{status}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {getPriorityIcon('Normal')}
+                        <span className="text-sm">Normal</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
+                        -
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+                
+                {tasks.length === 0 && !isCreatingNewTask && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       Keine Aufgaben in diesem Status
@@ -865,6 +1299,65 @@ export function TaskStatusTable({
           </div>
         )}
       </div>
+
+      {/* Floating Action Buttons */}
+      {showBulkActions && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 animate-in slide-in-from-bottom-2 duration-200">
+          <div className="bg-background border rounded-lg shadow-lg p-2 flex flex-col gap-2">
+            <div className="text-xs text-muted-foreground px-2 py-1 border-b">
+              {selectedTasks.size} ausgewählt
+            </div>
+            
+            {/* Delete Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={bulkActionLoading === 'delete'}
+              className="justify-start gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              {bulkActionLoading === 'delete' ? 'Wird erledigt...' : 'Als erledigt markieren'}
+            </Button>
+            
+            {/* Status Change Buttons */}
+            <div className="flex flex-col gap-1">
+              <div className="text-xs text-muted-foreground px-2">Nächster Job:</div>
+              {nextJobOptions.map((option) => (
+                <Button
+                  key={option}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkStatusChange(option)}
+                  disabled={bulkActionLoading === 'status'}
+                  className="justify-start gap-2 text-xs"
+                >
+                  <ArrowRight className="h-3 w-3" />
+                  {bulkActionLoading === 'status' ? 'Wird geändert...' : option}
+                </Button>
+              ))}
+            </div>
+            
+            {/* Priority Change Buttons */}
+            <div className="flex flex-col gap-1">
+              <div className="text-xs text-muted-foreground px-2">Priorität:</div>
+              {priorityOptions.map((priority) => (
+                <Button
+                  key={priority}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkPriorityChange(priority)}
+                  disabled={bulkActionLoading === 'priority'}
+                  className="justify-start gap-2 text-xs"
+                >
+                  <Flag className="h-3 w-3" />
+                  {bulkActionLoading === 'priority' ? 'Wird geändert...' : priority}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </TooltipProvider>
   );
 } 
