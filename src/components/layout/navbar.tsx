@@ -54,12 +54,16 @@ export function Navbar({ className }: NavbarProps) {
             <div className="hidden sm:block text-sm font-medium text-foreground/90">
               {session.user.name || "Unbekannte/r Nutzer/in"}
             </div>
-            <CachedAvatar 
-              src={session.user.image || undefined}
-              alt={session.user.name || "Profilbild"}
-              fallbackText={session.user.name || undefined}
-              size="md"
-            />
+            <div className="relative">
+              <CachedAvatar 
+                src={session.user.image || undefined}
+                alt={session.user.name || "Profilbild"}
+                fallbackText={session.user.name || undefined}
+                size="md"
+              />
+              {/* Green activity indicator */}
+              <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
+            </div>
           </div>
         )}
       </div>
