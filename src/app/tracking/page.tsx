@@ -396,7 +396,7 @@ export default function TrackingPage() {
                 .sort((a, b) => b.engagement - a.engagement)
                 .slice(0, 5)
                 .map((post) => (
-                  <div key={post.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                  <div key={post.id} className="flex items-start gap-3 p-3 bg-muted rounded-lg">
                     <div className={`w-3 h-3 rounded-full mt-2 ${getPlatformColor(post.platform)}`} />
                     <div className="flex-1 space-y-1">
                       <p className="text-sm line-clamp-2">{post.content}</p>

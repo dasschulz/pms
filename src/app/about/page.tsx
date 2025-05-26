@@ -1,13 +1,17 @@
 'use client';
 
 import React from 'react';
-import { BentoGrid, BentoGridItem } from '@/components/ui/bento-grid';
+import { BentoGrid } from '@/components/ui/bento-grid';
+import { cn } from '@/lib/utils';
 import {
   IconInfoCircle, 
   IconUsers,      
   IconApi,        
   IconCode,       
-  IconWebhook,    
+  IconWebhook,
+  IconTrain,
+  IconFileText,
+  IconCalendar,
 // IconLink, // Not used directly, links are parsed
 // IconMail, // Not used directly, mailtos are parsed
 } from '@tabler/icons-react';
@@ -24,13 +28,17 @@ Dokumentenrecherche
 **Deutscher Bundestag**, Dokumentations- und Informationssystem für Parlamentsmaterialien <br>
 DIP API (link to https://dip.bundestag.de/%C3%BCber-dip/hilfe/api in new tab)
 
+Zugverbindungen
+**Deutsche Bahn**, Fahrplanauskunft und Echtzeitdaten <br>
+HAFAS API (link to https://github.com/public-transport/hafas-client in new tab)
+
 Tagesordnung
 **Jannis Hutt**(mailto:jannis.hutt@dielinkebt.de), Linksfraktion <br>
 BT-TO API @ github (link to https://github.com/hutt/bt-to/tree/main in new tab)
 `;
 
 const Skeleton = () => (
-  <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 dark:from-neutral-900 dark:to-neutral-800 to-neutral-100"></div>
+  <div className="flex flex-1 w-full h-[6rem] min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 dark:from-neutral-900 dark:to-neutral-800 to-neutral-100"></div>
 );
 
 const parseLine = (line: string): React.ReactNode[] => {
@@ -132,12 +140,50 @@ const parseDescription = (descriptionText: string): React.ReactNode[] => {
 };
 
 const getIcon = (title: string) => {
+  if (title.toLowerCase().includes('zugverbindungen')) return <IconTrain className="h-4 w-4 text-neutral-500" />;
+  if (title.toLowerCase().includes('dokumentenrecherche')) return <IconFileText className="h-4 w-4 text-neutral-500" />;
+  if (title.toLowerCase().includes('tagesordnung')) return <IconCalendar className="h-4 w-4 text-neutral-500" />;
   if (title.toLowerCase().includes('api')) return <IconApi className="h-4 w-4 text-neutral-500" />;
   if (title.toLowerCase().includes('person') || title.toLowerCase().includes('schulz') || title.toLowerCase().includes('hutt')) return <IconUsers className="h-4 w-4 text-neutral-500" />;
   if (title.toLowerCase().includes('webapp') || title.toLowerCase().includes('studio')) return <IconCode className="h-4 w-4 text-neutral-500" />;
   if (title.toLowerCase().includes('recherche')) return <IconWebhook className="h-4 w-4 text-neutral-500" />;
   return <IconInfoCircle className="h-4 w-4 text-neutral-500" />;
 }
+
+// Custom BentoGridItem without hover movement
+const BentoGridItem = ({
+  className,
+  title,
+  description,
+  header,
+  icon,
+}: {
+  className?: string;
+  title?: string | React.ReactNode;
+  description?: string | React.ReactNode;
+  header?: React.ReactNode;
+  icon?: React.ReactNode;
+}) => {
+  return (
+    <div
+      className={cn(
+        "group/bento shadow-input row-span-1 flex flex-col justify-between space-y-4 rounded-xl border border-neutral-200 bg-white p-4 transition duration-200 hover:shadow-xl dark:border-white/[0.2] dark:bg-black dark:shadow-none",
+        className,
+      )}
+    >
+      {header}
+      <div>
+        {icon}
+        <div className="mt-2 mb-2 font-sans font-bold text-neutral-600 dark:text-neutral-200">
+          {title}
+        </div>
+        <div className="font-sans text-xs font-normal text-neutral-600 dark:text-neutral-300">
+          {description}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function AboutPage() {
   const rawItems = markdownContent.trim().split('\n\n');

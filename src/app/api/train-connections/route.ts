@@ -1,98 +1,110 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { base } from '@/lib/airtable';
 import { getToken } from 'next-auth/jwt';
+import { createClient } from 'db-vendo-client';
+import { profile as dbnavProfile } from 'db-vendo-client/p/dbnav/index.js';
 
-// Use require for db-stations to avoid TypeScript issues
-const { readStations } = require('db-stations');
+// Create DB client with dbnav profile (stable, no API key required)
+const dbClient = createClient(dbnavProfile, 'MdB-App/1.0');
 
-// Cache for the stations data (loaded once per server startup)
-let stationsCache: any[] | null = null;
-
-// Load stations into memory (only once)
-async function loadStations() {
-  if (stationsCache) return stationsCache;
-  
-  console.log('🚂 Loading DB stations database...');
-  const stations = [];
-  
-  try {
-    for await (const station of readStations()) {
-      stations.push({
-        id: station.id,
-        name: station.name,
-        location: station.location,
-        weight: station.weight,
-        ril100: station.ril100,
-        city: station.address?.city,
-      });
-    }
-    
-    stationsCache = stations;
-    console.log(`✅ Loaded ${stations.length} DB stations into cache`);
-    return stations;
-  } catch (error) {
-    console.error('❌ Failed to load DB stations:', error);
-    return [];
-  }
+// Cache for connections data with 15-minute TTL
+interface CachedConnection {
+  data: any;
+  timestamp: number;
+  userId: string;
 }
 
-// Find station by name with fuzzy matching
-function findStation(query: string, stations: any[]) {
-  const normalizedQuery = query.toLowerCase().trim();
-  
-  // Exact match first
-  let match = stations.find(s => s.name.toLowerCase() === normalizedQuery);
-  if (match) return match;
-  
-  // Try common variations
-  const variations = [
-    normalizedQuery,
-    normalizedQuery.replace('hauptbahnhof', 'hbf'),
-    normalizedQuery.replace('hbf', 'hauptbahnhof'),
-    normalizedQuery.replace(' hbf', ' hauptbahnhof'),
-    normalizedQuery.replace(' hauptbahnhof', ' hbf'),
-    normalizedQuery + ' hbf',
-    normalizedQuery + ' hauptbahnhof',
-  ];
-  
-  // Try each variation
-  for (const variation of variations) {
-    match = stations.find(s => s.name.toLowerCase() === variation);
-    if (match) return match;
+let connectionsCache = new Map<string, CachedConnection>();
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+const CLEANUP_INTERVAL = 30 * 60 * 1000; // 30 minutes
+
+// Cleanup expired cache entries
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, cached] of connectionsCache.entries()) {
+    if (now - cached.timestamp > CACHE_TTL) {
+      connectionsCache.delete(key);
+    }
   }
+}, CLEANUP_INTERVAL);
+
+// Helper function to get cached data
+function getCachedConnections(userId: string, heimatbahnhof: string): any | null {
+  const cacheKey = `${userId}-${heimatbahnhof}`;
+  const cached = connectionsCache.get(cacheKey);
   
-  // Partial matches (starts with)
-  for (const variation of variations) {
-    match = stations.find(s => s.name.toLowerCase().startsWith(variation));
-    if (match) return match;
+  if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+    console.log(`🎯 Using cached train connections for ${heimatbahnhof}`);
+    return cached.data;
   }
-  
-  // City name matches
-  match = stations.find(s => s.city && s.city.toLowerCase() === normalizedQuery);
-  if (match) return match;
   
   return null;
 }
 
-// Helper function to add delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// Helper function to cache data
+function setCachedConnections(userId: string, heimatbahnhof: string, data: any): void {
+  const cacheKey = `${userId}-${heimatbahnhof}`;
+  connectionsCache.set(cacheKey, {
+    data,
+    timestamp: Date.now(),
+    userId
+  });
+  console.log(`💾 Cached train connections for ${heimatbahnhof}`);
+}
 
-// Helper function to retry API calls
-async function retryApiCall<T>(
-  apiCall: () => Promise<T>, 
-  retries: number = 2, 
-  delayMs: number = 1000
-): Promise<T> {
-  try {
-    return await apiCall();
-  } catch (error) {
-    if (retries > 0) {
-      console.log(`API call failed, retrying in ${delayMs}ms... (${retries} retries left)`);
-      await delay(delayMs);
-      return retryApiCall(apiCall, retries - 1, delayMs * 1.5);
+// Helper function to format journey data
+function formatJourney(journey: any) {
+  if (!journey || !journey.legs || journey.legs.length === 0) return null;
+  
+  const firstLeg = journey.legs[0];
+  const lastLeg = journey.legs[journey.legs.length - 1];
+  
+  // Extract detailed leg information
+  const legs = journey.legs.map((leg: any) => ({
+    origin: {
+      name: leg.origin?.name || 'Unknown',
+      id: leg.origin?.id,
+      platform: leg.departurePlatform || leg.origin?.platform
+    },
+    destination: {
+      name: leg.destination?.name || 'Unknown', 
+      id: leg.destination?.id,
+      platform: leg.arrivalPlatform || leg.destination?.platform
+    },
+    departure: leg.departure,
+    arrival: leg.arrival,
+    line: {
+      name: leg.line?.name,
+      product: leg.line?.product,
+      number: leg.line?.name || leg.line?.fahrtNr || leg.line?.id,
+      operator: leg.line?.operator?.name,
+      direction: leg.direction,
+      // Store more train info for debugging
+      rawLine: leg.line
+    },
+    duration: leg.duration,
+    distance: leg.distance,
+    walking: leg.walking || false,
+    delay: {
+      departure: leg.departureDelay || 0,
+      arrival: leg.arrivalDelay || 0
     }
-    throw error;
-  }
+  }));
+  
+  return {
+    departure: firstLeg.departure,
+    arrival: lastLeg.arrival,
+    duration: journey.duration || null,
+    transfers: journey.legs.length - 1,
+    products: journey.legs.map((leg: any) => leg.line?.product).filter(Boolean),
+    delay: firstLeg.departureDelay || 0,
+    // Add detailed information for expanded view
+    legs: legs,
+    price: journey.price,
+    departurePlatform: firstLeg.departurePlatform || firstLeg.origin?.platform,
+    arrivalPlatform: lastLeg.arrivalPlatform || lastLeg.destination?.platform,
+    rawJourney: journey // Store raw data for debugging and future use
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -105,6 +117,7 @@ export async function GET(req: NextRequest) {
   const userId = token.id as string;
   const { searchParams } = new URL(req.url);
   const isDebug = searchParams.get('debug') === 'true';
+  const forceRefresh = searchParams.get('refresh') === 'true';
 
   try {
     // First, get the user's Heimatbahnhof from Airtable
@@ -130,307 +143,206 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // If debug mode, just return the station info without making API calls
+    // If debug mode, just return the station info
     if (isDebug) {
-      const generateSearchVariations = (stationName: string): string[] => {
-        const variations = [stationName];
-        
-        if (stationName.includes('Hauptbahnhof')) {
-          variations.push(stationName.replace('Hauptbahnhof', 'Hbf'));
-          variations.push(stationName.replace('Hauptbahnhof', 'HBF'));
-        }
-        if (stationName.includes('Hbf')) {
-          variations.push(stationName.replace('Hbf', 'Hauptbahnhof'));
-          variations.push(stationName.replace('Hbf', 'HBF'));
-        }
-        if (stationName.includes('HBF')) {
-          variations.push(stationName.replace('HBF', 'Hauptbahnhof'));
-          variations.push(stationName.replace('HBF', 'Hbf'));
-        }
-        
-        const cityName = stationName.split(' ')[0];
-        if (cityName !== stationName) {
-          variations.push(cityName);
-          variations.push(`${cityName} Hbf`);
-          variations.push(`${cityName} Hauptbahnhof`);
-        }
-        
-        return [...new Set(variations)];
-      };
-
       return NextResponse.json({
         debug: true,
         storedValue: heimatbahnhof,
-        searchVariations: generateSearchVariations(heimatbahnhof),
-        encoding: {
-          original: heimatbahnhof,
-          encoded: encodeURIComponent(heimatbahnhof),
-          bytes: [...new TextEncoder().encode(heimatbahnhof)],
+        cacheInfo: {
+          hasCachedData: getCachedConnections(userId, heimatbahnhof) !== null,
+          cacheSize: connectionsCache.size,
+        },
+        config: {
+          profile: 'dbnav',
+          cacheTTL: `${CACHE_TTL / 1000 / 60} minutes`,
         }
       });
     }
 
-    // First, try to resolve station using local DB
-    const stations = await loadStations();
-    let selectedStation = null;
-    let heimatbahnhofId = null;
-    
-    if (stations.length > 0) {
-      selectedStation = findStation(heimatbahnhof, stations);
-      if (selectedStation) {
-        heimatbahnhofId = selectedStation.id;
-        console.log(`✅ Found station locally: "${selectedStation.name}" (ID: ${heimatbahnhofId})`);
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cachedData = getCachedConnections(userId, heimatbahnhof);
+      if (cachedData) {
+        return NextResponse.json(cachedData);
       }
     }
+
+    console.log(`🚂 Fetching fresh train connections for: ${heimatbahnhof}`);
+
+    // Step 1: Find the home station using db-vendo-client
+    let homeStation = null;
     
-    // If local lookup failed, fall back to API search
-    if (!selectedStation) {
-      console.log(`🔍 Local lookup failed for "${heimatbahnhof}", trying API...`);
-      
-      // Helper function to search for a station with a specific query
-      const searchStation = async (query: string) => {
-        console.log(`🔍 Trying search query: "${query}"`);
-        
-        // First try the DB-specific stations endpoint (better for our use case)
-        try {
-          console.log(`🚆 Trying DB stations autocomplete for: "${query}"`);
-          const stationsResponse = await fetch(
-            `https://v5.db.transport.rest/stations?query=${encodeURIComponent(query)}&limit=5&fuzzy=true&completion=true`,
-            {
-              headers: {
-                'User-Agent': 'MdB-App/1.0',
-              },
-              signal: AbortSignal.timeout(10000),
-            }
-          );
+    try {
+      console.log(`🔍 Searching for station: ${heimatbahnhof}`);
+      const locations = await dbClient.locations(heimatbahnhof, {
+        results: 5,
+        fuzzy: true,
+        stops: true,
+        addresses: false,
+        poi: false
+      });
 
-          if (stationsResponse.ok) {
-            const stationsData = await stationsResponse.json();
-            // Convert stations object to array format
-            const stationsArray = Object.values(stationsData).map((station: any) => ({
-              type: 'station',
-              id: station.id,
-              name: station.name,
-              location: station.location
-            }));
-            
-            console.log(`🎯 DB stations found ${stationsArray.length} results for "${query}":`, 
-              stationsArray.slice(0, 3).map((loc: any) => loc.name));
-            
-            if (stationsArray.length > 0) {
-              return stationsArray;
-            }
-          }
-        } catch (stationsError) {
-          console.log(`❌ DB stations search failed for "${query}":`, stationsError);
-        }
-
-        // Fallback to general locations endpoint with better parameters
-        console.log(`🗺️ Trying general locations search for: "${query}"`);
-        const locationResponse = await fetch(
-          `https://v5.db.transport.rest/locations?query=${encodeURIComponent(query)}&results=5&stops=true&addresses=false&poi=false&fuzzy=true&language=de`,
-          {
-            headers: {
-              'User-Agent': 'MdB-App/1.0',
-            },
-            signal: AbortSignal.timeout(10000),
-          }
-        );
-
-        if (!locationResponse.ok) {
-          throw new Error(`Location search failed: ${locationResponse.status}`);
-        }
-
-        const locationsData = await locationResponse.json();
-        console.log(`📍 General locations found ${locationsData?.length || 0} results for "${query}":`, 
-          locationsData?.slice(0, 3).map((loc: any) => loc.name) || []);
-        
-        return locationsData;
-      };
-
-      // Generate search variations for German station names
-      const generateSearchVariations = (stationName: string): string[] => {
-        const variations = [stationName]; // Start with original
-        
-        // Convert common abbreviations
-        if (stationName.includes('Hauptbahnhof')) {
-          variations.push(stationName.replace('Hauptbahnhof', 'Hbf'));
-          variations.push(stationName.replace('Hauptbahnhof', 'HBF'));
-        }
-        if (stationName.includes('Hbf')) {
-          variations.push(stationName.replace('Hbf', 'Hauptbahnhof'));
-          variations.push(stationName.replace('Hbf', 'HBF'));
-        }
-        if (stationName.includes('HBF')) {
-          variations.push(stationName.replace('HBF', 'Hauptbahnhof'));
-          variations.push(stationName.replace('HBF', 'Hbf'));
-        }
-        
-        // Add variations with just the city name (for major stations)
-        const cityName = stationName.split(' ')[0];
-        if (cityName !== stationName) {
-          variations.push(cityName);
-          variations.push(`${cityName} Hbf`);
-          variations.push(`${cityName} Hauptbahnhof`);
-        }
-        
-        // Remove duplicates
-        return [...new Set(variations)];
-      };
-
-      const searchVariations = generateSearchVariations(heimatbahnhof);
-      console.log(`🔄 Will try ${searchVariations.length} search variations:`, searchVariations);
-
-      let locations: any = null;
-      let successfulQuery = '';
-
-      // Try each variation until we find results
-      for (const variation of searchVariations) {
-        try {
-          const result = await retryApiCall(() => searchStation(variation));
-          if (result && result.length > 0) {
-            locations = result;
-            successfulQuery = variation;
-            console.log(`✅ Found station with query: "${variation}"`);
-            break;
-          }
-        } catch (variationError) {
-          console.log(`❌ Variation "${variation}" failed:`, variationError);
-          continue;
-        }
-      }
-
-      if (!locations || locations.length === 0) {
-        console.error(`❌ No station found for any variation of: "${heimatbahnhof}"`);
+      if (locations && locations.length > 0) {
+        homeStation = locations[0];
+        console.log(`✅ Found station: ${homeStation.name} (ID: ${homeStation.id})`);
+      } else {
         throw new Error('Station not found');
       }
-
-      selectedStation = locations[0];
-      heimatbahnhofId = selectedStation.id;
-      
-      console.log(`🎯 Using station: "${selectedStation.name}" (ID: ${heimatbahnhofId})`);
-      if (successfulQuery !== heimatbahnhof) {
-        console.log(`📝 Note: Found with search query "${successfulQuery}" instead of original "${heimatbahnhof}"`);
-      }
-    }
-
-    // Continue with journey search using the resolved station
-    console.log(`🚂 Searching journeys for station: "${selectedStation.name}" (${heimatbahnhofId})`);
-    
-    // Define Berlin Hauptbahnhof station ID (from DB API)
-    const berlinHbfId = '8011160';
-
-    // Get current time for journey searches
-    const now = new Date();
-    const departure = now.toISOString();
-
-    // Search for journeys with retry logic
-    const [toBerlinData, fromBerlinData] = await Promise.allSettled([
-      retryApiCall(async () => {
-        const response = await fetch(
-          `https://v5.db.transport.rest/journeys?from=${heimatbahnhofId}&to=${berlinHbfId}&departure=${departure}&results=3&transfers=5&nationalExpress=true&national=true&regionalExp=true&regional=true`,
-          {
-            headers: {
-              'User-Agent': 'MdB-App/1.0',
-            },
-            signal: AbortSignal.timeout(10000),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Journey search failed: ${response.status}`);
-        }
-
-        return response.json();
-      }),
-      retryApiCall(async () => {
-        const response = await fetch(
-          `https://v5.db.transport.rest/journeys?from=${berlinHbfId}&to=${heimatbahnhofId}&departure=${departure}&results=3&transfers=5&nationalExpress=true&national=true&regionalExp=true&regional=true`,
-          {
-            headers: {
-              'User-Agent': 'MdB-App/1.0',
-            },
-            signal: AbortSignal.timeout(10000),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Journey search failed: ${response.status}`);
-        }
-
-        return response.json();
-      })
-    ]);
-
-    // Process and format the results
-    const formatJourney = (journey: any) => {
-      if (!journey || !journey.legs) return null;
-      
-      const firstLeg = journey.legs[0];
-      const lastLeg = journey.legs[journey.legs.length - 1];
-      
-      return {
-        departure: firstLeg.departure,
-        arrival: lastLeg.arrival,
-        duration: journey.duration,
-        transfers: journey.legs.length - 1,
-        products: journey.legs.map((leg: any) => leg.line?.product || 'unknown'),
-        delay: firstLeg.departureDelay || 0,
-      };
-    };
-
-    const toBerlinJourneys = toBerlinData.status === 'fulfilled' 
-      ? toBerlinData.value?.journeys?.slice(0, 2).map(formatJourney).filter(Boolean) || []
-      : [];
-    
-    const fromBerlinJourneys = fromBerlinData.status === 'fulfilled'
-      ? fromBerlinData.value?.journeys?.slice(0, 2).map(formatJourney).filter(Boolean) || []
-      : [];
-
-    // Check if we got any data
-    const hasAnyData = toBerlinJourneys.length > 0 || fromBerlinJourneys.length > 0;
-    
-    if (!hasAnyData && (toBerlinData.status === 'rejected' || fromBerlinData.status === 'rejected')) {
-      // If both failed, return service unavailable with cached fallback
-      return NextResponse.json({ 
-        error: 'Train API temporarily unavailable',
-        message: 'DB-Service ist momentan nicht verfügbar. Versuche es später erneut.',
+    } catch (locationError) {
+      console.error('❌ Station search failed:', locationError);
+      return NextResponse.json({
+        error: 'Station not found',
+        message: 'Station nicht gefunden. Bitte überprüfe die Schreibweise in den Einstellungen.',
         fallback: {
-          heimatbahnhof: selectedStation.name,
+          heimatbahnhof: heimatbahnhof,
           berlinHbf: 'Berlin Hbf',
           connections: {
             toBerlin: [],
             fromBerlin: [],
           },
-          lastUpdated: now.toISOString(),
+          lastUpdated: new Date().toISOString(),
           status: 'offline'
         }
+      }, { status: 404 });
+    }
+
+    // Step 2: Find Berlin Hauptbahnhof
+    let berlinStation = null;
+    
+    try {
+      const berlinLocationResults = await dbClient.locations('Berlin Hauptbahnhof', {
+        results: 1,
+        fuzzy: false,
+        stops: true,
+        addresses: false,
+        poi: false
+      });
+
+      if (berlinLocationResults && berlinLocationResults.length > 0) {
+        berlinStation = berlinLocationResults[0];
+        console.log(`✅ Found Berlin station: ${berlinStation.name} (ID: ${berlinStation.id})`);
+      } else {
+        // Fallback to known Berlin Hbf ID
+        berlinStation = { id: '8011160', name: 'Berlin Hbf' };
+        console.log('📍 Using fallback Berlin Hbf ID');
+      }
+    } catch (berlinError) {
+      console.error('❌ Berlin station search failed, using fallback:', berlinError);
+      berlinStation = { id: '8011160', name: 'Berlin Hbf' };
+    }
+
+    // Step 3: Search for journeys
+    const now = new Date();
+    
+    try {
+      console.log(`🚂 Searching journeys: ${homeStation.name} (${homeStation.id}) ↔ ${berlinStation.name} (${berlinStation.id})`);
+      
+      // Note: The dbnav profile doesn't support products filtering (specific train types)
+      // This means we'll get all available transport types (ICE, IC, RE, RB, S-Bahn, etc.)
+      // which is actually better for comprehensive journey planning
+      
+      // Search for journeys to and from Berlin
+      const [toBerlinJourneys, fromBerlinJourneys] = await Promise.allSettled([
+        dbClient.journeys(homeStation.id, berlinStation.id, {
+          departure: now,
+          results: 3,
+          transfers: 5,
+          transferTime: 0,
+          walking: true,
+          bike: false
+        }),
+        dbClient.journeys(berlinStation.id, homeStation.id, {
+          departure: now,
+          results: 3,
+          transfers: 5,
+          transferTime: 0,
+          walking: true,
+          bike: false
+        })
+      ]);
+
+      // Log detailed results for debugging
+      console.log(`📊 Journey search results:`);
+      console.log(`  - To Berlin: ${toBerlinJourneys.status}`, 
+        toBerlinJourneys.status === 'rejected' ? toBerlinJourneys.reason : `${toBerlinJourneys.value?.journeys?.length || 0} journeys`);
+      console.log(`  - From Berlin: ${fromBerlinJourneys.status}`, 
+        fromBerlinJourneys.status === 'rejected' ? fromBerlinJourneys.reason : `${fromBerlinJourneys.value?.journeys?.length || 0} journeys`);
+
+      // Process results
+      const toBerlinData = toBerlinJourneys.status === 'fulfilled' 
+        ? toBerlinJourneys.value?.journeys?.slice(0, 2).map(formatJourney).filter(Boolean) || []
+        : [];
+      
+      const fromBerlinData = fromBerlinJourneys.status === 'fulfilled'
+        ? fromBerlinJourneys.value?.journeys?.slice(0, 2).map(formatJourney).filter(Boolean) || []
+        : [];
+
+      const hasAnyData = toBerlinData.length > 0 || fromBerlinData.length > 0;
+      
+      const responseData = {
+        heimatbahnhof: homeStation.name,
+        berlinHbf: berlinStation.name,
+        connections: {
+          toBerlin: toBerlinData,
+          fromBerlin: fromBerlinData,
+        },
+        lastUpdated: now.toISOString(),
+        status: hasAnyData ? 'online' : 'partial',
+        cacheInfo: {
+          cached: false,
+          validUntil: new Date(now.getTime() + CACHE_TTL).toISOString()
+        }
+      };
+
+      // Cache the successful response even if no journeys found (to avoid repeated API calls)
+      setCachedConnections(userId, heimatbahnhof, responseData);
+
+      // Only return 503 if both searches failed with errors (not if they just returned no results)
+      if (!hasAnyData && (toBerlinJourneys.status === 'rejected' && fromBerlinJourneys.status === 'rejected')) {
+        console.log('❌ Both journey searches failed with errors');
+        return NextResponse.json({ 
+          error: 'Train API temporarily unavailable',
+          message: 'DB-Service ist momentan nicht verfügbar. Versuche es später erneut.',
+          fallback: {
+            ...responseData,
+            status: 'offline'
+          }
+        }, { status: 503 });
+      }
+
+      console.log(`✅ Journey search completed: ${toBerlinData.length} to Berlin, ${fromBerlinData.length} from Berlin`);
+      return NextResponse.json(responseData);
+
+    } catch (journeyError) {
+      console.error('❌ Journey search failed:', journeyError);
+      
+      const fallbackData = {
+        heimatbahnhof: homeStation.name,
+        berlinHbf: berlinStation.name,
+        connections: {
+          toBerlin: [],
+          fromBerlin: [],
+        },
+        lastUpdated: now.toISOString(),
+        status: 'offline'
+      };
+
+      return NextResponse.json({ 
+        error: 'Journey search failed',
+        message: 'Verbindungssuche fehlgeschlagen. Versuche es später erneut.',
+        fallback: fallbackData
       }, { status: 503 });
     }
 
-    return NextResponse.json({
-      heimatbahnhof: selectedStation.name,
-      berlinHbf: 'Berlin Hbf',
-      connections: {
-        toBerlin: toBerlinJourneys,
-        fromBerlin: fromBerlinJourneys,
-      },
-      lastUpdated: now.toISOString(),
-      status: hasAnyData ? 'online' : 'partial'
-    });
-
-  } catch (apiError) {
-    console.error('DB API Error:', apiError);
+  } catch (error) {
+    console.error('❌ Train connections API error:', error);
     
-    // Provide more specific error messages
     let userMessage = 'Verbindungsdaten derzeit nicht verfügbar';
-    if (apiError instanceof Error) {
-      if (apiError.message.includes('Station not found')) {
+    if (error instanceof Error) {
+      if (error.message.includes('Station not found')) {
         userMessage = 'Station nicht gefunden. Bitte überprüfe die Schreibweise in den Einstellungen.';
-      } else if (apiError.message.includes('503')) {
-        userMessage = 'DB-Service ist momentan überlastet. Versuche es in wenigen Minuten erneut.';
-      } else if (apiError.message.includes('timeout')) {
-        userMessage = 'Verbindung zum DB-Service zeitüberschreitung. Überprüfe deine Internetverbindung.';
+      } else if (error.message.includes('timeout')) {
+        userMessage = 'DB-Service antwortet nicht rechtzeitig. Versuche es später erneut.';
       }
     }
     
@@ -438,7 +350,7 @@ export async function GET(req: NextRequest) {
       error: 'Train API unavailable',
       message: userMessage,
       fallback: {
-        heimatbahnhof: 'Nicht verfügbar',
+        heimatbahnhof: 'Heimatbahnhof',
         berlinHbf: 'Berlin Hbf',
         connections: {
           toBerlin: [],
