@@ -136,11 +136,6 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    title: 'Wettbewerbsstatistiken',
-    href: '/wettbewerbsstatistiken',
-    icon: BarChart3,
-  },
-  {
     title: 'Gegner-Recherche',
     href: '/gegner-recherche',
     icon: FileSearch2,
