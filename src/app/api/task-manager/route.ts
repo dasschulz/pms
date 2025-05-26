@@ -52,11 +52,11 @@ export async function GET(req: NextRequest) {
       
       const tasks = records.map(record => ({
         id: record.id,
-        taskId: record.get('Task-ID ') as number,
+        taskId: record.get('Task-ID') as number,
         name: record.get(' Name ') as string,
         detailview: record.get(' Detailview ') as string || '',
         isSubtask: record.get(' IsSubtask ') as boolean || false,
-        parentTaskId: record.get(' ParentTaskID ') as string[] || null,
+        parentTaskId: record.get('ParentTaskID') as string[] || null,
         fälligkeitsdatum: record.get(' Fälligkeitsdatum ') as string || null,
         nextJob: record.get(' NextJob ') as string || 'Brainstorming',
         priority: record.get(' Priority ') as string || 'Normal',
@@ -85,16 +85,16 @@ export async function GET(req: NextRequest) {
         
         const tasks = records.map(record => ({
           id: record.id,
-          taskId: record.get('Task-ID ') as number,
+          taskId: record.get('Task-ID') as number,
           name: record.get(' Name ') as string,
           detailview: record.get(' Detailview ') as string || '',
           isSubtask: record.get(' IsSubtask ') as boolean || false,
-          parentTaskId: record.get(' ParentTaskID ') as string[] || null,
+          parentTaskId: record.get('ParentTaskID') as string[] || null,
           fälligkeitsdatum: record.get(' Fälligkeitsdatum ') as string || null,
           nextJob: record.get(' NextJob ') as string || 'Brainstorming',
           priority: record.get(' Priority ') as string || 'Normal',
           publishDate: record.get(' PublishDate ') as string || null,
-          sortOrder: 0, 
+          sortOrder: 0,
           createdDate: record.get(' CreatedDate ') as string,
           modifiedDate: record.get(' ModifiedDate') as string,
         }));
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
     }
 
     const userAirtableId = userRecords[0].id;
-    // console.log('TaskManager API: User Airtable ID for creation:', userAirtableId);
+    console.log('TaskManager API: User Airtable ID for creation:', userAirtableId);
     
     const requestData = await req.json();
     // console.log('TaskManager API: Request data for task creation:', requestData);
@@ -183,13 +183,19 @@ export async function POST(req: NextRequest) {
       ' SortOrder ': sortOrder || 0,
     };
 
+    console.log('TaskManager API: nextJob value:', nextJob, 'type:', typeof nextJob);
+    console.log('TaskManager API: priority value:', priority, 'type:', typeof priority);
+
     if (detailview) createFields[' Detailview '] = detailview;
     if (isSubtask) createFields[' IsSubtask '] = isSubtask;
-    if (parentTaskId) createFields[' ParentTaskID '] = [parentTaskId];
+    if (parentTaskId) {
+      console.log('TaskManager API: parentTaskId received:', parentTaskId, 'type:', typeof parentTaskId, 'isArray:', Array.isArray(parentTaskId));
+      createFields['ParentTaskID'] = Array.isArray(parentTaskId) ? parentTaskId : [parentTaskId];
+    }
     if (fälligkeitsdatum) createFields[' Fälligkeitsdatum '] = fälligkeitsdatum;
     if (publishDate) createFields[' PublishDate '] = publishDate;
 
-    // console.log('TaskManager API: Creating task with fields:', createFields);
+    console.log('TaskManager API: Creating task with fields (FULL DUMP):', JSON.stringify(createFields, null, 2));
 
     const record = await base('TaskManager').create([{
       fields: createFields
@@ -200,11 +206,11 @@ export async function POST(req: NextRequest) {
     const newTask = record[0];
     const responseData = {
       id: newTask.id,
-      taskId: newTask.get('Task-ID '),
+      taskId: newTask.get('Task-ID'),
       name: newTask.get(' Name '),
       detailview: newTask.get(' Detailview ') || '',
       isSubtask: newTask.get(' IsSubtask ') || false,
-      parentTaskId: newTask.get(' ParentTaskID ') || null,
+      parentTaskId: newTask.get('ParentTaskID') || null,
       fälligkeitsdatum: newTask.get(' Fälligkeitsdatum ') || null,
       nextJob: newTask.get(' NextJob ') || 'Brainstorming',
       priority: newTask.get(' Priority ') || 'Normal',
@@ -269,21 +275,40 @@ export async function PUT(req: NextRequest) {
     }
 
     const updateFields: any = {
-      ' ModifiedDate': new Date().toISOString().split('T')[0], // ModifiedDate field
+      ' ModifiedDate': new Date().toISOString().split('T')[0],
     };
 
     // Map the update data to Airtable fields
-    if (updateData.name !== undefined) updateFields[' Name '] = updateData.name; // Name field
-    if (updateData.detailview !== undefined) updateFields[' Detailview '] = updateData.detailview; // Detailview field
-    if (updateData.isSubtask !== undefined) updateFields[' IsSubtask '] = updateData.isSubtask; // IsSubtask field
+    if (updateData.name !== undefined) updateFields[' Name '] = updateData.name;
+    if (updateData.detailview !== undefined) updateFields[' Detailview '] = updateData.detailview;
+    if (updateData.isSubtask !== undefined) updateFields[' IsSubtask '] = updateData.isSubtask;
     if (updateData.parentTaskId !== undefined) {
-      updateFields[' ParentTaskID '] = updateData.parentTaskId ? [updateData.parentTaskId] : null; // ParentTaskID field
+      console.log('TaskManager API: UPDATE parentTaskId received:', updateData.parentTaskId, 'type:', typeof updateData.parentTaskId, 'isArray:', Array.isArray(updateData.parentTaskId));
+      if (updateData.parentTaskId === null) {
+        updateFields['ParentTaskID'] = null;
+      } else if (Array.isArray(updateData.parentTaskId)) {
+        updateFields['ParentTaskID'] = updateData.parentTaskId;
+      } else {
+        updateFields['ParentTaskID'] = [updateData.parentTaskId];
+      }
     }
-    if (updateData.fälligkeitsdatum !== undefined) updateFields[' Fälligkeitsdatum '] = updateData.fälligkeitsdatum; // Fälligkeitsdatum field
-    if (updateData.nextJob !== undefined) updateFields[' NextJob '] = updateData.nextJob; // NextJob field
-    if (updateData.priority !== undefined) updateFields[' Priority '] = updateData.priority; // Priority field
-    if (updateData.publishDate !== undefined) updateFields[' PublishDate '] = updateData.publishDate; // PublishDate field
-    if (updateData.sortOrder !== undefined) updateFields[' SortOrder '] = updateData.sortOrder; // SortOrder field
+    if (updateData.fälligkeitsdatum !== undefined) {
+      console.log('TaskManager API: UPDATE fälligkeitsdatum received:', updateData.fälligkeitsdatum, 'type:', typeof updateData.fälligkeitsdatum);
+      updateFields[' Fälligkeitsdatum '] = updateData.fälligkeitsdatum;
+    }
+    if (updateData.nextJob !== undefined) {
+      console.log('TaskManager API: UPDATE nextJob received:', updateData.nextJob, 'type:', typeof updateData.nextJob);
+      updateFields[' NextJob '] = updateData.nextJob;
+    }
+    if (updateData.priority !== undefined) {
+      console.log('TaskManager API: UPDATE priority received:', updateData.priority, 'type:', typeof updateData.priority);
+      updateFields[' Priority '] = updateData.priority;
+    }
+    if (updateData.publishDate !== undefined) {
+      console.log('TaskManager API: UPDATE publishDate received:', updateData.publishDate, 'type:', typeof updateData.publishDate);
+      updateFields[' PublishDate '] = updateData.publishDate;
+    }
+    if (updateData.sortOrder !== undefined) updateFields[' SortOrder '] = updateData.sortOrder;
 
     const updatedRecord = await base('TaskManager').update([{
       id: id,
@@ -293,18 +318,18 @@ export async function PUT(req: NextRequest) {
     const task = updatedRecord[0];
     return NextResponse.json({
       id: task.id,
-      taskId: task.get('Task-ID '), // Task-ID field
-      name: task.get(' Name '), // Name field
-      detailview: task.get(' Detailview ') || '', // Detailview field
-      isSubtask: task.get(' IsSubtask ') || false, // IsSubtask field
-      parentTaskId: task.get(' ParentTaskID ') || null, // ParentTaskID field
-      fälligkeitsdatum: task.get(' Fälligkeitsdatum ') || null, // Fälligkeitsdatum field
-      nextJob: task.get(' NextJob ') || 'Brainstorming', // NextJob field
-      priority: task.get(' Priority ') || 'Normal', // Priority field
-      publishDate: task.get(' PublishDate ') || null, // PublishDate field
-      sortOrder: task.get(' SortOrder ') || 0, // SortOrder field
-      createdDate: task.get(' CreatedDate '), // CreatedDate field
-      modifiedDate: task.get(' ModifiedDate'), // ModifiedDate field
+      taskId: task.get('Task-ID'),
+      name: task.get(' Name '),
+      detailview: task.get(' Detailview ') || '',
+      isSubtask: task.get(' IsSubtask ') || false,
+      parentTaskId: task.get('ParentTaskID') || null,
+      fälligkeitsdatum: task.get(' Fälligkeitsdatum ') || null,
+      nextJob: task.get(' NextJob ') || 'Brainstorming',
+      priority: task.get(' Priority ') || 'Normal',
+      publishDate: task.get(' PublishDate ') || null,
+      sortOrder: task.get(' SortOrder ') || 0,
+      createdDate: task.get(' CreatedDate '),
+      modifiedDate: task.get(' ModifiedDate'),
     });
   } catch (error) {
     console.error('Airtable API Error updating task:', error);

@@ -13,11 +13,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { de } from "date-fns/locale";
 import { 
   ChevronDown, 
   ChevronRight, 
   GripVertical, 
   Calendar,
+  CalendarIcon,
   Clock,
   ArrowUp,
   ArrowDown,
@@ -30,6 +36,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types/videoplanung";
+import { nextJobOptions, priorityOptions } from "@/types/videoplanung";
 import { Fragment } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -121,6 +128,8 @@ export function TaskStatusTable({
   const [creatingSubtaskFor, setCreatingSubtaskFor] = useState<string | null>(null);
   const [newSubtaskName, setNewSubtaskName] = useState<string>('');
   const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
+  const [editingField, setEditingField] = useState<{taskId: string, field: string} | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
 
   const handleTaskSelect = (taskId: string) => {
     const newSelected = new Set(selectedTasks);
@@ -159,7 +168,6 @@ export function TaskStatusTable({
   const handleCreateSubtask = (parentTaskId: string) => {
     setCreatingSubtaskFor(parentTaskId);
     setNewSubtaskName('');
-    setIsCreatingSubtask(true);
     // Ensure parent task is expanded
     setExpandedTasks(prev => new Set([...prev, parentTaskId]));
   };
@@ -172,14 +180,19 @@ export function TaskStatusTable({
       // Find the parent task to inherit some properties
       const parentTask = tasks.find(t => t.id === creatingSubtaskFor);
       
-      await createTask({
+      const taskData = {
         name: newSubtaskName.trim(),
         detailview: '',
         nextJob: parentTask?.nextJob || status,
         priority: 'Normal',
         isSubtask: true,
-        parentTaskId: creatingSubtaskFor
-      });
+        parentTaskId: [creatingSubtaskFor]
+      };
+      
+      console.log('Frontend: Creating subtask with data:', taskData);
+      console.log('Frontend: parentTaskId value:', taskData.parentTaskId, 'type:', typeof taskData.parentTaskId, 'isArray:', Array.isArray(taskData.parentTaskId));
+      
+      await createTask(taskData);
       
       toast({
         title: "Unteraufgabe erstellt",
@@ -187,6 +200,7 @@ export function TaskStatusTable({
       });
       handleCancelSubtask();
     } catch (error) {
+      console.error('Error creating subtask:', error);
       toast({
         title: "Fehler beim Erstellen",
         description: "Die Unteraufgabe konnte nicht erstellt werden.",
@@ -216,6 +230,9 @@ export function TaskStatusTable({
     if (creatingSubtaskFor) {
       handleCancelSubtask();
     }
+    if (editingField) {
+      handleFieldCancel();
+    }
   };
 
   const mainTasks = tasks.filter(task => !task.isSubtask);
@@ -223,6 +240,274 @@ export function TaskStatusTable({
     tasks.filter(task => task.isSubtask && task.parentTaskId?.includes(parentId));
 
   const statusColorClass = getStatusColor(status);
+
+  const handleFieldEdit = (taskId: string, field: string, currentValue: string) => {
+    console.log('Frontend: handleFieldEdit called:', { taskId, field, currentValue });
+    setEditingField({ taskId, field });
+    setEditingValue(currentValue || '');
+    console.log('Frontend: Editing state set:', { editingField: { taskId, field }, editingValue: currentValue || '' });
+  };
+
+  const handleFieldSave = async () => {
+    if (!editingField || !onTaskUpdate) return;
+    
+    try {
+      const updates: Partial<Task> = {};
+      
+      switch (editingField.field) {
+        case 'fälligkeitsdatum':
+        case 'publishDate':
+          // For dates, we expect ISO date string format
+          (updates as any)[editingField.field] = editingValue || null;
+          break;
+        case 'nextJob':
+        case 'priority':
+          (updates as any)[editingField.field] = editingValue;
+          break;
+      }
+      
+      await onTaskUpdate(editingField.taskId, updates);
+      toast({
+        title: "Aufgabe aktualisiert",
+        description: "Das Feld wurde erfolgreich geändert.",
+      });
+      setEditingField(null);
+      setEditingValue('');
+    } catch (error) {
+      toast({
+        title: "Fehler beim Aktualisieren",
+        description: "Das Feld konnte nicht aktualisiert werden.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFieldCancel = () => {
+    setEditingField(null);
+    setEditingValue('');
+  };
+
+  const handleFieldKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (editingField) {
+        // Handle Enter key for date fields
+        const target = e.target as HTMLInputElement;
+        if (target.type === 'date') {
+          target.blur(); // This will trigger the onBlur save handler
+        } else {
+          handleFieldSave();
+        }
+      }
+    } else if (e.key === 'Escape') {
+      handleFieldCancel();
+    }
+  };
+
+  // Helper function to render editable date field
+  const renderEditableDate = (task: Task, field: 'fälligkeitsdatum' | 'publishDate', icon: React.ReactNode) => {
+    const isEditing = editingField?.taskId === task.id && editingField?.field === field;
+    const value = task[field];
+    const displayValue = value ? formatDate(value) : '-';
+    const dateValue = value ? new Date(value) : null;
+    
+    if (isEditing) {
+      return (
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <Popover open={true} onOpenChange={(open) => {
+            if (!open) {
+              // Save and close when popover closes
+              setEditingField(null);
+              setEditingValue('');
+            }
+          }}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "w-32 h-6 justify-start text-left font-normal text-xs",
+                  !dateValue && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-1 h-3 w-3" />
+                {dateValue ? (
+                  format(dateValue, "dd.MM.yyyy", { locale: de })
+                ) : (
+                  <span>Datum wählen</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={dateValue || undefined}
+                onSelect={async (date) => {
+                  try {
+                    const updates: Partial<Task> = {};
+                    (updates as any)[field] = date ? date.toISOString().split('T')[0] : null;
+                    console.log('Frontend: Saving date update via calendar:', { taskId: task.id, field, date, updates });
+                    await onTaskUpdate?.(task.id, updates);
+                    toast({
+                      title: "Aufgabe aktualisiert",
+                      description: "Das Datum wurde erfolgreich geändert.",
+                    });
+                    setEditingField(null);
+                    setEditingValue('');
+                  } catch (error) {
+                    console.error('Frontend: Error saving date via calendar:', error);
+                    toast({
+                      title: "Fehler beim Aktualisieren",
+                      description: "Das Datum konnte nicht aktualisiert werden.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                locale={de}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      );
+    }
+    
+    return (
+      <div 
+        className="flex items-center gap-1 text-sm text-muted-foreground cursor-pointer hover:bg-muted px-1 py-0.5 rounded"
+        onClick={(e) => {
+          e.stopPropagation();
+          console.log('Frontend: Starting date edit for:', { taskId: task.id, field, value });
+          handleFieldEdit(task.id, field, value || '');
+        }}
+      >
+        {icon}
+        {displayValue}
+      </div>
+    );
+  };
+
+  // Helper function to render editable status field
+  const renderEditableStatus = (task: Task) => {
+    const isEditing = editingField?.taskId === task.id && editingField?.field === 'nextJob';
+    
+    if (isEditing) {
+      return (
+        <div onClick={(e) => e.stopPropagation()}>
+          <Select
+            value={editingValue}
+            onValueChange={async (value) => {
+              setEditingValue(value);
+              // Save immediately
+              try {
+                const updates: Partial<Task> = { nextJob: value as Task['nextJob'] };
+                console.log('Frontend: Saving nextJob update:', { taskId: task.id, value, updates });
+                console.log('Frontend: nextJob value details:', { value, type: typeof value, stringified: JSON.stringify(value) });
+                await onTaskUpdate?.(task.id, updates);
+                toast({
+                  title: "Aufgabe aktualisiert",
+                  description: "Das Feld wurde erfolgreich geändert.",
+                });
+                setEditingField(null);
+                setEditingValue('');
+              } catch (error) {
+                console.error('Error saving nextJob:', error);
+                toast({
+                  title: "Fehler beim Aktualisieren",
+                  description: "Das Feld konnte nicht aktualisiert werden.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            <SelectTrigger className="w-full h-6 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {nextJobOptions.map((option) => (
+                <SelectItem key={option} value={option} className="text-xs">
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    
+    return (
+      <Badge 
+        className={cn("text-xs cursor-pointer hover:opacity-80", getStatusColor(task.nextJob || 'Brainstorming'))}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleFieldEdit(task.id, 'nextJob', task.nextJob || 'Brainstorming');
+        }}
+      >
+        {task.nextJob || 'Brainstorming'}
+      </Badge>
+    );
+  };
+
+  // Helper function to render editable priority field
+  const renderEditablePriority = (task: Task) => {
+    const isEditing = editingField?.taskId === task.id && editingField?.field === 'priority';
+    
+    if (isEditing) {
+      return (
+        <div onClick={(e) => e.stopPropagation()}>
+          <Select
+            value={editingValue}
+            onValueChange={async (value) => {
+              setEditingValue(value);
+              // Save immediately
+              try {
+                const updates: Partial<Task> = { priority: value as Task['priority'] };
+                console.log('Frontend: Saving priority update:', { taskId: task.id, value, updates });
+                console.log('Frontend: priority value details:', { value, type: typeof value, stringified: JSON.stringify(value) });
+                await onTaskUpdate?.(task.id, updates);
+                toast({
+                  title: "Aufgabe aktualisiert",
+                  description: "Das Feld wurde erfolgreich geändert.",
+                });
+                setEditingField(null);
+                setEditingValue('');
+              } catch (error) {
+                console.error('Error saving priority:', error);
+                toast({
+                  title: "Fehler beim Aktualisieren",
+                  description: "Das Feld konnte nicht aktualisiert werden.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            <SelectTrigger className="w-full h-6 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {priorityOptions.map((option) => (
+                <SelectItem key={option} value={option} className="text-xs">
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    
+    return (
+      <div 
+        className="flex items-center gap-1 cursor-pointer hover:bg-muted px-1 py-0.5 rounded"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleFieldEdit(task.id, 'priority', task.priority || 'Normal');
+        }}
+      >
+        {getPriorityIcon(task.priority || 'Normal')}
+        <span className="text-xs">{task.priority || 'Normal'}</span>
+      </div>
+    );
+  };
 
   return (
     <TooltipProvider>
@@ -341,27 +626,16 @@ export function TaskStatusTable({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(task.fälligkeitsdatum)}
-                          </div>
+                          {renderEditableDate(task, 'fälligkeitsdatum', <Calendar className="h-3 w-3" />)}
                         </TableCell>
                         <TableCell>
-                          <Badge className={cn("text-xs", getStatusColor(task.nextJob))}>
-                            {task.nextJob}
-                          </Badge>
+                          {renderEditableStatus(task)}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            {getPriorityIcon(task.priority)}
-                            <span className="text-xs">{task.priority}</span>
-                          </div>
+                          {renderEditablePriority(task)}
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {formatDate(task.publishDate)}
-                          </div>
+                          {renderEditableDate(task, 'publishDate', <Clock className="h-3 w-3" />)}
                         </TableCell>
                       </TableRow>
                       
@@ -381,6 +655,7 @@ export function TaskStatusTable({
                                 value={newSubtaskName}
                                 onChange={(e) => setNewSubtaskName(e.target.value)}
                                 onKeyDown={handleSubtaskKeyPress}
+                                onClick={(e) => e.stopPropagation()}
                                 placeholder="Neue Unteraufgabe..."
                                 className="flex-1"
                                 autoFocus
@@ -492,27 +767,16 @@ export function TaskStatusTable({
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Calendar className="h-3 w-3" />
-                                {formatDate(subtask.fälligkeitsdatum)}
-                              </div>
+                              {renderEditableDate(subtask, 'fälligkeitsdatum', <Calendar className="h-3 w-3" />)}
                             </TableCell>
                             <TableCell>
-                              <Badge className={cn("text-xs", getStatusColor(subtask.nextJob))}>
-                                {subtask.nextJob}
-                              </Badge>
+                              {renderEditableStatus(subtask)}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1">
-                                {getPriorityIcon(subtask.priority)}
-                                <span className="text-xs">{subtask.priority}</span>
-                              </div>
+                              {renderEditablePriority(subtask)}
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                {formatDate(subtask.publishDate)}
-                              </div>
+                              {renderEditableDate(subtask, 'publishDate', <Clock className="h-3 w-3" />)}
                             </TableCell>
                           </TableRow>
                           
@@ -532,6 +796,7 @@ export function TaskStatusTable({
                                     value={newSubtaskName}
                                     onChange={(e) => setNewSubtaskName(e.target.value)}
                                     onKeyDown={handleSubtaskKeyPress}
+                                    onClick={(e) => e.stopPropagation()}
                                     placeholder="Neue Unteraufgabe..."
                                     className="flex-1"
                                     autoFocus
