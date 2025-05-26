@@ -270,19 +270,19 @@ export function TrainCard({ className }: TrainCardProps) {
           onClick={() => toggleJourneyExpansion(journeyKey)}
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-gray-400 dark:text-muted-foreground" />
-              <span className="font-semibold">
+            <div className="flex items-center space-x-2 flex-wrap">
+              <Clock className="w-4 h-4 text-gray-400 dark:text-muted-foreground shrink-0" />
+              <span className="font-semibold whitespace-nowrap">
                 {formatTime(journey.departure)} → {formatTime(journey.arrival)}
               </span>
               {journey.delay > 0 && (
-                <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5">
+                <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
                   +{journey.delay}min
                 </Badge>
               )}
               {/* Platform information */}
               {journey.departurePlatform && (
-                <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 whitespace-nowrap">
                   Gleis {journey.departurePlatform}
                 </Badge>
               )}
@@ -347,15 +347,15 @@ export function TrainCard({ className }: TrainCardProps) {
                     {formatTime(leg.departure)}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">{leg.origin.name}</span>
+                    <div className="flex items-center space-x-2 flex-wrap">
+                      <span className="font-medium whitespace-nowrap">{leg.origin.name}</span>
                       {leg.origin.platform && (
-                        <Badge variant="outline" className="text-[11px] px-1.5 py-0.5">
+                        <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
                           Gl. {leg.origin.platform}
                         </Badge>
                       )}
                       {leg.delay.departure > 0 && (
-                        <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5">
+                        <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
                           +{leg.delay.departure}min
                         </Badge>
                       )}
@@ -365,11 +365,9 @@ export function TrainCard({ className }: TrainCardProps) {
                     {leg.line.name && !leg.walking && (
                       <div className="mt-1 space-y-1">
                         <div className="flex items-center space-x-2">
-                          {leg.line.name && (
-                            <span className="text-xs font-medium text-gray-400 dark:text-muted-foreground">
-                              {leg.line.name}
-                            </span>
-                          )}
+                          <span className="text-xs font-medium text-gray-400 dark:text-muted-foreground">
+                            {leg.line.name}
+                          </span>
                         </div>
                         <div className="text-xs text-gray-400 dark:text-muted-foreground">
                           → Richtung: <span className="font-medium">{leg.direction || leg.destination.name}</span>
@@ -395,15 +393,15 @@ export function TrainCard({ className }: TrainCardProps) {
                     {formatTime(leg.arrival)}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">{leg.destination.name}</span>
+                    <div className="flex items-center space-x-2 flex-wrap">
+                      <span className="font-medium whitespace-nowrap">{leg.destination.name}</span>
                       {leg.destination.platform && (
-                        <Badge variant="outline" className="text-[11px] px-1.5 py-0.5">
+                        <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
                           Gl. {leg.destination.platform}
                         </Badge>
                       )}
                       {leg.delay.arrival > 0 && (
-                        <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5">
+                        <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
                           +{leg.delay.arrival}min
                         </Badge>
                       )}
