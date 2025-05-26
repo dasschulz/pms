@@ -270,7 +270,7 @@ export function TrainCard({ className }: TrainCardProps) {
           onClick={() => toggleJourneyExpansion(journeyKey)}
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 flex-wrap">
+            <div className="flex items-baseline space-x-2 flex-wrap align-content-start">
               <Clock className="w-4 h-4 text-gray-400 dark:text-muted-foreground shrink-0" />
               <span className="font-semibold whitespace-nowrap">
                 {formatTime(journey.departure)} → {formatTime(journey.arrival)}
@@ -347,7 +347,7 @@ export function TrainCard({ className }: TrainCardProps) {
                     {formatTime(leg.departure)}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2 flex-wrap">
+                    <div className="flex items-baseline space-x-2 flex-wrap align-content-start">
                       <span className="font-medium whitespace-nowrap">{leg.origin.name}</span>
                       {leg.origin.platform && (
                         <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
@@ -393,7 +393,7 @@ export function TrainCard({ className }: TrainCardProps) {
                     {formatTime(leg.arrival)}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center space-x-2 flex-wrap">
+                    <div className="flex items-baseline space-x-2 flex-wrap align-content-start">
                       <span className="font-medium whitespace-nowrap">{leg.destination.name}</span>
                       {leg.destination.platform && (
                         <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
