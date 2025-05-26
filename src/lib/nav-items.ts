@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin } from 'lucide-react';
+import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin, Clapperboard } from 'lucide-react';
 
 export interface NavItem {
   title: string;
@@ -138,6 +138,11 @@ export const navItems: NavItem[] = [
         title: 'Sharepics',
         href: '/sharepics',
         icon: Image,
+      },
+      {
+        title: 'Videoplanung',
+        href: '/videoplanung',
+        icon: Clapperboard,
       },
     ],
   },

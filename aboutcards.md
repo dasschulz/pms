@@ -1,14 +1,27 @@
 Linksfraktion Studio Webapp
-**Felix S. Schulz**(mailto:heidi.reichinnek.ma02@bundestag.de), Büro Reichinnek <br>
-Next.js/React/Tailwind CSS/Vercel/Airtable
+<mailto:heidi.reichinnek.ma02@bundestag.de>**Felix S. Schulz**</mailto>, Büro Reichinnek <br>
+Next.js/React/Tailwind CSS/Vercel/Airtable (set links to each)
 
 Gegner-Recherche
-Abgeordnetenwatch API(link to https://www.abgeordnetenwatch.de/api in new tab)/Wikipedia API/Anthropic
+<a href="https://www.abgeordnetenwatch.de/api">Abgeordnetenwatch API</a>/<a href="">Wikipedia API</a>/<a href="">Anthropic</a>
 
 Dokumentenrecherche
 **Deutscher Bundestag**, Dokumentations- und Informationssystem für Parlamentsmaterialien <br>
-DIP API (link to https://dip.bundestag.de/%C3%BCber-dip/hilfe/api in new tab)
+<a href="https://dip.bundestag.de/%C3%BCber-dip/hilfe/api">DIP API</a>
 
 Tagesordnung
-**Jannis Hutt**(mailto:jannis.hutt@dielinkebt.de), Linksfraktion <br>
-BT-TO API @ github (link to https://github.com/hutt/bt-to/tree/main in new tab)
+<mailto:jannis.hutt@dielinkebt.de>**Jannis Hutt**)</mailto>, Linksfraktion <br>
+<a href="https://github.com/hutt/bt-to/tree/main">BT-TO API @ github</a>
+
+IFG-Anfragen
+<a href="https://fragdenstaat.de/api/">**Fragdenstaat API**
+
+Zugverbindungen
+**Deutsche Bahn**, Fahrplanauskunft und Echtzeitdaten
+<a href="ttps://github.com/public-transport/hafas-client%20in%20new%20tab">HAFAS API</a>
+
+
+--> all links should open in new tabs
+--> all mentioned things should have little images (rounded corners, very light border in their cards, left aligned, top left) instead of current placeholders - the images are in /public/images/apis and named accordingly
+--> all cards should show a little icon (dont change existing)
+--> ** means bold

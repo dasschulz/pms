@@ -148,6 +148,12 @@ fld0bFiLCUjUDlIRq
 
 select
 
+IsFraktionsvorstand
+
+fldTkNfCk2uQo0uA5
+
+checkbox
+
 Data
 
 fldF7liDq05X8jXKq
@@ -237,6 +243,68 @@ Bugs
 fldJGFcRnEZmv1ZYN
 
 foreignKey
+
+Table: User-Preferences (tblVzV5cyPa60sJNf)
+
+Field Name
+
+Field ID
+
+Type
+
+ID
+
+fldBrQ8aqbTbZF6bS
+
+autoNumber
+
+Name
+
+fldeVDfe0gUyFnH0l
+
+foreignKey
+
+UserID (from Name)
+
+fldtlFfK9ihD4FA9t
+
+lookup
+
+Name (from Name)
+
+fldJHPYvDe2qIjeo2
+
+lookup
+
+Email (from Name)
+
+fldpCfO6RUUCbStBU
+
+lookup
+
+Widget Order
+
+fldeK5BNlLlB9n6gq
+
+multilineText
+
+Active Widgets
+
+fldjyRe67IlOFercN
+
+multilineText
+
+Theme Preference
+
+fldaKvqawmIhpo1ew
+
+select
+
+Last Update
+
+fld9hDhwYbK2PdbrV
+
+date
 
 Table: Statistiken (tblsDN92Tq2azaRdP)
 
@@ -1027,3 +1095,101 @@ Token Used
 fldCzYmjZyZ7TXqJy
 
 text
+
+Table: TaskManager (tblEMB2W3pf8cNwje)
+
+Field Name
+
+Field ID
+
+Type
+
+Task-ID
+
+fldy8obVawyjCBKoB
+
+autoNumber
+
+Name
+
+fldDYccEsBdMmNlXq
+
+text
+
+Detailview
+
+fldEdYT8XIt8mU1gU
+
+multilineText
+
+IsSubtask
+
+fldt08fbbWXuGwfnm
+
+foreignKey
+
+ParentTaskID
+
+fldETvcRu8TRjn6cp
+
+lookup
+
+Fälligkeitsdatum
+
+fldkf3xLee04ZH70V
+
+date
+
+NextJob
+
+fldOesgUzwRwFkWkR
+
+select
+
+Priority
+
+fldrc9mhALCs3yvob
+
+select
+
+PublishDate
+
+fldKHcSkUnu6t76Ez
+
+date
+
+SortOrder
+
+fldedV7iTeOSWtgU4
+
+number
+
+UserID
+
+fldKB5HNJAal59uQd
+
+foreignKey
+
+UserID (from UserID)
+
+fldirhqhpcbGphbdD
+
+lookup
+
+CreatedDate
+
+fldgjJE30BLbDrojS
+
+date
+
+ModifiedDate
+
+fldTZGAGPQwdXcMrt
+
+date
+
+From field: IsSubtask
+
+fldKtWzT0fRi94p3S
+
+foreignKey

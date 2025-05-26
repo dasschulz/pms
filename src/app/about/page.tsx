@@ -3,107 +3,143 @@
 import React from 'react';
 import { BentoGrid } from '@/components/ui/bento-grid';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 import {
   IconInfoCircle, 
-  IconUsers,      
-  IconApi,        
   IconCode,       
   IconWebhook,
   IconTrain,
   IconFileText,
   IconCalendar,
-// IconLink, // Not used directly, links are parsed
-// IconMail, // Not used directly, mailtos are parsed
+  IconQuestionMark,
 } from '@tabler/icons-react';
 
 const markdownContent = `
 Linksfraktion Studio Webapp
-**Felix S. Schulz**(Mailto:heidi.reichinnek.ma02@bundestag.de), Büro Reichinnek <br>
-Next.js/React/Tailwind CSS/Vercel/Airtable
+**Felix S. Schulz** <mailto:heidi.reichinnek.ma02@bundestag.de>, Büro Reichinnek <br>
+<a href="https://nextjs.org">Next.js</a>/<a href="https://react.dev">React</a>/<a href="https://tailwindcss.com">Tailwind CSS</a>/<a href="https://vercel.com">Vercel</a>/<a href="https://airtable.com">Airtable</a>
 
 Gegner-Recherche
-Abgeordnetenwatch API(link to https://www.abgeordnetenwatch.de/api in new tab)/Wikipedia API/Anthropic
+<a href="https://www.abgeordnetenwatch.de/api">Abgeordnetenwatch API</a>/<a href="https://www.mediawiki.org/wiki/API:Main_page">Wikipedia API</a>/<a href="https://www.anthropic.com">Anthropic</a>
 
 Dokumentenrecherche
 **Deutscher Bundestag**, Dokumentations- und Informationssystem für Parlamentsmaterialien <br>
-DIP API (link to https://dip.bundestag.de/%C3%BCber-dip/hilfe/api in new tab)
+<a href="https://dip.bundestag.de/%C3%BCber-dip/hilfe/api">DIP API</a>
+
+Tagesordnung
+**Jannis Hutt** <mailto:jannis.hutt@dielinkebt.de>, Linksfraktion <br>
+<a href="https://github.com/hutt/bt-to/tree/main">BT-TO API @ github</a>
+
+IFG-Anfragen
+<a href="https://fragdenstaat.de/api/">Fragdenstaat API</a>
 
 Zugverbindungen
 **Deutsche Bahn**, Fahrplanauskunft und Echtzeitdaten <br>
-HAFAS API (link to https://github.com/public-transport/hafas-client in new tab)
-
-Tagesordnung
-**Jannis Hutt**(mailto:jannis.hutt@dielinkebt.de), Linksfraktion <br>
-BT-TO API @ github (link to https://github.com/hutt/bt-to/tree/main in new tab)
+<a href="https://github.com/public-transport/hafas-client">HAFAS API</a>
 `;
 
-const Skeleton = () => (
-  <div className="flex flex-1 w-full h-[6rem] min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-200 dark:from-neutral-900 dark:to-neutral-800 to-neutral-100"></div>
-);
+// Map titles to their corresponding images
+const getImageForTitle = (title: string) => {
+  const titleLower = title.toLowerCase();
+  
+  if (titleLower.includes('linksfraktion') || titleLower.includes('webapp')) {
+    return '/images/apis/nextjs.jpg'; // Main framework
+  }
+  if (titleLower.includes('gegner-recherche')) {
+    return '/images/apis/abgeordnetenwatch.jpg'; // Primary API for this section
+  }
+  if (titleLower.includes('dokumentenrecherche')) {
+    return '/images/apis/dip.jpg';
+  }
+  if (titleLower.includes('tagesordnung')) {
+    return '/images/apis/bttoapi.jpg';
+  }
+  if (titleLower.includes('ifg-anfragen')) {
+    return '/images/apis/wiki.jpg'; // Use wiki as fallback for government/transparency
+  }
+  if (titleLower.includes('zugverbindungen')) {
+    return '/images/apis/react.jpg'; // Use React as tech fallback
+  }
+  
+  return '/images/apis/nextjs.jpg'; // Default fallback
+};
+
+const ApiImage = ({ title }: { title: string }) => {
+  const imageSrc = getImageForTitle(title);
+  
+  return (
+    <div className="flex flex-1 w-full h-[6rem] min-h-[6rem] rounded-xl overflow-hidden border border-neutral-100 dark:border-neutral-800">
+      <Image
+        src={imageSrc}
+        alt={`${title} API`}
+        width={200}
+        height={96}
+        className="w-full h-full object-cover"
+      />
+    </div>
+  );
+};
 
 const parseLine = (line: string): React.ReactNode[] => {
   const nodes: React.ReactNode[] = [];
-  const tokenRegex = /(\*\*.*?\*\*|\(link to [^)]+\)|\(mailto:[^)]+\))/g;
-  let lastIndex = 0;
-  let match;
-
-  while ((match = tokenRegex.exec(line)) !== null) {
-    const textBeforeMatch = line.substring(lastIndex, match.index);
-    if (textBeforeMatch) {
-      nodes.push(textBeforeMatch);
-    }
-
-    const token = match[0];
-    const matchIndex = match.index;
-
-    if (token.startsWith('**') && token.endsWith('**')) {
-      nodes.push(<strong key={`strong-${matchIndex}`}>{token.substring(2, token.length - 2)}</strong>);
-    } else if (token.startsWith('(link to ') || token.startsWith('(mailto:')) {
-      const isMailto = token.startsWith('(mailto:');
-      const content = isMailto ? token.substring(8, token.length - 1) : token.substring(10, token.length - 1);
-      const href = isMailto ? `mailto:${content}` : content;
-      let linkableContent: React.ReactNode = null;
-
-      if (nodes.length > 0) {
-        const lastNode = nodes[nodes.length - 1];
-        if (typeof lastNode === 'string' || (React.isValidElement(lastNode) && lastNode.type === 'strong')) {
-          linkableContent = nodes.pop();
-        }
-      }
-
-      if (linkableContent) {
+  
+  // Handle mailto links in the format: <mailto:email>text</mailto>
+  let workingLine = line.replace(/<mailto:([^>]+)>([^<]+)<\/mailto>/g, (match, email, text) => {
+    return `[MAILTO:${email}:${text}]`;
+  });
+  
+  // Handle regular links in the format: <a href="url">text</a>
+  workingLine = workingLine.replace(/<a\s+href="([^"]*)"[^>]*>([^<]+)<\/a>/g, (match, url, text) => {
+    return `[LINK:${url}:${text}]`;
+  });
+  
+  // Handle bold text
+  workingLine = workingLine.replace(/\*\*([^*]+)\*\*/g, '[BOLD:$1]');
+  
+  // Split by our custom tokens
+  const parts = workingLine.split(/(\[(?:MAILTO|LINK|BOLD):[^\]]+\])/);
+  
+  parts.forEach((part, index) => {
+    if (part.startsWith('[MAILTO:')) {
+      const matches = part.match(/\[MAILTO:([^:]+):([^\]]+)\]/);
+      if (matches) {
+        const [, email, text] = matches;
         nodes.push(
           <a 
-            key={`link-${matchIndex}`}
-            href={href}
-            target={isMailto ? undefined : '_blank'} 
-            rel={isMailto ? undefined : 'noopener noreferrer'}
+            key={`mailto-${index}`}
+            href={`mailto:${email}`}
             className="text-blue-500 hover:underline"
           >
-            {linkableContent}
-          </a>
-        );
-      } else {
-        nodes.push(
-          <a 
-            key={`linkfallback-${matchIndex}`}
-            href={href}
-            target={isMailto ? undefined : '_blank'} 
-            rel={isMailto ? undefined : 'noopener noreferrer'}
-            className="text-blue-500 hover:underline"
-          >
-            {content} 
+            {text}
           </a>
         );
       }
+    } else if (part.startsWith('[LINK:')) {
+      const matches = part.match(/\[LINK:([^:]+):([^\]]+)\]/);
+      if (matches) {
+        const [, url, text] = matches;
+        nodes.push(
+          <a 
+            key={`link-${index}`}
+            href={url}
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline"
+          >
+            {text}
+          </a>
+        );
+      }
+    } else if (part.startsWith('[BOLD:')) {
+      const matches = part.match(/\[BOLD:([^\]]+)\]/);
+      if (matches) {
+        nodes.push(<strong key={`bold-${index}`}>{matches[1]}</strong>);
+      }
+    } else if (part) {
+      nodes.push(part);
     }
-    lastIndex = tokenRegex.lastIndex;
-  }
-
-  const remainingText = line.substring(lastIndex);
-  if (remainingText) {
-    nodes.push(remainingText);
-  }
+  });
+  
   return nodes;
 };
 
@@ -112,30 +148,14 @@ const parseDescription = (descriptionText: string): React.ReactNode[] => {
   const lines = descriptionText.split(/<br\s*\/?>|\n/g);
 
   lines.forEach((line, index) => {
-    if (line.trim() || (index < lines.length -1 && lines[index+1]?.trim())) { 
-        overallNodes.push(...parseLine(line));
+    if (line.trim()) {
+      overallNodes.push(...parseLine(line));
     }
-    if (index < lines.length - 1) {
+    if (index < lines.length - 1 && line.trim()) {
       overallNodes.push(<br key={`br-${index}`} />);
     }
   });
   
-  while (overallNodes.length > 0) {
-    const lastNode = overallNodes[overallNodes.length - 1];
-    if (React.isValidElement(lastNode) && lastNode.type === 'br') {
-      const secondLastNode = overallNodes.length > 1 ? overallNodes[overallNodes.length - 2] : null;
-      const originalLineIndex = lines.length - ( (overallNodes.filter(n => React.isValidElement(n) && n.type === 'br').length) - overallNodes.indexOf(lastNode) );
-      const correspondingOriginalLineIsEmpty = lines[lines.length -1 - (overallNodes.filter(n => React.isValidElement(n) && n.type === 'br').length - 1 - overallNodes.indexOf(lastNode)) ]?.trim() === '';
-
-      if ((React.isValidElement(secondLastNode) && secondLastNode.type === 'br') || correspondingOriginalLineIsEmpty ) {
-        overallNodes.pop();
-      } else {
-        break; 
-      }
-    } else {
-      break; 
-    }
-  }
   return overallNodes;
 };
 
@@ -143,8 +163,7 @@ const getIcon = (title: string) => {
   if (title.toLowerCase().includes('zugverbindungen')) return <IconTrain className="h-4 w-4 text-neutral-500" />;
   if (title.toLowerCase().includes('dokumentenrecherche')) return <IconFileText className="h-4 w-4 text-neutral-500" />;
   if (title.toLowerCase().includes('tagesordnung')) return <IconCalendar className="h-4 w-4 text-neutral-500" />;
-  if (title.toLowerCase().includes('api')) return <IconApi className="h-4 w-4 text-neutral-500" />;
-  if (title.toLowerCase().includes('person') || title.toLowerCase().includes('schulz') || title.toLowerCase().includes('hutt')) return <IconUsers className="h-4 w-4 text-neutral-500" />;
+  if (title.toLowerCase().includes('ifg-anfragen')) return <IconQuestionMark className="h-4 w-4 text-neutral-500" />;
   if (title.toLowerCase().includes('webapp') || title.toLowerCase().includes('studio')) return <IconCode className="h-4 w-4 text-neutral-500" />;
   if (title.toLowerCase().includes('recherche')) return <IconWebhook className="h-4 w-4 text-neutral-500" />;
   return <IconInfoCircle className="h-4 w-4 text-neutral-500" />;
@@ -195,20 +214,20 @@ export default function AboutPage() {
     return {
       title: title,
       description: parseDescription(descriptionString),
-      header: <Skeleton />,
+      header: <ApiImage title={title} />,
       icon: getIcon(title),
       className: "", // Default, will be overridden by processedItems logic below
     };
   });
 
-  const processedItems = items.map((item, i, arr) => {
+  const processedItems = items.map((item, index, arr) => {
     let className = item.className;
     if (arr.length === 4) {
-        if (i === 3) className = "md:col-span-3";
+        if (index === 3) className = "md:col-span-3";
         else className = ""; 
-    } else if (arr.length % 3 === 1 && i === arr.length - 1) {
+    } else if (arr.length % 3 === 1 && index === arr.length - 1) {
         className = "md:col-span-3";
-    } else if (arr.length % 3 === 2 && i >= arr.length -2) {
+    } else if (arr.length % 3 === 2 && index >= arr.length -2) {
         className = "md:col-span-1"; 
     }
     return { ...item, className }; 

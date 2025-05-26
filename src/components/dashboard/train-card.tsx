@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Train, Clock, MapPin, AlertCircle, RefreshCw, Wifi, WifiOff, Home, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 interface JourneyLeg {
   origin: {
@@ -76,6 +77,8 @@ export function TrainCard({ className }: TrainCardProps) {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [retryCount, setRetryCount] = useState(0);
   const [expandedJourneys, setExpandedJourneys] = useState<Set<string>>(new Set());
+  const [hasHeimatbahnhof, setHasHeimatbahnhof] = useState<boolean | null>(null);
+  const router = useRouter();
 
   const fetchConnections = async (forceRefresh: boolean = false) => {
     setIsLoading(true);
@@ -89,6 +92,11 @@ export function TrainCard({ className }: TrainCardProps) {
       
       if (!response.ok) {
         if (response.status === 404) {
+          // Check if it's a missing Heimatbahnhof configuration
+          if (data.error === 'No Heimatbahnhof configured') {
+            setHasHeimatbahnhof(false);
+            return; // Don't throw error, just set state
+          }
           throw new Error(data.message || 'Station nicht gefunden');
         } else if (response.status === 503) {
           // Service unavailable - show fallback data if available
@@ -102,6 +110,7 @@ export function TrainCard({ className }: TrainCardProps) {
       }
       
       setConnections(data);
+      setHasHeimatbahnhof(true);
       setLastRefresh(new Date());
       setRetryCount(0); // Reset retry count on success
     } catch (error) {
@@ -116,19 +125,25 @@ export function TrainCard({ className }: TrainCardProps) {
   useEffect(() => {
     fetchConnections();
     
-    // Much more conservative refresh intervals to respect 15-minute backend cache
-    // Base interval: 16 minutes (slightly longer than cache TTL to avoid unnecessary calls)
-    const baseInterval = 16 * 60 * 1000; // 16 minutes
+    // Only set up refresh intervals if user has configured Heimatbahnhof
+    const interval = setInterval(() => {
+      if (hasHeimatbahnhof === true) {
+        // Much more conservative refresh intervals to respect 15-minute backend cache
+        // Base interval: 16 minutes (slightly longer than cache TTL to avoid unnecessary calls)
+        const baseInterval = 16 * 60 * 1000; // 16 minutes
+        
+        // If there are failures, back off more aggressively
+        const backoffMultiplier = Math.min(retryCount, 3); // Max 3x multiplier
+        const refreshInterval = baseInterval * (1 + backoffMultiplier); // 16min, 32min, 48min, 64min max
+        
+        console.log(`🔄 Next train data refresh in ${refreshInterval / 1000 / 60} minutes`);
+        
+        fetchConnections();
+      }
+    }, hasHeimatbahnhof === true ? 16 * 60 * 1000 * (1 + Math.min(retryCount, 3)) : 60000); // Check every minute if no station set
     
-    // If there are failures, back off more aggressively
-    const backoffMultiplier = Math.min(retryCount, 3); // Max 3x multiplier
-    const refreshInterval = baseInterval * (1 + backoffMultiplier); // 16min, 32min, 48min, 64min max
-    
-    console.log(`🔄 Next train data refresh in ${refreshInterval / 1000 / 60} minutes`);
-    
-    const interval = setInterval(() => fetchConnections(), refreshInterval);
     return () => clearInterval(interval);
-  }, [retryCount]);
+  }, [retryCount, hasHeimatbahnhof]);
 
   const formatTime = (isoString: string) => {
     return new Date(isoString).toLocaleTimeString('de-DE', {
@@ -270,22 +285,23 @@ export function TrainCard({ className }: TrainCardProps) {
           onClick={() => toggleJourneyExpansion(journeyKey)}
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-baseline space-x-2 flex-wrap align-content-start">
-              <Clock className="w-4 h-4 text-gray-400 dark:text-muted-foreground shrink-0" />
-              <span className="font-semibold whitespace-nowrap">
-                {formatTime(journey.departure)} → {formatTime(journey.arrival)}
-              </span>
-              {journey.delay > 0 && (
-                <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
-                  +{journey.delay}min
-                </Badge>
-              )}
-              {/* Platform information */}
-              {journey.departurePlatform && (
-                <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 whitespace-nowrap">
-                  Gleis {journey.departurePlatform}
-                </Badge>
-              )}
+            <div className="flex items-start space-x-2">
+              <Clock className="w-4 h-4 text-gray-400 dark:text-muted-foreground shrink-0 mt-[3px]" />
+              <div className="flex items-baseline flex-wrap align-content-start gap-x-2 gap-y-1 w-max">
+                <span className="font-semibold whitespace-nowrap">
+                  {formatTime(journey.departure)} → {formatTime(journey.arrival)}
+                </span>
+                {journey.delay > 0 && (
+                  <Badge variant="destructive" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
+                    +{journey.delay}min
+                  </Badge>
+                )}
+                {journey.departurePlatform && (
+                  <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 whitespace-nowrap">
+                    Gleis {journey.departurePlatform}
+                  </Badge>
+                )}
+              </div>
             </div>
             <div className="text-right">
               <div className="text-lg font-bold text-accent dark:text-white">
@@ -343,11 +359,11 @@ export function TrainCard({ className }: TrainCardProps) {
               <div key={idx} className="space-y-2">
                 {/* Departure info */}
                 <div className="flex items-center space-x-3 text-sm">
-                  <div className="w-16 text-xs text-gray-400 dark:text-muted-foreground text-right">
+                  <div className="w-16 text-xs text-gray-400 dark:text-muted-foreground text-right shrink-0">
                     {formatTime(leg.departure)}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-baseline space-x-2 flex-wrap align-content-start">
+                    <div className="flex items-baseline flex-wrap align-content-start gap-x-2 gap-y-1 w-max">
                       <span className="font-medium whitespace-nowrap">{leg.origin.name}</span>
                       {leg.origin.platform && (
                         <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
@@ -389,11 +405,11 @@ export function TrainCard({ className }: TrainCardProps) {
                 
                 {/* Arrival info - show for all legs */}
                 <div className="flex items-center space-x-3 text-sm border-l-2 border-gray-200 ml-8 pl-3">
-                  <div className="w-16 text-xs text-gray-400 dark:text-muted-foreground text-right">
+                  <div className="w-16 text-xs text-gray-400 dark:text-muted-foreground text-right shrink-0">
                     {formatTime(leg.arrival)}
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-baseline space-x-2 flex-wrap align-content-start">
+                    <div className="flex items-baseline flex-wrap align-content-start gap-x-2 gap-y-1 w-max">
                       <span className="font-medium whitespace-nowrap">{leg.destination.name}</span>
                       {leg.destination.platform && (
                         <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 whitespace-nowrap">
@@ -471,6 +487,38 @@ export function TrainCard({ className }: TrainCardProps) {
             <div className="h-4 bg-muted rounded w-3/4"></div>
             <div className="h-4 bg-muted rounded w-1/2"></div>
             <div className="h-16 bg-muted rounded"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show configuration prompt if no Heimatbahnhof is set
+  if (hasHeimatbahnhof === false) {
+    return (
+      <Card className={`shadow-lg ${className}`}>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Train className="w-5 h-5" />
+            <span>Zugverbindungen</span>
+          </CardTitle>
+          <CardDescription>Konfiguration erforderlich</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-6">
+            <MapPin className="w-8 h-8 text-gray-400 dark:text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm text-gray-600 dark:text-muted-foreground mb-4">
+              Bitte konfiguriere deinen Heimatbahnhof in den Einstellungen, um deine Zugverbindungen nach Berlin anzuzeigen.
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => router.push('/einstellungen')}
+              className="flex items-center space-x-2"
+            >
+              <MapPin className="w-4 h-4" />
+              <span>Zu den Einstellungen</span>
+            </Button>
           </div>
         </CardContent>
       </Card>

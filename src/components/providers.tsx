@@ -12,8 +12,25 @@ interface ProvidersProps {
 }
 
 export function Providers({ children }: ProvidersProps) {
-  // Create a QueryClient instance on the client
-  const [queryClient] = useState(() => new QueryClient());
+  // Create a QueryClient instance with optimized settings
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        // Reduce stale time for task-related queries to ensure fresh data
+        staleTime: 1000 * 30, // 30 seconds
+        // Enable background refetching
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
+        // Retry failed requests
+        retry: 1,
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      },
+      mutations: {
+        // Retry failed mutations once
+        retry: 1,
+      },
+    },
+  }));
 
   return (
     <SessionProvider>
