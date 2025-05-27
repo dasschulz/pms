@@ -6,7 +6,6 @@ import { TaskModal } from "./task-modal";
 import { VideoPlanningBoardSkeleton } from "./video-planning-skeleton";
 import { useTasks } from "@/hooks/use-tasks";
 import type { Task } from "@/types/videoplanung";
-import { statusOrder } from "@/types/videoplanung";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Video } from "lucide-react";
@@ -17,10 +16,14 @@ export function VideoPlanningBoard() {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
 
-  const groupedTasks = statusOrder.reduce((acc, status) => {
-    acc[status] = tasks?.filter((task: Task) => task.nextJob === status) || [];
-    return acc;
-  }, {} as Record<string, Task[]>);
+  // Simplified grouping: only two tables
+  const groupedTasks = {
+    'Zu drehen': tasks?.filter((task: Task) => task.nextJob !== 'Erledigt') || [],
+    'Erledigt': tasks?.filter((task: Task) => task.nextJob === 'Erledigt') || []
+  };
+
+  // Define table order
+  const tableOrder = ['Zu drehen', 'Erledigt'] as const;
 
   // Check if there are any tasks at all
   const totalTasks = tasks?.length || 0;
@@ -176,7 +179,7 @@ export function VideoPlanningBoard() {
 
   return (
     <div className="space-y-6">
-      {statusOrder.map((status) => (
+      {tableOrder.map((status) => (
         <TaskStatusTable
           key={status}
           status={status}

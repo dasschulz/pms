@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { 
+import React from "react";
+import {
   Table, 
   TableBody, 
   TableCell, 
@@ -61,19 +62,19 @@ interface TaskStatusTableProps {
 export const getStatusColor = (status: string) => {
   switch (status) {
     case 'Brainstorming':
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 border-gray-200 dark:border-slate-700';
     case 'Skript':
-      return 'bg-red-900 text-red-100 border-red-800';
+      return 'bg-red-900 dark:bg-red-900 text-red-100 dark:text-red-100 border-red-800 dark:border-red-800';
     case 'Dreh':
-      return 'bg-red-100 text-red-800 border-red-200';
+      return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700';
     case 'Schnitt':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700';
     case 'Veröffentlichung':
-      return 'bg-green-100 text-green-800 border-green-200';
+      return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700';
     case 'Erledigt':
-      return 'bg-white text-gray-800 border-gray-200';
+      return 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 border-gray-200 dark:border-slate-700';
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 border-gray-200 dark:border-slate-700';
   }
 };
 
@@ -148,6 +149,9 @@ export function TaskStatusTable({
   const [newTaskName, setNewTaskName] = useState('');
   const [isNewTaskActive, setIsNewTaskActive] = useState(false);
   const [isSavingNewTask, setIsSavingNewTask] = useState(false);
+
+  // Drag and drop state
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const handleTaskSelect = (taskId: string) => {
     const newSelected = new Set(selectedTasks);
@@ -359,7 +363,7 @@ export function TaskStatusTable({
       const taskData = {
         name: newTaskName.trim(),
         detailview: '',
-        nextJob: status,
+        nextJob: status === 'Zu drehen' ? 'Brainstorming' : status,
         priority: 'Normal',
         isSubtask: false
       };
@@ -463,7 +467,7 @@ export function TaskStatusTable({
     const isCurrentField = sortField === field;
     return (
       <TableHead 
-        className={cn("cursor-pointer hover:bg-muted/50 select-none", className)}
+        className={cn("cursor-pointer hover:bg-muted/50 select-none dark:bg-muted/30", className)}
         onClick={() => handleSort(field)}
       >
         <div className="flex items-center gap-1">
@@ -661,7 +665,10 @@ export function TaskStatusTable({
             <SelectTrigger className={cn(
               "h-9 px-3 py-2 text-sm w-full border border-input",
               getStatusColor(editingValue),
-              "hover:opacity-80"
+              "hover:opacity-80",
+              "[&>svg]:hidden", // Hide the chevron indicator
+              "justify-center", // Center the content like display state
+              "[&>span]:flex [&>span]:items-center [&>span]:justify-center [&>span]:w-full" // Override SelectValue positioning
             )}>
               <SelectValue placeholder="Status wählen" />
             </SelectTrigger>
@@ -700,8 +707,6 @@ export function TaskStatusTable({
         }}
       >
         <span className="overflow-hidden text-ellipsis whitespace-nowrap">{task.nextJob || 'Brainstorming'}</span>
-        {/* Optional: Add a down-arrow icon here to make it look more like a select */}
-        {/* <ChevronDown className="h-4 w-4 opacity-50" /> */}
       </div>
     );
   };
@@ -740,7 +745,10 @@ export function TaskStatusTable({
             <SelectTrigger className={cn(
               "w-full h-9 px-3 py-2 text-sm", // Adjusted for md size
               // Apply a base background and border similar to a "soft" variant
-              "bg-background border border-input hover:bg-muted"
+              "bg-background border border-input hover:bg-muted",
+              "[&>svg]:hidden", // Hide the chevron indicator
+              "justify-start", // Match the display state alignment
+              "[&>span]:flex [&>span]:items-center [&>span]:justify-start [&>span]:w-full" // Override SelectValue positioning to match display
             )}>
               <SelectValue placeholder="Priorität wählen" />
             </SelectTrigger>
@@ -805,13 +813,13 @@ export function TaskStatusTable({
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12"></TableHead>
-                  <TableHead className="w-12"></TableHead>
-                  {renderSortableHeader("Name", "name")}
+                  <TableHead className="w-12 dark:bg-muted/30"></TableHead>
+                  <TableHead className="w-12 dark:bg-muted/30"></TableHead>
+                  {renderSortableHeader("Name", "name", "w-[custom]")}
                   {renderSortableHeader("Fälligkeit", "fälligkeitsdatum", "w-28")}
-                  {renderSortableHeader("Nächster Job", "nextJob", "w-32")}
+                  {renderSortableHeader("Nächster Job", "nextJob", "w-44")}
                   {renderSortableHeader("Priorität", "priority", "w-32")}
-                  {renderSortableHeader("VÖ-Datum", "publishDate", "w-28")}
+                  {renderSortableHeader("VÖ-Datum", "publishDate", "w-32")}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -942,7 +950,7 @@ export function TaskStatusTable({
                               <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                             </div>
                           </TableCell>
-                          <TableCell className="w-12"></TableCell>
+                          <TableCell></TableCell>
                           <TableCell className="font-medium text-sm pl-8" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-2">
                               <Camera className="h-4 w-4 text-gray-400" />
@@ -981,7 +989,7 @@ export function TaskStatusTable({
                               -
                             </div>
                           </TableCell>
-                          <TableCell className="w-32">
+                          <TableCell className="w-44">
                             <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
                               -
                             </div>
@@ -992,7 +1000,7 @@ export function TaskStatusTable({
                               <span className="text-xs">Normal</span>
                             </div>
                           </TableCell>
-                          <TableCell className="w-28">
+                          <TableCell className="w-32">
                             <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
                               -
                             </div>
@@ -1147,7 +1155,7 @@ export function TaskStatusTable({
                                   -
                                 </div>
                               </TableCell>
-                              <TableCell className="w-32">
+                              <TableCell className="w-44">
                                 <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
                                   -
                                 </div>
@@ -1158,7 +1166,7 @@ export function TaskStatusTable({
                                   <span className="text-xs">Normal</span>
                                 </div>
                               </TableCell>
-                              <TableCell className="w-28">
+                              <TableCell className="w-32">
                                 <div className="flex items-center justify-start text-sm text-muted-foreground h-9 w-full">
                                   -
                                 </div>

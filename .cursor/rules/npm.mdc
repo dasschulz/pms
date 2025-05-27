@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+never npm run build/npm run dev/try a build or restart server unless specifically asked or getting approval from user beforehand. 

@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useTasks } from "@/hooks/use-tasks";
 import type { Task } from "@/types/videoplanung";
 import { nextJobOptions, priorityOptions } from "@/types/videoplanung";
+import { getStatusColor } from "./task-status-table";
 import { useToast } from "@/hooks/use-toast";
 
 interface TaskModalProps {
@@ -170,12 +171,19 @@ export function TaskModal({ isOpen, onClose, task, mode, parentTaskId }: TaskMod
                 value={formData.nextJob}
                 onValueChange={(value) => setFormData({ ...formData, nextJob: value })}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className={cn(
+                  "h-9 px-3 py-2 text-sm w-full",
+                  "bg-background border border-input"
+                )}>
+                  <SelectValue placeholder="Status wählen" />
                 </SelectTrigger>
                 <SelectContent>
                   {nextJobOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
+                    <SelectItem 
+                      key={option} 
+                      value={option}
+                      className={cn("text-sm", getStatusColor(option))}
+                    >
                       {option}
                     </SelectItem>
                   ))}
@@ -191,12 +199,15 @@ export function TaskModal({ isOpen, onClose, task, mode, parentTaskId }: TaskMod
                 value={formData.priority}
                 onValueChange={(value) => setFormData({ ...formData, priority: value })}
               >
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className={cn(
+                  "h-9 px-3 py-2 text-sm w-full",
+                  "bg-background border border-input"
+                )}>
+                  <SelectValue placeholder="Priorität wählen" />
                 </SelectTrigger>
                 <SelectContent>
                   {priorityOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
+                    <SelectItem key={option} value={option} className="text-sm">
                       {option}
                     </SelectItem>
                   ))}
@@ -207,7 +218,7 @@ export function TaskModal({ isOpen, onClose, task, mode, parentTaskId }: TaskMod
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Fälligkeitsdatum</Label>
+              <Label>Fälligkeit</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button

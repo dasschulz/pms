@@ -10,25 +10,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { statusOrder } from "@/types/videoplanung";
 
 // Color schemes for different statuses (matching the actual component)
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'Brainstorming':
-      return 'bg-gray-100 text-gray-800 border-gray-200';
-    case 'Skript':
-      return 'bg-red-900 text-red-100 border-red-800';
-    case 'Dreh':
-      return 'bg-red-100 text-red-800 border-red-200';
-    case 'Schnitt':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'Veröffentlichung':
-      return 'bg-green-100 text-green-800 border-green-200';
+    case 'Zu drehen':
+      return 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 border-gray-200 dark:border-slate-700';
     case 'Erledigt':
-      return 'bg-white text-gray-800 border-gray-200';
+      return 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 border-gray-200 dark:border-slate-700';
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 border-gray-200 dark:border-slate-700';
   }
 };
 
@@ -104,13 +95,13 @@ function StatusTableSkeleton({ status, taskCount = 3, isCollapsed = false }: Sta
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12"></TableHead>
-                <TableHead className="w-12"></TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="w-32">Fälligkeitsdatum</TableHead>
-                <TableHead className="w-32">Nächster Job</TableHead>
-                <TableHead className="w-24">Priorität</TableHead>
-                <TableHead className="w-32">VÖ-Datum</TableHead>
+                <TableHead className="w-12 dark:bg-muted/30"></TableHead>
+                <TableHead className="w-12 dark:bg-muted/30"></TableHead>
+                <TableHead className="dark:bg-muted/30">Name</TableHead>
+                <TableHead className="w-28 dark:bg-muted/30">Fälligkeit</TableHead>
+                <TableHead className="w-44 dark:bg-muted/30">Nächster Job</TableHead>
+                <TableHead className="w-32 dark:bg-muted/30">Priorität</TableHead>
+                <TableHead className="w-32 dark:bg-muted/30">VÖ-Datum</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -132,11 +123,11 @@ function StatusTableSkeleton({ status, taskCount = 3, isCollapsed = false }: Sta
 export function VideoPlanningBoardSkeleton() {
   return (
     <div className="space-y-6">
-      {statusOrder.map((status, index) => (
+      {['Zu drehen', 'Erledigt'].map((status) => (
         <StatusTableSkeleton
           key={status}
           status={status}
-          taskCount={Math.max(1, 4 - index)} // Vary the number of skeleton rows
+          taskCount={status === 'Zu drehen' ? 4 : 2} // More tasks in "Zu drehen", fewer in "Erledigt"
           isCollapsed={status === 'Erledigt'}
         />
       ))}

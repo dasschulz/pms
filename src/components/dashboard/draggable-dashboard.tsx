@@ -1,25 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-} from "@dnd-kit/sortable";
-import {
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { WeatherCard } from "./weather-card";
@@ -47,43 +28,6 @@ interface WidgetConfig {
   props?: any;
   defaultActive: boolean;
   category: "info" | "tools" | "activity";
-}
-
-interface DraggableCardProps {
-  id: string;
-  children: React.ReactNode;
-}
-
-function DraggableCard({ id, children }: DraggableCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} className="relative group">
-      <div
-        {...attributes}
-        {...listeners}
-        className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
-      >
-        <div className="bg-background/80 backdrop-blur-sm rounded p-1 border">
-          <Grip className="h-4 w-4 text-muted-foreground" />
-        </div>
-      </div>
-      {children}
-    </div>
-  );
 }
 
 interface DraggableDashboardProps {
@@ -252,25 +196,6 @@ export function DraggableDashboard({ userName, initialPreferences }: DraggableDa
     savePreferences(undefined, widgetOrder);
   }, [widgetOrder]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setWidgetOrder((items) => {
-        const oldIndex = items.indexOf(active.id as string);
-        const newIndex = items.indexOf(over.id as string);
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    }
-  };
-
   const toggleWidget = (widgetId: string) => {
     setActiveWidgets((prev) => {
       const newWidgets = prev.includes(widgetId) 
@@ -319,30 +244,17 @@ export function DraggableDashboard({ userName, initialPreferences }: DraggableDa
         </DropdownMenu>
       </div>
 
-      <DndContext 
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext 
-          items={orderedActiveWidgets.map(w => w.id)}
-          strategy={rectSortingStrategy}
-        >
-          <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
-            {orderedActiveWidgets.map((widget) => {
-              const Component = widget.component;
-              
-              return (
-                <div key={widget.id} className="break-inside-avoid mb-6">
-                  <DraggableCard id={widget.id}>
-                    <Component {...widget.props} />
-                  </DraggableCard>
-                </div>
-              );
-            })}
-          </div>
-        </SortableContext>
-      </DndContext>
+      <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
+        {orderedActiveWidgets.map((widget) => {
+          const Component = widget.component;
+          
+          return (
+            <div key={widget.id} className="break-inside-avoid mb-6">
+              <Component {...widget.props} />
+            </div>
+          );
+        })}
+      </div>
 
       {orderedActiveWidgets.length === 0 && (
         <Card>

@@ -18,7 +18,7 @@ export interface CreateTaskData {
   name: string;
   detailview?: string;
   isSubtask?: boolean;
-  parentTaskId?: string;
+  parentTaskId?: string | string[];
   fälligkeitsdatum?: string;
   nextJob?: string;
   priority?: string;
