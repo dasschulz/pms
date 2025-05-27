@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { WeatherCard } from "./weather-card";
 import { TrainCard } from "./train-card";
 import { LatestSpeechCard } from "./latest-speech-card";
+import { DrehCard } from "./dreh-card";
 import { 
   Settings, 
   Grip,
   Check,
-  X
+  X,
+  Activity
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -67,12 +69,23 @@ export function DraggableDashboard({ userName, initialPreferences }: DraggableDa
       category: "info"
     },
     {
+      id: "dreh",
+      name: "Videodreh",
+      component: DrehCard,
+      props: {},
+      defaultActive: true,
+      category: "info"
+    },
+    {
       id: "activity",
       name: "Letzte Aktivitäten",
       component: () => (
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Letzte Aktivitäten</CardTitle>
+            <CardTitle className="flex items-center space-x-2">
+              <Activity className="w-5 h-5" />
+              <span>Letzte Aktivitäten</span>
+            </CardTitle>
             <CardDescription>Übersicht deiner zuletzt generierten Dokumente.</CardDescription>
           </CardHeader>
           <CardContent>

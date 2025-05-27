@@ -112,7 +112,10 @@ export function WeatherCard({ city, electoralDistrict }: WeatherCardProps) {
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle>Wetterübersicht</CardTitle>
+        <CardTitle className="flex items-center space-x-2">
+          <Sun className="w-5 h-5" />
+          <span>Wetterübersicht</span>
+        </CardTitle>
         <CardDescription>Aktuelle Bedingungen an wichtigen Standorten.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
