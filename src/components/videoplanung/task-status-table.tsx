@@ -22,7 +22,6 @@ import { de } from "date-fns/locale";
 import { 
   ChevronDown, 
   ChevronRight, 
-  GripVertical, 
   Calendar,
   CalendarIcon,
   Clock,
@@ -467,7 +466,7 @@ export function TaskStatusTable({
     const isCurrentField = sortField === field;
     return (
       <TableHead 
-        className={cn("cursor-pointer hover:bg-muted/50 select-none dark:bg-muted/30", className)}
+        className={cn("cursor-pointer select-none", className)}
         onClick={() => handleSort(field)}
       >
         <div className="flex items-center gap-1">
@@ -813,8 +812,8 @@ export function TaskStatusTable({
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12 dark:bg-muted/30"></TableHead>
-                  <TableHead className="w-12 dark:bg-muted/30"></TableHead>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-12"></TableHead>
                   {renderSortableHeader("Name", "name", "w-[custom]")}
                   {renderSortableHeader("Fälligkeit", "fälligkeitsdatum", "w-28")}
                   {renderSortableHeader("Nächster Job", "nextJob", "w-44")}
@@ -829,10 +828,9 @@ export function TaskStatusTable({
                   
                   return (
                     <Fragment key={task.id}>
-                      <TableRow className="cursor-pointer hover:bg-muted/50">
+                      <TableRow className="cursor-pointer bg-white">
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1">
-                            <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                             <Checkbox
                               checked={selectedTasks.has(task.id)}
                               onCheckedChange={() => handleTaskSelect(task.id)}
@@ -944,10 +942,13 @@ export function TaskStatusTable({
                       
                       {/* Inline subtask creation row */}
                       {creatingSubtaskFor === task.id && (
-                        <TableRow className="bg-muted/30 animate-in slide-in-from-top-2 duration-200">
+                        <TableRow className="animate-in slide-in-from-top-2 duration-200 bg-white">
                           <TableCell onClick={(e) => e.stopPropagation()} className="w-12">
                             <div className="flex items-center gap-1 ml-6">
-                              <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                              <Checkbox
+                                checked={selectedTasks.has(task.id)}
+                                onCheckedChange={() => handleTaskSelect(task.id)}
+                              />
                             </div>
                           </TableCell>
                           <TableCell></TableCell>
@@ -1012,11 +1013,10 @@ export function TaskStatusTable({
                       {isExpanded && subtasks.map((subtask) => (
                         <Fragment key={subtask.id}>
                           <TableRow
-                            className="cursor-pointer hover:bg-muted/50 bg-muted/20"
+                            className="cursor-pointer bg-white"
                           >
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center gap-1 ml-6">
-                                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                                 <Checkbox
                                   checked={selectedTasks.has(subtask.id)}
                                   onCheckedChange={() => handleTaskSelect(subtask.id)}
@@ -1110,10 +1110,13 @@ export function TaskStatusTable({
                           
                           {/* Inline subtask creation row for subtasks */}
                           {creatingSubtaskFor === subtask.id && (
-                            <TableRow className="bg-muted/40 animate-in slide-in-from-top-2 duration-200">
+                            <TableRow className="animate-in slide-in-from-top-2 duration-200 bg-white">
                               <TableCell onClick={(e) => e.stopPropagation()} className="w-12">
                                 <div className="flex items-center gap-1 ml-6">
-                                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                                  <Checkbox
+                                    checked={selectedTasks.has(subtask.id)}
+                                    onCheckedChange={() => handleTaskSelect(subtask.id)}
+                                  />
                                 </div>
                               </TableCell>
                               <TableCell></TableCell>
@@ -1182,12 +1185,11 @@ export function TaskStatusTable({
                 {/* New Task Creation Row */}
                 {!isCreatingNewTask ? (
                   <TableRow 
-                    className="cursor-pointer hover:bg-muted/30 opacity-60 hover:opacity-100 transition-opacity duration-200"
+                    className="cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-200 bg-white"
                     onClick={handleNewTaskActivate}
                   >
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <GripVertical className="h-4 w-4 text-muted-foreground/50" />
                         <Checkbox disabled className="opacity-50" />
                       </div>
                     </TableCell>
@@ -1222,10 +1224,9 @@ export function TaskStatusTable({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  <TableRow className="bg-muted/20 animate-in slide-in-from-top-2 duration-200">
+                  <TableRow className="animate-in slide-in-from-top-2 duration-200 bg-white">
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
-                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                         <Checkbox disabled />
                       </div>
                     </TableCell>

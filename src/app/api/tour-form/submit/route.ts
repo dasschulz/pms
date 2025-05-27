@@ -72,6 +72,16 @@ export async function POST(req: NextRequest) {
 
     console.log('Tour request created:', tourRequestRecord.id);
 
+    // Hard delete the used token/link after successful submission
+    try {
+      const linkRecord = linkRecords[0];
+      await base('Touranfragen_Links').destroy([linkRecord.id]);
+      console.log('Form link deleted after successful submission:', linkRecord.id);
+    } catch (deleteError) {
+      console.error('Error deleting form link:', deleteError);
+      // Don't fail the entire request if link deletion fails
+    }
+
     return NextResponse.json({ 
       success: true, 
       requestId: tourRequestRecord.id 

@@ -29,10 +29,9 @@ interface TaskRowSkeletonProps {
 
 function TaskRowSkeleton({ isSubtask = false }: TaskRowSkeletonProps) {
   return (
-    <TableRow className={cn("hover:bg-muted/50", isSubtask && "bg-muted/20")}>
+    <TableRow className="bg-white">
       <TableCell>
         <div className={cn("flex items-center gap-1", isSubtask && "ml-6")}>
-          <Skeleton className="h-4 w-4" />
           <Skeleton className="h-4 w-4" />
         </div>
       </TableCell>
@@ -95,13 +94,13 @@ function StatusTableSkeleton({ status, taskCount = 3, isCollapsed = false }: Sta
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-12 dark:bg-muted/30"></TableHead>
-                <TableHead className="w-12 dark:bg-muted/30"></TableHead>
-                <TableHead className="dark:bg-muted/30">Name</TableHead>
-                <TableHead className="w-28 dark:bg-muted/30">Fälligkeit</TableHead>
-                <TableHead className="w-44 dark:bg-muted/30">Nächster Job</TableHead>
-                <TableHead className="w-32 dark:bg-muted/30">Priorität</TableHead>
-                <TableHead className="w-32 dark:bg-muted/30">VÖ-Datum</TableHead>
+                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-12"></TableHead>
+                <TableHead className="">Name</TableHead>
+                <TableHead className="w-28">Fälligkeit</TableHead>
+                <TableHead className="w-44">Nächster Job</TableHead>
+                <TableHead className="w-32">Priorität</TableHead>
+                <TableHead className="w-32">VÖ-Datum</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
