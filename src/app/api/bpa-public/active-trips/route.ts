@@ -10,13 +10,43 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const records = await base('BPA_Fahrten')
-      .select({
-        filterByFormula: `AND(SEARCH("${airtableUserId}", ARRAYJOIN({UserID})), {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`,
-        fields: ['Fahrt_Datum_von', 'Zielort', 'Beschreibung', 'Status_Fahrt', 'Aktiv'],
-        sort: [{ field: 'Fahrt_Datum_von', direction: 'asc' }],
-      })
-      .all();
+    // First, get the numeric UserID from the airtableUserId
+    const userRecord = await base('Users').find(airtableUserId);
+    if (!userRecord) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const numericUserId = userRecord.fields.UserID;
+    if (!numericUserId) {
+      return NextResponse.json({ error: 'User has no UserID' }, { status: 400 });
+    }
+
+    // Try filtering directly by numeric UserID like touranfragen does
+    let records;
+    try {
+      records = await base('BPA_Fahrten')
+        .select({
+          filterByFormula: `AND({UserID} = ${numericUserId}, {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`,
+          fields: ['Fahrt_Datum_von', 'Zielort', 'Beschreibung', 'Status_Fahrt', 'Aktiv'],
+          sort: [{ field: 'Fahrt_Datum_von', direction: 'asc' }],
+        })
+        .all();
+      
+      console.log('[BPA Public Active Trips] Records found with numeric UserID filter:', records.length);
+    } catch (error) {
+      console.log('[BPA Public Active Trips] Numeric UserID filter failed, trying Airtable record ID approach:', error);
+      
+      // Fallback to the Airtable record ID approach if numeric filter doesn't work
+      records = await base('BPA_Fahrten')
+        .select({
+          filterByFormula: `AND(SEARCH("${airtableUserId}", ARRAYJOIN({UserID})), {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`,
+          fields: ['Fahrt_Datum_von', 'Zielort', 'Beschreibung', 'Status_Fahrt', 'Aktiv'],
+          sort: [{ field: 'Fahrt_Datum_von', direction: 'asc' }],
+        })
+        .all();
+      
+      console.log('[BPA Public Active Trips] Records found with Airtable ID fallback:', records.length);
+    }
 
     const activeTrips = records.map(record => ({
       id: record.id,
