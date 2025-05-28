@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       records = await base('BPA_Fahrten')
         .select({
           filterByFormula: `AND({UserID} = ${numericUserId}, {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`,
-          fields: ['Fahrt_Datum_von', 'Zielort', 'Beschreibung', 'Status_Fahrt', 'Aktiv'],
+          fields: ['Fahrt_Datum_von', 'Fahrt_Datum_Bis', 'Anmeldefrist', 'Zielort', 'Beschreibung', 'Status_Fahrt', 'Aktiv'],
           sort: [{ field: 'Fahrt_Datum_von', direction: 'asc' }],
         })
         .all();
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       records = await base('BPA_Fahrten')
         .select({
           filterByFormula: `AND(SEARCH("${airtableUserId}", ARRAYJOIN({UserID})), {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`,
-          fields: ['Fahrt_Datum_von', 'Zielort', 'Beschreibung', 'Status_Fahrt', 'Aktiv'],
+          fields: ['Fahrt_Datum_von', 'Fahrt_Datum_Bis', 'Anmeldefrist', 'Zielort', 'Beschreibung', 'Status_Fahrt', 'Aktiv'],
           sort: [{ field: 'Fahrt_Datum_von', direction: 'asc' }],
         })
         .all();
@@ -51,7 +51,11 @@ export async function GET(req: NextRequest) {
     const activeTrips = records.map(record => ({
       id: record.id,
       name: `Fahrt nach ${record.fields.Zielort || 'Berlin'} (ab ${record.fields.Fahrt_Datum_von || 'N/A'})`,
+      startDate: record.fields.Fahrt_Datum_von,
+      endDate: record.fields.Fahrt_Datum_Bis,
+      anmeldefrist: record.fields.Anmeldefrist,
       fahrtDatumVon: record.fields.Fahrt_Datum_von,
+      fahrtDatumBis: record.fields.Fahrt_Datum_Bis,
       zielort: record.fields.Zielort,
       beschreibung: record.fields.Beschreibung,
       aktiv: record.fields.Aktiv === true,

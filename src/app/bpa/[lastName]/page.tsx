@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Send, AlertCircle, MapPin, Calendar, HelpCircle } from "lucide-react";
+import { Send, AlertCircle, MapPin, HelpCircle } from "lucide-react";
 
 interface MdbDetails {
   id: string; // UserID from Airtable
@@ -22,6 +22,9 @@ interface MdbDetails {
 interface BpaFahrtOption {
   id: string; // FahrtID from Airtable
   name: string; // e.g., "Berlinfahrt Mai 2024", or a generated title
+  startDate?: string; // Add optional date fields
+  endDate?: string;
+  anmeldefrist?: string; // Add deadline field
   // Add other relevant trip details if needed for selection display
 }
 
@@ -41,11 +44,13 @@ export default function BpaDirectFormPage() {
     nachname: '',
     geburtsdatum: '',
     email: '',
+    telefon: '',
     anschrift: '',
     postleitzahl: '',
     ort: '',
     parteimitglied: false,
     teilnahme5Jahre: false,
+    einzelzimmer: false,
     zustieg: '',
     essenspraeferenz: '',
     // Add other fields from BPA_Formular as needed
@@ -112,6 +117,12 @@ export default function BpaDirectFormPage() {
     </Popover>
   );
 
+  // Email validation function
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const isCheckbox = type === 'checkbox';
@@ -129,6 +140,10 @@ export default function BpaDirectFormPage() {
     }
     if (activeTrips.length > 1 && !selectedTripId) {
       setError("Bitte wähle eine Fahrt aus.");
+      return;
+    }
+    if (!validateEmail(formData.email)) {
+      setError("Bitte gib eine gültige E-Mail-Adresse ein.");
       return;
     }
     if (formData.teilnahme5Jahre) {
@@ -170,6 +185,9 @@ export default function BpaDirectFormPage() {
       setLoading(false);
     }
   };
+
+  // Get selected trip for date display
+  const selectedTrip = activeTrips.find(trip => trip.id === selectedTripId) || (activeTrips.length === 1 ? activeTrips[0] : null);
 
   if (isSubmitted) {
     return (
@@ -325,10 +343,34 @@ export default function BpaDirectFormPage() {
         {(activeTrips.length > 0 || loading) && (
           <Card className="bg-background/5 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-white/10">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white text-xl">
-                <Calendar className="h-5 w-5" />
-                Anmeldung zur BPA-Fahrt
-              </CardTitle>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-white text-xl mb-0">
+                    Besuch im Bundestag
+                  </CardTitle>
+                  {selectedTrip && (
+                    <div className="text-white/80 text-lg font-medium">
+                      {selectedTrip.startDate && selectedTrip.endDate ? (
+                        <>{new Date(selectedTrip.startDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} - {new Date(selectedTrip.endDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</>
+                      ) : selectedTrip.startDate ? (
+                        <>ab {new Date(selectedTrip.startDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</>
+                      ) : selectedTrip.endDate ? (
+                        <>bis {new Date(selectedTrip.endDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</>
+                      ) : (
+                        <>Fahrt nach Berlin</>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {selectedTrip && selectedTrip.anmeldefrist && (
+                  <div className="text-right">
+                    <div className="text-white text-xl mb-0">Anmeldefrist:</div>
+                    <div className="text-white/80 text-lg font-medium">
+                      {new Date(selectedTrip.anmeldefrist).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -360,7 +402,10 @@ export default function BpaDirectFormPage() {
                   <h3 className="text-lg font-light font-work-sans text-white border-b border-white/20 pb-2">Persönliche Angaben</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="vorname" className="text-white">Vorname</Label>
+                      <div className="flex items-center h-6">
+                        <Label htmlFor="vorname" className="text-white">Vorname</Label>
+                        <InfoPopover content="Vor- und Nachname sowie das Geburtsdatum werden ausschließlich an die jeweiligen Besucherdienste übermittelt. Die Polizei beim Deutschen Bundestag führt auf Grundlage des § 2 Absatz 6c der Hausordnung des Deutschen Bundestages eine Zuverlässigkeitsüberprüfung durch. Ihre Daten werden nach Beendigung des Besuches gelöscht." />
+                      </div>
                       <Input 
                         type="text" 
                         name="vorname" 
@@ -372,7 +417,9 @@ export default function BpaDirectFormPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="nachname" className="text-white">Nachname</Label>
+                      <div className="flex items-center h-6">
+                        <Label htmlFor="nachname" className="text-white">Nachname</Label>
+                      </div>
                       <Input 
                         type="text" 
                         name="nachname" 
@@ -385,16 +432,17 @@ export default function BpaDirectFormPage() {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <div className="flex items-center">
+                      <div className="flex items-center h-6">
                         <Label htmlFor="geburtsdatum" className="text-white">Geburtsdatum</Label>
-                        <InfoPopover content="Vor- und Nachname sowie das Geburtsdatum werden ausschließlich an die jeweiligen Besucherdienste übermittelt. Die Polizei beim Deutschen Bundestag führt auf Grundlage des § 2 Absatz 6c der Hausordnung des Deutschen Bundestages eine Zuverlässigkeitsüberprüfung durch. Ihre Daten werden nach Beendigung des Besuches gelöscht." />
+                        <InfoPopover content="Teilnehmer:innen müssen das 18. Lebensjahr vollendet haben." />
                       </div>
                       <Input 
-                        type="date" 
+                        type="text" 
                         name="geburtsdatum" 
                         id="geburtsdatum" 
+                        placeholder="TT.MM.JJJJ"
                         value={formData.geburtsdatum} 
                         onChange={handleChange} 
                         required 
@@ -402,12 +450,28 @@ export default function BpaDirectFormPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-white">E-Mail-Adresse</Label>
+                      <div className="flex items-center h-6">
+                        <Label htmlFor="email" className="text-white">E-Mail-Adresse</Label>
+                      </div>
                       <Input 
                         type="email" 
                         name="email" 
                         id="email" 
                         value={formData.email} 
+                        onChange={handleChange} 
+                        required 
+                        className="bg-background/10 backdrop-blur-xl border-white/20 text-white placeholder:text-white/60" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center h-6">
+                        <Label htmlFor="telefon" className="text-white">Telefonnummer</Label>
+                      </div>
+                      <Input 
+                        type="tel" 
+                        name="telefon" 
+                        id="telefon" 
+                        value={formData.telefon} 
                         onChange={handleChange} 
                         required 
                         className="bg-background/10 backdrop-blur-xl border-white/20 text-white placeholder:text-white/60" 
@@ -466,7 +530,10 @@ export default function BpaDirectFormPage() {
                   <h3 className="text-lg font-light font-work-sans text-white border-b border-white/20 pb-2">Fahrtdetails</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="zustieg" className="text-white">Zustiegspunkt</Label>
+                      <div className="flex items-center">
+                        <Label htmlFor="zustieg" className="text-white">Zustiegspunkt</Label>
+                        <InfoPopover content="Die Anreise erfolgt mit der Deutschen Bahn. Im Berliner Stadtgebiet steht der Reisegruppe ein eigener Bus zur Verfügung." />
+                      </div>
                       <Select value={formData.zustieg} onValueChange={(value) => setFormData(prev => ({ ...prev, zustieg: value }))}>
                         <SelectTrigger className="bg-background/10 backdrop-blur-xl border-white/20 text-white">
                           <SelectValue placeholder="Bitte auswählen..." />
@@ -479,7 +546,10 @@ export default function BpaDirectFormPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="essenspraeferenz" className="text-white">Essenspräferenz</Label>
+                      <div className="flex items-center">
+                        <Label htmlFor="essenspraeferenz" className="text-white">Essenspräferenz</Label>
+                        <InfoPopover content="Die Reise- und Übernachtungskosten werden komplett übernommen, die Verpflegungskosten in begrenztem Umfang: Aus Einspargründen hat der Bundestag beschlossen, ab 2023 pro Fahrt nur noch die Kosten für drei Essen zu übernehmen. Das heißt, die Teilnehmer:innen müssen zwei Essen pro Fahrt selbst bezahlen." />
+                      </div>
                       <Select value={formData.essenspraeferenz} onValueChange={(value) => setFormData(prev => ({ ...prev, essenspraeferenz: value }))}>
                         <SelectTrigger className="bg-background/10 backdrop-blur-xl border-white/20 text-white">
                           <SelectValue placeholder="Bitte auswählen..." />
@@ -498,14 +568,32 @@ export default function BpaDirectFormPage() {
 
                 {/* Additional Information */}
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="parteimitglied" 
-                      checked={formData.parteimitglied} 
-                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, parteimitglied: checked === true }))}
-                      className="border-white/20 data-[state=checked]:bg-white data-[state=checked]:text-black"
-                    />
-                    <Label htmlFor="parteimitglied" className="text-white">Ich bin Mitglied der Partei Die Linke</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="parteimitglied" 
+                        checked={formData.parteimitglied} 
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, parteimitglied: checked === true }))}
+                        className="border-white/20 data-[state=checked]:bg-white data-[state=checked]:text-black"
+                      />
+                      <div className="flex items-center">
+                        <Label htmlFor="parteimitglied" className="text-white">Ich bin Mitglied der Partei Die Linke</Label>
+                        <InfoPopover content="Nur zu Informationszwecken; KEINE Bedingung." />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="einzelzimmer" 
+                        checked={formData.einzelzimmer} 
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, einzelzimmer: checked === true }))}
+                        className="border-white/20 data-[state=checked]:bg-white data-[state=checked]:text-black"
+                      />
+                      <div className="flex items-center">
+                        <Label htmlFor="einzelzimmer" className="text-white">Einzelzimmer gewünscht</Label>
+                        <InfoPopover content="Die Unterbringung erfolgt grundsätzlich in Doppelzimmern. Einzelzimmerwünsche können zwar berücksichtigt werden, hängen aber von der jeweiligen Kapazität des Hotels ab. Der Einzelzimmerzuschlag ist aus eigener Tasche zu leisten." />
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="flex items-center space-x-2">
@@ -539,11 +627,7 @@ export default function BpaDirectFormPage() {
 
                 <div className="mt-6 p-4 bg-background/10 backdrop-blur-xl border border-white/20 rounded-lg">
                   <p className="text-xs text-white/80 leading-relaxed">
-                    <strong>Datenschutzhinweis:</strong> Deine personenbezogenen Angaben werden ausschließlich im Zusammenhang mit den BPA-Fahrten genutzt. 
-                    Für Sicherheitskontrollen werden Vor- und Nachname sowie das Geburtsdatum an die jeweiligen Besucherdienste übermittelt. 
-                    Nach Beendigung des Besuches werden deine Daten gelöscht. Teilnehmer müssen das 18. Lebensjahr vollendet haben und es muss sich um 
-                    "politisch Interessierte" aus dem Wahlkreis handeln. Eine mehrmalige Teilnahme derselben Person innerhalb von 5 Jahren entspricht 
-                    nicht den Richtlinien des BPA.
+                    <strong>Datenschutzhinweis:</strong> Deine personenbezogenen Angaben werden ausschließlich im Zusammenhang mit den BPA-Fahrten genutzt.
                   </p>
                 </div>
               </form>
@@ -554,17 +638,26 @@ export default function BpaDirectFormPage() {
         <div className="mt-8 text-center">
           <Card className="bg-background/5 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-white/10">
             <CardContent className="pt-4">
-              <p className="text-sm text-white/80 mb-2">
-                <strong>Weitere Informationen</strong>
-              </p>
-              <a 
-                href="https://www.bundestag.de/besuche/fuehrung/besuchaufeinladungeinesabgeordneten"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-white/90 hover:text-white underline underline-offset-2 transition-colors"
-              >
-                Besuch auf Einladung eines Abgeordneten - Deutscher Bundestag
-              </a>
+              <div className="flex items-center justify-between gap-4">
+                <div className="text-left">
+                  <p className="text-sm text-white/80 mb-0">
+                    <strong>Weitere Informationen</strong>
+                  </p>
+                  <a 
+                    href="https://www.bundestag.de/besuche/fuehrung/besuchaufeinladungeinesabgeordneten"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-white/90 hover:text-white underline underline-offset-2 transition-colors"
+                  >
+                    Besuch auf Einladung eines Abgeordneten - Deutscher Bundestag
+                  </a>
+                </div>
+                <img 
+                  src="/images/btg.png" 
+                  alt="Bundestag" 
+                  className="w-12 h-12 object-contain"
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
