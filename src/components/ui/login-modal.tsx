@@ -74,27 +74,27 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-background/10 backdrop-blur-sm border border-border">
+      <DialogContent className="sm:max-w-[425px] bg-background/10 backdrop-blur-sm border border-border !text-white">
         <DialogHeader>
-          <DialogTitle className="text-center text-2xl font-bold font-work-sans font-black">
+          <DialogTitle className="text-center text-2xl font-bold font-work-sans font-black !text-white">
             Linksfraktion Studio
           </DialogTitle>
-          <DialogDescription className="text-center">
+          <DialogDescription className="text-center !text-white">
             Politische Werkzeugsammlung
           </DialogDescription>
         </DialogHeader>
         
         <Card className="border-0 shadow-none bg-transparent">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-work-sans">Anmelden</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg font-work-sans !text-white">Anmelden</CardTitle>
+            <CardDescription className="!text-white">
               Bitte melde dich mit deinen Zugangsdaten an.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="modal-email">E-Mail</Label>
+                <Label htmlFor="modal-email" className="!text-white">E-Mail</Label>
                 <Input
                   id="modal-email"
                   type="email"
@@ -103,11 +103,11 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="bg-background/20 backdrop-blur-sm border-border"
+                  className="bg-background/20 backdrop-blur-sm border-border !text-white placeholder:!text-white/70"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="modal-password">Passwort</Label>
+                <Label htmlFor="modal-password" className="!text-white">Passwort</Label>
                 <Input
                   id="modal-password"
                   type="password"
@@ -115,24 +115,24 @@ export function LoginModal({ isOpen, onOpenChange }: LoginModalProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="bg-background/20 backdrop-blur-sm border-border"
+                  className="bg-background/20 backdrop-blur-sm border-border !text-white placeholder:!text-white/70"
                 />
               </div>
               
               {errorMsg && (
                 <Alert variant="destructive" className="bg-destructive/10 backdrop-blur-sm border-destructive/20">
-                  <AlertDescription>{errorMsg}</AlertDescription>
+                  <AlertDescription className="!text-white">{errorMsg}</AlertDescription>
                 </Alert>
               )}
               
               <Button 
                 type="submit" 
-                className="w-full bg-background/10 backdrop-blur-sm border border-border text-foreground hover:bg-background/20 transition-colors" 
+                className="w-full bg-background/10 backdrop-blur-sm border border-border !text-white hover:bg-background/20 transition-colors" 
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin !text-white" />
                     Lädt...
                   </>
                 ) : (

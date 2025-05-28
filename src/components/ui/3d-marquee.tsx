@@ -24,12 +24,12 @@ export const ThreeDMarquee = ({
       )}
     >
       <div className="flex size-full items-center justify-center overflow-hidden">
-        <div className="w-full h-full max-w-[1720px] max-h-[1720px] shrink-0 scale-[0.3] sm:scale-[0.4] md:scale-[0.5] lg:scale-[0.6] xl:scale-[0.7]">
+        <div className="relative w-full h-full max-w-[1720px] max-h-[1720px] shrink-0 scale-[0.3] sm:scale-[0.4] md:scale-[0.5] lg:scale-[0.6] xl:scale-[0.7]">
           <div
             style={{
-              transform: "rotateX(55deg) rotateY(0deg) rotateZ(-45deg)",
+              transform: "translateX(-50%) translateY(-50%) rotateX(55deg) rotateY(0deg) rotateZ(-45deg)",
             }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 grid w-[1720px] h-[1720px] origin-center grid-cols-4 gap-8 transform-3d"
+            className="absolute top-1/2 left-1/2 grid w-[1720px] h-[1720px] origin-center grid-cols-4 gap-8 transform-3d"
           >
             {chunks.map((subarray, colIndex) => (
               <motion.div

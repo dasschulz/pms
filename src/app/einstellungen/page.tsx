@@ -13,10 +13,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CachedAvatar } from "@/components/ui/cached-avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { PageLayout } from "@/components/page-layout";
-import { User, Mail, MapPin, Hash, Building, Camera, Lock, Eye, EyeOff, AlertTriangle, Shield, Upload } from "lucide-react";
+import { User, Mail, MapPin, Hash, Building, Camera, Lock, Eye, EyeOff, AlertTriangle, Shield, Upload, Crop } from "lucide-react";
 import { toast } from "sonner";
 import { useProfilePicture } from "@/hooks/use-profile-picture";
 import { StationAutocomplete } from "@/components/ui/station-autocomplete";
+import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 
 interface UserData {
   name: string;
@@ -51,6 +52,10 @@ export default function EinstellungenPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Image crop dialog state
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
 
   const [userData, setUserData] = useState<UserData>({
     name: "",
@@ -211,34 +216,65 @@ export default function EinstellungenPage() {
       return;
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Das Bild darf maximal 5MB groß sein");
-      return;
-    }
+    // Check if file size exceeds 2MB or if image dimensions are not square
+    const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+    const needsProcessing = file.size > maxSizeBytes;
+    
+    // Check image dimensions
+    const img = new Image();
+    img.onload = () => {
+      const isSquare = img.naturalWidth === img.naturalHeight;
+      
+      if (needsProcessing || !isSquare) {
+        // Show crop dialog for processing
+        setPendingImageFile(file);
+        setCropDialogOpen(true);
+      } else {
+        // File is already good, upload directly
+        uploadProfilePicture(file);
+      }
+    };
+    
+    img.src = URL.createObjectURL(file);
+  };
 
+  // Upload profile picture (either original file or cropped base64)
+  const uploadProfilePicture = async (file?: File, base64String?: string) => {
     try {
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64String = reader.result as string;
-        const profilePictureUrl = base64String;
-        
-        // Clear old cached image before saving new one
-        clearCache(userData.profilePictureUrl);
-        
-        // Save to Airtable
-        await saveUserData({ profilePictureUrl });
-        
-        // Update local state
-        setUserData(prev => ({ ...prev, profilePictureUrl }));
-        toast.success("Profilbild erfolgreich aktualisiert");
-      };
-      reader.readAsDataURL(file);
+      let profilePictureUrl: string;
+      
+      if (base64String) {
+        profilePictureUrl = base64String;
+      } else if (file) {
+        // Convert file to base64
+        const reader = new FileReader();
+        profilePictureUrl = await new Promise<string>((resolve) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      } else {
+        throw new Error("No file or base64 string provided");
+      }
+      
+      // Clear old cached image before saving new one
+      clearCache(userData.profilePictureUrl);
+      
+      // Save to Airtable
+      await saveUserData({ profilePictureUrl });
+      
+      // Update local state
+      setUserData(prev => ({ ...prev, profilePictureUrl }));
+      toast.success("Profilbild erfolgreich aktualisiert");
     } catch (error) {
       console.error('Error uploading profile picture:', error);
       toast.error("Fehler beim Hochladen des Profilbilds");
     }
+  };
+
+  // Handle crop completion
+  const handleCropComplete = (croppedImageBase64: string) => {
+    uploadProfilePicture(undefined, croppedImageBase64);
+    setPendingImageFile(null);
   };
 
   // Save user data to Airtable
@@ -374,7 +410,7 @@ export default function EinstellungenPage() {
                     Neues Bild hochladen
                   </Button>
                   <p className="text-sm text-muted-foreground">
-                    JPG, PNG oder GIF. Maximal 5MB.
+                    JPG, PNG oder GIF. Maximal 2MB.
                   </p>
                 </div>
                 <input
@@ -674,6 +710,16 @@ export default function EinstellungenPage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Image Crop Dialog */}
+      <ImageCropDialog
+        open={cropDialogOpen}
+        onOpenChange={setCropDialogOpen}
+        imageFile={pendingImageFile}
+        onCropComplete={handleCropComplete}
+        maxSizeBytes={2 * 1024 * 1024} // 2MB
+        targetDimensions={{ width: 400, height: 400 }}
+      />
     </PageLayout>
   );
 }

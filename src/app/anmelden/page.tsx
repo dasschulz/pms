@@ -88,7 +88,7 @@ export default function AnmeldenPage() {
       {/* ThreeDMarquee Container - properly constrained */}
       <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
         <ThreeDMarquee
-          className="pointer-events-none !h-[80vh] !w-[80vw] !rounded-none"
+          className="pointer-events-none !h-full !w-full !rounded-none"
           images={images}
         />
       </div>

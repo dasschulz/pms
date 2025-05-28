@@ -1,32 +1,46 @@
-import NextAuth from "next-auth";
+import NextAuth, { DefaultSession } from "next-auth";
+import { DefaultJWT } from "next-auth/jwt";
 
 declare module "next-auth" {
+  /**
+   * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
+   */
   interface Session {
     user: {
       id: string;
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      wahlkreis?: string;
-      landesverband?: string;
-    }
+      wahlkreis?: string | null;
+      landesverband?: string | null;
+      role?: string | null;
+      airtableRecordId?: string;
+      userIdNumeric?: number;
+    } & Omit<DefaultSession["user"], 'id' | 'name' | 'email' | 'image'>
   }
 
   interface User {
     id: string;
     name: string;
     email: string;
-    image?: string;
-    wahlkreis?: string;
-    landesverband?: string;
+    image?: string | null;
+    wahlkreis?: string | null;
+    landesverband?: string | null;
   }
 }
 
 declare module "next-auth/jwt" {
-  interface JWT {
+  /** Returned by the `jwt` callback and `getToken`, when using JWT sessions */
+  interface JWT extends DefaultJWT {
     id: string;
-    image?: string;
-    wahlkreis?: string;
-    landesverband?: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    wahlkreis?: string | null;
+    landesverband?: string | null;
+    role?: string | null;
+    airtableRecordId?: string;
+    userIdNumeric?: number;
+    error?: "AirtableUserNotFound" | "AirtableFetchError";
   }
 } 

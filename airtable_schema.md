@@ -263,3 +263,58 @@
 | CreatedDate         | fldgjJE30BLbDrojS  | date              |
 | ModifiedDate        | fldTZGAGPQwdXcMrt  | date              |
 | From field: IsSubtask | fldKtWzT0fRi94p3S | foreignKey       |
+
+## BPA_Formular (tblk78Ya1EpEMUpxW)
+
+| Field Name           | Field ID           | Type                   |
+|----------------------|--------------------|------------------------|
+| ID                   | fldxmov4r8Yrg34eI  | autoNumber             |
+| UserID               | fldae3qAVJuU3sBEF  | foreignKey             |
+| FahrtID_ForeignKey   | fldA0WyW6TwjVDqGV  | foreignKey             |
+| FahrtID (from FahrtID_Foreignkey) | fldM694KJ19tDCnLl | lookup            |
+| Name (from UserID)   | fldaZDpwQnIgFHupO  | lookup                 |
+| UserID (from UserID) | fldwqx4rlkYygBxUx  | lookup                 |
+| Created              | fldYbmPAp6QVy2SeH  | date                   |
+| Anschrift            | fldaxRAJh2X9JjLti  | text                   |
+| Postleitzahl         | fldkJwhCfssXMEqR2  | number                 |
+| Geburtsdatum         | fldtvFU1d4qjBAtd4  | date                   |
+| Geburtsort           | fldrHVxstGXs1U4N8  | text                   |
+| Ort                  | fldUSoYUtZpCmgUeI  | text                   |
+| Vorname              | fld2s1kXwiBGO3j8g  | text                   |
+| Nachname             | fldgnycvXVJOQ2pSt  | text                   |
+| Zeitraum Von         | fld4jHkhcsdwgPbAZ  | date                   |
+| Zeitraum Bis         | fldnoTxy86Y970wit  | date                   |
+| Zeitraum Alle        | fldnMpb2MpeTkU8uJ  | multilineText          |
+| Themen               | fldpyjtc82FFjCwYz  | multilineText          |
+| Essenspräferenzen    | fldiD7GwEAM3crblo  | select                 |
+| Email                | fld79dvhPEYtpP6Ah  | email                  |
+| Telefonnummer        | fldHs9aPjaP80Q7iJ  | phoneNumber            |
+| Zustieg              | fldkY9uvdjR5Wg0tX  | select                 |
+| Status_Teilnahme     | fldTH64ThGdES4aLc  | select                 |
+| Status               | fldA1UzQdpOG5WbRI  | select                 |
+| Teilnahme_5J         | fldEj7AmpuwKjFUCw  | checkbox               |
+| Parteimitglied       | fldCP2cnNvk87uiMM  | checkbox               |
+| Einzelzimmer         | fldMYpaDorVPUd965  | checkbox               |
+
+## BPA_Fahrten (tblJsAQS7w10LdFDA)
+
+| Field Name        | Field ID                  | Type         |
+|-------------------|---------------------------|--------------|
+| FahrtID           | fldKxhde00p2pkeWy         | autoNumber   |
+| UserID            | fldNHxKrcJ0Hv4x1s         | foreignKey   |
+| Name (from UserID)| fldUrE2P2bflgLksn         | lookup       |
+| UserID (from UserID)| fldbsPoWGjn66L2sn        | lookup       |
+| Fahrt_Datum_von   | fldGlnKXyP0ZXHHnS         | date         |
+| Fahrt_Datum_Bis   | fldbLztHtK10egwXi         | date         |
+| Zielort           | fldYeSaE6cwbISABo         | text         |
+| Hotel_Name        | fldMvXiBSgwFHvlol         | text         |
+| Hotel_Adresse     | fldvqyWww479h1puM         | multilineText|
+| Kontingent_Max    | fldQCo3STAQq8KQE4         | number       |
+| Aktuelle_Anmeldungen | fld6W7sv170nAMrpd       | count        |
+| Bestaetigte_Anmeldungen | fldidhgaWtBLX5qcX    | count        |
+| Status_Fahrt      | fldZ3rgzzeSQH480j         | select       |
+| Anmeldefrist      | fldhF4hfoR6qbueGp         | date         |
+| Beschreibung      | fld5hxmjYaP09yIRq         | multilineText|
+| Zustiegsorte_Config | fldGB1VWpMkjdMrRc       | multilineText|
+| BPA_Formular      | fldiBsdxxtFR8OJkk         | foreignKey   |
+| Aktiv             | fldTr7lN3yYikDsaF         | checkbox     |

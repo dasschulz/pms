@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin, Clapperboard } from 'lucide-react';
+import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin, Clapperboard, ClipboardList, Building2, Mountain } from 'lucide-react';
 
 export interface NavItem {
   title: string;
@@ -34,9 +34,26 @@ export const navItems: NavItem[] = [
     icon: CalendarDays,
   },
   {
-    title: 'Touranfragen',
-    href: '/touranfragen',
-    icon: MapPin,
+    title: 'Draußenwelt',
+    icon: Mountain,
+    isChidren: true,
+    children: [
+      {
+        title: 'BPA-Fahrten',
+        href: '/bpa-fahrten',
+        icon: ClipboardList,
+      },
+      {
+        title: 'Touranfragen',
+        href: '/touranfragen',
+        icon: MapPin,
+      },
+      {
+        title: 'Wahlkreisbüros',
+        href: '/wahlkreisbueros',
+        icon: Building2,
+      },
+    ],
   },
   {
     title: 'Dokumentensuche',

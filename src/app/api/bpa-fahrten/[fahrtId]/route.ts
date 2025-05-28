@@ -16,14 +16,14 @@ interface UpdateBpaFahrtBody {
   aktiv?: boolean;
 }
 
-export async function GET(req: NextRequest, { params }: { params: { fahrtId: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ fahrtId: string }> }) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token || !token.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const userId = token.id as string;
 
-  const { fahrtId } = params;
+  const { fahrtId } = await params;
   if (!fahrtId) {
     return NextResponse.json({ error: 'Missing fahrtId parameter' }, { status: 400 });
   }
@@ -78,14 +78,14 @@ export async function GET(req: NextRequest, { params }: { params: { fahrtId: str
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { fahrtId: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ fahrtId: string }> }) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token || !token.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const userId = token.id as string;
 
-  const { fahrtId } = params;
+  const { fahrtId } = await params;
   if (!fahrtId) {
     return NextResponse.json({ error: 'Missing fahrtId parameter' }, { status: 400 });
   }
