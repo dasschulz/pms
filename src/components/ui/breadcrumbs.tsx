@@ -40,13 +40,36 @@ const findCategoryForPath = (path: string, items: NavItem[]): NavItem | null => 
   return null;
 };
 
+// Helper function to find nav item title by href
+const findNavItemTitle = (href: string, items: NavItem[]): string | null => {
+  // Check top-level items
+  for (const item of items) {
+    if (item.href === href) {
+      return item.title;
+    }
+    // Check children if they exist
+    if (item.children) {
+      for (const child of item.children) {
+        if (child.href === href) {
+          return child.title;
+        }
+      }
+    }
+  }
+  return null;
+};
+
 export const Breadcrumbs: React.FC = () => {
   const pathname = usePathname();
   const pathSegments = pathname.split('/').filter(segment => segment);
 
   const generatedBreadcrumbs: BreadcrumbItem[] = pathSegments.map((segment, index) => {
     const href = '/' + pathSegments.slice(0, index + 1).join('/');
-    const label = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
+    
+    // Try to find the correct title from nav items, fallback to auto-generated
+    const navTitle = findNavItemTitle(href, navItems);
+    const label = navTitle || (segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' '));
+    
     return { label, href };
   });
 
