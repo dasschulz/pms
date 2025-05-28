@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Send, AlertCircle, MapPin, Calendar } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Send, AlertCircle, MapPin, Calendar, HelpCircle } from "lucide-react";
 
 interface MdbDetails {
   id: string; // UserID from Airtable
@@ -44,6 +45,7 @@ export default function BpaDirectFormPage() {
     postleitzahl: '',
     ort: '',
     parteimitglied: false,
+    teilnahme5Jahre: false,
     zustieg: '',
     essenspraeferenz: '',
     // Add other fields from BPA_Formular as needed
@@ -96,6 +98,20 @@ export default function BpaDirectFormPage() {
     }
   }, [lastName]);
 
+  // Helper component for info popovers
+  const InfoPopover = ({ content }: { content: string }) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" className="ml-1 text-white/60 hover:text-white/80 transition-colors">
+          <HelpCircle className="w-4 h-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="max-w-sm text-sm bg-white/95 backdrop-blur-sm border border-white/20 text-black">
+        {content}
+      </PopoverContent>
+    </Popover>
+  );
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const isCheckbox = type === 'checkbox';
@@ -113,6 +129,10 @@ export default function BpaDirectFormPage() {
     }
     if (activeTrips.length > 1 && !selectedTripId) {
       setError("Bitte wähle eine Fahrt aus.");
+      return;
+    }
+    if (formData.teilnahme5Jahre) {
+      setError("Eine mehrmalige Teilnahme derselben Person innerhalb von 5 Jahren entspricht nicht den Richtlinien des BPA.");
       return;
     }
     const finalTripId = activeTrips.length === 1 && activeTrips[0] ? activeTrips[0].id : selectedTripId;
@@ -367,7 +387,10 @@ export default function BpaDirectFormPage() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="geburtsdatum" className="text-white">Geburtsdatum</Label>
+                      <div className="flex items-center">
+                        <Label htmlFor="geburtsdatum" className="text-white">Geburtsdatum</Label>
+                        <InfoPopover content="Vor- und Nachname sowie das Geburtsdatum werden ausschließlich an die jeweiligen Besucherdienste übermittelt. Die Polizei beim Deutschen Bundestag führt auf Grundlage des § 2 Absatz 6c der Hausordnung des Deutschen Bundestages eine Zuverlässigkeitsüberprüfung durch. Ihre Daten werden nach Beendigung des Besuches gelöscht." />
+                      </div>
                       <Input 
                         type="date" 
                         name="geburtsdatum" 
@@ -482,18 +505,35 @@ export default function BpaDirectFormPage() {
                       onCheckedChange={(checked) => setFormData(prev => ({ ...prev, parteimitglied: checked === true }))}
                       className="border-white/20 data-[state=checked]:bg-white data-[state=checked]:text-black"
                     />
-                    <Label htmlFor="parteimitglied" className="text-white">Ich bin Parteimitglied</Label>
+                    <Label htmlFor="parteimitglied" className="text-white">Ich bin Mitglied der Partei Die Linke</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="teilnahme5Jahre" 
+                      checked={formData.teilnahme5Jahre} 
+                      onCheckedChange={(checked) => setFormData(prev => ({ ...prev, teilnahme5Jahre: checked === true }))}
+                      className="border-white/20 data-[state=checked]:bg-white data-[state=checked]:text-black"
+                    />
+                    <div className="flex items-center">
+                      <Label htmlFor="teilnahme5Jahre" className="text-white">Ich habe in den letzten 5 Jahren an einer BPA-Fahrt teilgenommen</Label>
+                      <InfoPopover content="Eine mehrmalige Teilnahme derselben Person innerhalb von 5 Jahren entspricht nicht den Richtlinien des BPA." />
+                    </div>
                   </div>
                 </div>
 
                 <div className="pt-4">
                   <Button 
                     type="submit" 
-                    disabled={loading}
-                    className="w-full bg-white text-black hover:bg-white/90 font-semibold py-3 text-lg"
+                    disabled={loading || formData.teilnahme5Jahre}
+                    className={`w-full font-semibold py-3 text-lg ${
+                      formData.teilnahme5Jahre 
+                        ? 'bg-gray-500 text-gray-300 cursor-not-allowed' 
+                        : 'bg-white text-black hover:bg-white/90'
+                    }`}
                   >
                     <Send className="mr-2 h-5 w-5" />
-                    {loading ? 'Wird gesendet...' : 'Anmeldung Absenden'}
+                    {loading ? 'Wird gesendet...' : 'Verbindlich anmelden'}
                   </Button>
                 </div>
 
@@ -512,16 +552,6 @@ export default function BpaDirectFormPage() {
         )}
 
         <div className="mt-8 text-center">
-          <Card className="bg-background/5 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-white/10">
-            <CardContent className="pt-4">
-              <p className="text-sm text-white/80">
-                Dieses Formular dient zur Anmeldung für BPA-Fahrten des MdB {mdbDetails?.name || decodeURIComponent(lastName)}.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mt-4 text-center">
           <Card className="bg-background/5 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-white/10">
             <CardContent className="pt-4">
               <p className="text-sm text-white/80 mb-2">
