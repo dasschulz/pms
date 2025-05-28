@@ -20,17 +20,56 @@ die Funktion unter 1 sollte ein offen zugängliches Formular sein.
 
 ## Aufgabe 3: Implementiere die entsprechenden Funktionalitäten (API Calls, Anlegen von Fahrten, Verwalten von Fahrten, Anmeldungen ansehen etc.). Schaue hierbei auf die konkrete Airtable-API-Implementierung auf der /touranfragen-Seite, um die Fehler zu beheben, die bei deiner Standardisierten Implementierung sonst immer wieder passieren. Wir haben das mehrfach durchgespielt, lass es uns abkürzen.
 
-## Aufgabe 4: Hübsche das externe Formular auf. Vergleich hier mit Touranfragen-Form. Im Backend, ermögliche eine One-Click-Option, um das Formular als iFrame zu embedden.
+## Aufgabe 4: Hübsche das externe Formular für BPA-Fahrt-Anmeldungen auf. Vergleich hier mit Touranfragen-Form. Im Backend, ermögliche eine One-Click-Option, um das Formular als iFrame zu embedden.
 
-## Aufgabe 5:
-
-Erstelle eine "Draußenwelt"-Kategorie für die Sidebar. Ordne darunter BPA-Fahrten und Touranfragen ein. Erstelle außerdem eine "Wahlkreisbüros"-Seite. Die bearbeiten wir später, Platzhalter reicht.
+## Aufgabe 5: Erstelle eine "Draußenwelt"-Kategorie für die Sidebar. Ordne darunter BPA-Fahrten und Touranfragen ein. Erstelle außerdem eine "Wahlkreisbüros"-Seite. Die bearbeiten wir später, Platzhalter reicht.
 
 ### Fußnoten.
 
 Für die Fahrten erhalten die Teilnehmer einen Fahrtkostenzuschuss. 
 In Sitzungswochen ist der Besuch einer Plenardebatte, in der sitzungsfreien Zeit ein Vortrag im Plenarsaal über die Aufgaben und Funktionen des Parlaments sowie ein Museums- oder Ministerienbesuch vorgesehen. Wenn terminlich möglich, wird ein Treffen mit mir organisiert.
-Die Teilnehmer müssen in der Regel das 18. Lebensjahr vollendet haben. Eingeladen werden können deutsche Staatsangehörige und ausländische Teilnehmer aus den EU-Staaten. Nach den zurzeit geltenden Bestimmungen muss es sich bei den Teilnehmern um "politisch Interessierte" aus den jeweiligen Wahlkreisen handeln. Eine mehrmalige Teilnahme derselben Person innerhalb von 5 Jahren entspricht nicht den Richtlinien des BPA.
+Die Teilnehmer müssen in der Regel das 18. Lebensjahr vollendet haben. 
+
+Eingeladen werden können deutsche Staatsangehörige und ausländische Teilnehmer aus den EU-Staaten. 
+
+Nach den zurzeit geltenden Bestimmungen muss es sich bei den Teilnehmern um "politisch Interessierte" aus den jeweiligen Wahlkreisen handeln. 
+
+Eine mehrmalige Teilnahme derselben Person innerhalb von 5 Jahren entspricht nicht den Richtlinien des BPA.
+
+Ihre personenbezogenen
+Angaben werden
+ausschließlich im
+Zusammenhang mit den
+BPA-Fahrten genutzt. Für die
+Sicherheitskontrollen zu
+bestimmten Besuchsorten
+(Bundestag, Ministerien etc.)
+werden Vor- und Nachname
+sowie das Geburtsdatum an
+die jeweiligen Besucherdienste
+übermittelt. Die Polizei beim
+Deutschen Bundestag führt
+zum Beispiel auf Grundlage
+des § 2 Absatz 6c der
+Hausordnung des Deutschen
+Bundestages eine
+Zuverlässigkeitsüberprüfung
+insbesondere durch
+Einsichtnahme in das
+Informationssystem der Polizei
+beim Deutschen Bundestag
+und in das Informationssystem
+der Polizei (INPOL) durch. Ihre
+Daten (Vorname, Nachname,
+Geburtsdatum) werden nach
+Beendigung des Besuches
+gelöscht. Das Hotel erhält nur
+den Vor- und Nachnamen. Als
+Abgeordnetenbüro bewahren
+wir Ihre Daten nach erfolgter
+Teilnahme lediglich auf, um
+erneute Anmeldungen
+ausschließen zu können.
 
 
 Zudem besteht die Möglichkeit zu einem kostenlosen Mittagessen im Besucherrestaurant des Bundestags.

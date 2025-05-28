@@ -67,6 +67,7 @@ export const authOptions: NextAuthOptions = {
             token.wahlkreis = airtableUser.fields.Wahlkreis;
             token.landesverband = airtableUser.fields.Landesverband;
             token.role = airtableUser.fields.Role;
+            token.isFraktionsvorstand = airtableUser.fields.IsFraktionsvorstand;
 
           } else {
             console.error(`User with email ${user.email} not found in Airtable.`);
@@ -90,6 +91,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.airtableRecordId = token.airtableRecordId as string;
         session.user.userIdNumeric = token.userIdNumeric as number;
+        session.user.isFraktionsvorstand = token.isFraktionsvorstand as boolean;
       }
       return session;
     },

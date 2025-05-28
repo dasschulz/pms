@@ -16,6 +16,7 @@ declare module "next-auth" {
       role?: string | null;
       airtableRecordId?: string;
       userIdNumeric?: number;
+      isFraktionsvorstand?: boolean;
     } & Omit<DefaultSession["user"], 'id' | 'name' | 'email' | 'image'>
   }
 
@@ -42,5 +43,6 @@ declare module "next-auth/jwt" {
     airtableRecordId?: string;
     userIdNumeric?: number;
     error?: "AirtableUserNotFound" | "AirtableFetchError";
+    isFraktionsvorstand?: boolean;
   }
 } 

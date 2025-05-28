@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin, Clapperboard, ClipboardList, Building2, Mountain } from 'lucide-react';
+import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin, Clapperboard, ClipboardList, Building2, Mountain, Code, Plane, Users, CalendarCheck, Phone, Shield, UserPlus } from 'lucide-react';
 
 export interface NavItem {
   title: string;
@@ -48,11 +48,6 @@ export const navItems: NavItem[] = [
         href: '/touranfragen',
         icon: MapPin,
       },
-      {
-        title: 'Wahlkreisbüros',
-        href: '/wahlkreisbueros',
-        icon: Building2,
-      },
     ],
   },
   {
@@ -69,7 +64,83 @@ export const navItems: NavItem[] = [
     title: 'Fragewesen',
     icon: FileSearch2,
     isChidren: true,
+    children: [],
+  },
+  {
+    title: 'Reden',
+    icon: Mic2,
+    isChidren: true,
     children: [
+      {
+        title: 'Meine Reden',
+        href: '/meine-reden',
+        icon: Mic2,
+      },
+    ],
+  },
+  {
+    title: 'Kommunikation',
+    icon: FileText,
+    isChidren: true,
+    children: [],
+  },
+  {
+    title: 'Social Media',
+    icon: Share2,
+    isChidren: true,
+    children: [
+      {
+        title: 'Videoplanung',
+        href: '/videoplanung',
+        icon: Clapperboard,
+      },
+    ],
+  },
+  {
+    title: 'Dev',
+    icon: Code,
+    isChidren: true,
+    children: [
+      {
+        title: 'Alle Wahlkreisbüros',
+        href: '/alle-wahlkreisbueros',
+        icon: Building2,
+      },
+      {
+        title: 'Dienstreisen',
+        href: '/dienstreisen',
+        icon: Plane,
+      },
+      {
+        title: 'Referentenpool',
+        href: '/referentenpool',
+        icon: Users,
+      },
+      {
+        title: 'Journalistenpool',
+        href: '/journalistenpool',
+        icon: Newspaper,
+      },
+      {
+        title: 'Anfragenplanung',
+        href: '/anfragenplanung',
+        icon: CalendarCheck,
+      },
+      {
+        title: 'Transparenz',
+        href: '/transparenz',
+        icon: Shield,
+      },
+      {
+        title: 'Raumbuchung',
+        href: '/raumbuchung',
+        icon: CalendarDays,
+      },
+      {
+        title: 'Besucheranmeldung',
+        href: '/besucheranmeldung',
+        icon: UserPlus,
+      },
       {
         title: 'Kleine Anfragen',
         href: '/kleine-anfragen/generate',
@@ -95,30 +166,11 @@ export const navItems: NavItem[] = [
         href: '/ifg',
         icon: FileSearch2,
       },
-    ],
-  },
-  {
-    title: 'Reden',
-    icon: Mic2,
-    isChidren: true,
-    children: [
       {
         title: 'Redenschreiber',
         href: '/redenschreiber',
         icon: Mic2,
       },
-      {
-        title: 'Meine Reden',
-        href: '/meine-reden',
-        icon: Mic2,
-      },
-    ],
-  },
-  {
-    title: 'Kommunikation',
-    icon: FileText,
-    isChidren: true,
-    children: [
       {
         title: 'PM-Generator',
         href: '/pressemitteilung',
@@ -129,13 +181,6 @@ export const navItems: NavItem[] = [
         href: '/buergerpost',
         icon: Mail,
       },
-    ],
-  },
-  {
-    title: 'Social Media',
-    icon: Share2,
-    isChidren: true,
-    children: [
       {
         title: 'Skriptgenerator',
         href: '/skriptgenerator',
@@ -157,13 +202,47 @@ export const navItems: NavItem[] = [
         icon: Image,
       },
       {
-        title: 'Videoplanung',
-        href: '/videoplanung',
-        icon: Clapperboard,
+        title: 'Wahlkreisbüros',
+        href: '/wahlkreisbueros',
+        icon: Building2,
       },
     ],
   },
 ];
+
+// Conditional navigation items based on user permissions
+export const getFraktionsvorstandNavItems = (): NavItem[] => [
+  {
+    title: 'Fraktionsvorstand',
+    icon: Phone,
+    isChidren: true,
+    children: [
+      {
+        title: 'Fraktionsruf',
+        href: '/fraktionsruf',
+        icon: Phone,
+      },
+    ],
+  },
+];
+
+export const getNavItemsForUser = (isFraktionsvorstand?: boolean): NavItem[] => {
+  const baseNavItems = [...navItems];
+  
+  if (isFraktionsvorstand) {
+    // Find the index of the Dev section
+    const devIndex = baseNavItems.findIndex(item => item.title === 'Dev');
+    if (devIndex !== -1) {
+      // Insert Fraktionsvorstand section before Dev
+      baseNavItems.splice(devIndex, 0, ...getFraktionsvorstandNavItems());
+    } else {
+      // If Dev section not found, add at the end
+      baseNavItems.push(...getFraktionsvorstandNavItems());
+    }
+  }
+  
+  return baseNavItems;
+};
 
 export const bottomNavItems: NavItem[] = [
   {

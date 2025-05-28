@@ -19,13 +19,14 @@ import {
   SidebarInset,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { navItems, bottomNavItems, signOutNavItem, type NavItem } from "@/lib/nav-items";
+import { navItems, bottomNavItems, signOutNavItem, type NavItem, getNavItemsForUser } from "@/lib/nav-items";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger as ShadCNAccordionTrigger } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 import { Navbar } from "./navbar";
 import { ChevronDown } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 // Custom Party Icon SVG - Wird für Sidebar Header und Header-Platzhalter verwendet
 // const PartyIcon = () => (
@@ -38,32 +39,38 @@ import { ChevronDown } from "lucide-react";
 function SidebarNav() {
   const pathname = usePathname();
   const { state: sidebarState } = useSidebar();
+  const { data: session } = useSession();
   const [openAccordionValue, setOpenAccordionValue] = React.useState<string | undefined>(undefined);
 
-  React.useEffect(() => {
-    // Find if any child of any accordion is active and open that accordion
-    let activeParentTitle: string | undefined = undefined;
-    navItems.forEach(item => {
-      if (item.isChidren && item.children && item.children.some(child => child.href === pathname)) {
-        activeParentTitle = item.title;
-      }
-    });
-    if (sidebarState === "expanded") {
-      setOpenAccordionValue(activeParentTitle);
-    } else {
-      // Collapse accordion when sidebar collapses, but preserve which one was active
-      // if (activeParentTitle) setOpenAccordionValue(undefined); // Optional: fully close on sidebar collapse
-    }
-  }, [pathname, sidebarState]);
+  const displayNavItems = getNavItemsForUser(session?.user?.isFraktionsvorstand);
 
-  const handleAccordionChange = (value: string) => {
+  React.useEffect(() => {
+    if (sidebarState === "expanded") {
+      let newActiveParentTitle: string | undefined = undefined;
+      displayNavItems.forEach(item => {
+        if (item.isChidren && item.children && item.children.some(child => child.href === pathname)) {
+          newActiveParentTitle = item.title;
+        }
+      });
+
+      if (newActiveParentTitle !== undefined && newActiveParentTitle !== openAccordionValue) {
+        setOpenAccordionValue(newActiveParentTitle);
+      }
+      // If newActiveParentTitle is undefined, or same as current, do nothing here to preserve manual state.
+    }
+    // Consider if openAccordionValue should be reset when sidebarState becomes "collapsed"
+    // else if (sidebarState === "collapsed" && openAccordionValue !== undefined) { 
+    //   setOpenAccordionValue(undefined); 
+    // }
+  }, [pathname, sidebarState, displayNavItems, openAccordionValue]);
+
+  const handleAccordionChange = React.useCallback((value: string) => {
     setOpenAccordionValue(prevValue => (prevValue === value ? undefined : value));
-  };
+  }, []);
 
   const renderNavItem = (item: NavItem, index: number, isSubItem = false) => {
     const isActive = item.href === pathname || (item.children && item.children.some(child => child.href === pathname));
-    const isParentPageActive = item.href === pathname; // For items that were parent pages
-
+    
     if (item.isHeader) {
       return (
         <div key={index} className={cn("flex items-center justify-center px-2 py-2 h-16 border-b", sidebarState === "collapsed" ? "" : "")}>
@@ -74,6 +81,8 @@ function SidebarNav() {
 
     if (item.isChidren && item.children) {
       const isCurrentlyOpen = openAccordionValue === item.title;
+      
+      // Removed console log from here: [SidebarNav] Evaluating render for parent...
 
       return (
         <div key={index} className="w-full">
@@ -82,11 +91,14 @@ function SidebarNav() {
               variant="default"
               className={cn(
                 "w-full justify-start h-9 mb-1",
-                // isActive && !isSubItem && "bg-sidebar-accent text-sidebar-accent-foreground", // Parent items are not active themselves anymore
                 sidebarState === "collapsed" ? "px-0 justify-center" : "px-2"
               )}
               tooltip={sidebarState === "collapsed" ? item.title : undefined}
-              onClick={() => sidebarState === "expanded" && handleAccordionChange(item.title)}
+              onClick={() => {
+                if (sidebarState === "expanded") {
+                  handleAccordionChange(item.title);
+                }
+              }}
               aria-expanded={isCurrentlyOpen}
             >
               <div className={cn("flex items-center gap-2 w-full", sidebarState === "collapsed" ? "justify-center" : "")}>
@@ -98,17 +110,14 @@ function SidebarNav() {
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          
+
           {sidebarState === "expanded" && (
-            <Accordion type="single" collapsible className="w-full px-0" value={openAccordionValue} onValueChange={handleAccordionChange}>
+            <Accordion type="single" collapsible className="w-full px-0" value={openAccordionValue}>
               <AccordionItem value={item.title} className="border-none overflow-hidden">
-                {/* AccordionTrigger is now part of the SidebarMenuButton above */}
                 <AccordionContent className="pt-1 pb-0 pl-2">
-                  {isCurrentlyOpen && (
+                  {openAccordionValue === item.title && (
                     <SidebarMenu className="border-l border-sidebar-border ml-[10px] pl-2">
-                      {item.children.map((child, childIndex) => (
-                        renderNavItem(child, childIndex, true)
-                      ))}
+                      {item.children.map((child, childIndex) => renderNavItem(child, childIndex, true))}
                     </SidebarMenu>
                   )}
                 </AccordionContent>
@@ -126,7 +135,7 @@ function SidebarNav() {
         "w-full justify-start h-9",
         isActive && !isSubItem && "bg-sidebar-accent text-sidebar-accent-foreground",
         sidebarState === "collapsed" ? "px-0 justify-center" : "px-2",
-        isSubItem ? "h-8 text-sm ml-2" : "" // Indent sub-items slightly
+        isSubItem ? "h-8 text-sm ml-2" : "" 
       ),
       tooltip: sidebarState === "collapsed" ? item.title : undefined,
     };
@@ -168,7 +177,7 @@ function SidebarNav() {
     <div className="flex flex-col flex-grow h-full">
       <ScrollArea className="flex-grow">
         <SidebarMenu className="px-2 pt-2">
-          {navItems.map((item, index) => renderNavItem(item, index))}
+          {displayNavItems.map((item, index) => renderNavItem(item, index))}
         </SidebarMenu>
 
         {bottomNavItems.length > 0 && (

@@ -30,6 +30,14 @@
 | Magic link          | fldazkEfAkENUynCw | text              |
 | Role                | fld0bFiLCUjUDlIRq | select            |
 | IsFraktionsvorstand | fldTkNfCk2uQo0uA5 | checkbox          |
+| Geschlecht          | fld0123456789ABCD | select            |
+| Tel Büroleitung     | fldCHiZ1FOe6lIAUj | phoneNumber       |
+| Ausschuss 1         | fldJdSlVYZ4fZxxIh | text              |
+| Ausschuss 2         | fldVWIo8WWq4iLZ3u | text              |
+| Ausschuss 3         | fldkt1gor0PrbBUak | text              |
+| Rolle Ausschuss 1   | fldJ3lYUcn941CKRR | multipleSelect    |
+| Rolle Ausschuss 2   | fldH8nyh2YDW6IrAO | multipleSelect    |
+| Rolle Ausschuss 3   | fldrEHoMZdfC2lB57 | multipleSelect    |
 | Data                | fldF7liDq05X8jXKq | foreignKey        |
 | Generierte Dokumente| fldVECnQ4WvYh7NGK | foreignKey        |
 | Count (Generierte Dokumente) | fldAHzngElJwo1b4f | count         |
@@ -318,3 +326,56 @@
 | Zustiegsorte_Config | fldGB1VWpMkjdMrRc       | multilineText|
 | BPA_Formular      | fldiBsdxxtFR8OJkk         | foreignKey   |
 | Aktiv             | fldTr7lN3yYikDsaF         | checkbox     |
+
+## FraktionsrufCounter (tblMfoWD86aQnZ9Ll)
+
+| Field Name             | Field ID            | Type                     | Description                                                                 | Example Values                                                              |
+|------------------------|---------------------|--------------------------|-----------------------------------------------------------------------------|-----------------------------------------------------------------------------|
+| FraktionsrufID         | fldIgWXTXU6ONbCDy   | autoNumber               | Automatically incremented unique counter for each record.                   | 1, 2, 3                                                                     |
+| Created                | fld4quiu0bLCc1enY   | date                     | UTC date, e.g. "2014-09-05".                                                | "2014-09-05"                                                                |
+| Assignee               | fldxxWcCDEXOUeGUQ   | link to another record   | Array of linked records IDs from the Users table.                           | ["rec8116cdd76088af", "rec245db9343f55e8", "rec4f3bade67ff565"]           |
+| UserID (from Assignee) | fldju5zwoJ3hinFbv   | lookup                   | Array of UserID fields in linked Users records.                             | To see example values, try adding some data to FraktionsrufCounter.         |
+| Month                  | fldLS863jcYhdjtuk   | number                   | An integer (whole number, e.g. 1, 32, 99). This field only allows positive numbers. | 42                                                                          |
+| Year                   | fldiDGx4ZsIPcAauV   | number                   | An integer (whole number, e.g. 1, 32, 99). This field only allows positive numbers. | 42                                                                          |
+| Count                  | fld3oujENuuPtzMB1   | count                    | Number of linked Users records.                                             |                                                                             |
+
+## Field Options Documentation
+
+### Users Table Select Field Options
+
+#### Geschlecht (fld0123456789ABCD)
+**Type:** Single Select  
+**Options:**
+- M
+- W
+- D
+
+#### Rolle Ausschuss 1 (fldJ3lYUcn941CKRR)
+**Type:** Multiple Select  
+**Options:**
+- Mitglied
+- Stellv. Mitglied
+- Vorsitz
+- Obmann/Obfrau
+
+#### Rolle Ausschuss 2 (fldH8nyh2YDW6IrAO)
+**Type:** Multiple Select  
+**Options:**
+- Mitglied
+- Stellv. Mitglied
+- Vorsitz
+- Obmann/Obfrau
+
+#### Rolle Ausschuss 3 (fldrEHoMZdfC2lB57)
+**Type:** Multiple Select  
+**Options:**
+- Mitglied
+- Stellv. Mitglied
+- Vorsitz
+- Obmann/Obfrau
+
+#### Tel Büroleitung (fldCHiZ1FOe6lIAUj)
+**Type:** Phone Number  
+**Format:** International phone number format (e.g., "(415) 555-9876")
+
+**Note:** When creating or updating records with select fields, if the choice string does not exactly match an existing option, the request will fail with an INVALID_MULTIPLE_CHOICE_OPTIONS error unless the typecast parameter is enabled. If typecast is enabled, a new choice will be created if one does not exactly match.
