@@ -4,23 +4,37 @@ Diese Seite dient Mitgliedern des Fraktionsvorstands dazu, neue Kommunikationsli
 
 ## Funktionen im Detail:
 
-1.  **Zugriffskontrolle**:
+1.  **Layout und Design**:
+    *   Vollbildschirm-Layout mit angemessenen Abständen.
+    *   Moderne PageLayout-Komponente mit Titel und Beschreibung.
+    *   Die Formular-Elemente sind in einer übergeordneten Struktur angeordnet, die primär aus einem zweispaltigen Grid für die oberen Sektionen besteht, gefolgt von einem weiteren zweispaltigen Grid für "Anhänge" und "Start-/End-Datum", und abschließend dem "Erstellen"-Button.
+        *   **Obere Sektion - Spalte 1**: Hauptthema, Beschreibung, Argumente (1-3, `rows={7}`).
+        *   **Obere Sektion - Spalte 2**: Zahl der Woche, Beschreibung (Zahl der Woche), Zuständiges MdB, Weiterführende Links.
+        *   **Untere Sektion (Sub-Grid) - Spalte 1**: Anhänge.
+        *   **Untere Sektion (Sub-Grid) - Spalte 2**: Start-/End-Datum (horizontal ausgerichtet mit Anhänge).
+        *   **Abschließende Sektion**: Erstellen-Button (unterhalb des Sub-Grids, im visuellen Fluss der ersten Spalte).
+    *   Responsive Grid-Layouts, die auf kleineren Bildschirmen zu einer Spalte wechseln.
+
+2.  **Skeleton Loading**:
+    *   Die Skeleton-Ansicht spiegelt diese neue verschachtelte Grid-Struktur wider.
+
+3.  **Zugriffskontrolle**:
     *   Die Seite ist ausschließlich für Benutzer zugänglich, bei denen das Feld `is_fraktionsvorstand` in der `users`-Tabelle auf `true` gesetzt ist.
     *   Nicht autorisierte Benutzer erhalten eine Fehlermeldung und können nicht auf die Inhalte zugreifen.
 
-2.  **Formular zur Erstellung einer neuen Kommunikationslinie**:
-    *   **Hauptthema**: Einzeiliges Textfeld für den Titel oder das Kernthema der Kommunikationslinie.
-    *   **Beschreibung**: Mehrzeiliges Textfeld für eine ausführliche Beschreibung. Zukünftig soll hier Markdown mit Bild-Uploads und iFrame-Einbettung (z.B. Datawrapper) unterstützt werden.
-    *   **Argument 1, Argument 2, Argument 3**: Drei separate mehrzeilige Textfelder für die Kernargumente.
-    *   **Zahl der Woche**: Einzeiliges Textfeld für eine prägnante Zahl oder Statistik.
-    *   **Beschreibung (Zahl der Woche)**: Mehrzeiliges Textfeld zur Erläuterung der Zahl der Woche.
-    *   **Zuständiges MdB**: Dropdown-Menü zur Auswahl eines MdB aus der `users`-Tabelle. Dieses MdB wird als Ansprechpartner für Rückfragen zur Kommunikationslinie angezeigt.
-    *   **Weiterführende Links (Further Reading)**: Dynamische Liste von Eingabefeldern, um URLs zu relevanten Artikeln oder Quellen hinzuzufügen. Es können beliebig viele Links hinzugefügt und entfernt werden.
-    *   **Start-Datum**: Datumsauswahl, ab wann die Kommunikationslinie als aktiv gilt.
-    *   **End-Datum**: Datumsauswahl, bis wann die Kommunikationslinie als aktuell gilt.
-    *   **Anhänge (PDFs)**: Dateiauswahlfeld, um mehrere PDF-Dateien hochzuladen. Die hochgeladenen Dateien werden im Supabase Storage Bucket `communicationattachments` gespeichert und mit der Kommunikationslinie verknüpft.
+4.  **Formular zur Erstellung einer neuen Kommunikationslinie**:
+    *   **Hauptthema**: (Obere Sektion, Spalte 1)
+    *   **Beschreibung**: (Obere Sektion, Spalte 1)
+    *   **Argument 1, Argument 2, Argument 3**: (Obere Sektion, Spalte 1, `rows={7}`)
+    *   **Zahl der Woche**: (Obere Sektion, Spalte 2)
+    *   **Beschreibung (Zahl der Woche)**: (Obere Sektion, Spalte 2)
+    *   **Zuständiges MdB**: (Obere Sektion, Spalte 2)
+    *   **Weiterführende Links**: (Obere Sektion, Spalte 2)
+    *   **Anhänge**: (Untere Sektion/Sub-Grid, Spalte 1)
+    *   **Start-Datum / End-Datum**: (Untere Sektion/Sub-Grid, Spalte 2)
+    *   **Erstellen-Button**: (Unterhalb des Sub-Grids)
 
-3.  **Speichervorgang**:
+5.  **Speichervorgang**:
     *   Beim Absenden des Formulars werden die Daten in der Supabase-Datenbank gespeichert:
         *   Die Hauptinformationen der Kommunikationslinie werden in die Tabelle `communication_lines` geschrieben.
         *   Hochgeladene PDF-Anhänge werden in den Storage Bucket `communicationattachments` geladen. Die Metadaten der Anhänge (Dateiname, Storage-Pfad) werden in der Tabelle `communication_line_attachments` gespeichert und mit dem entsprechenden Eintrag in `communication_lines` verknüpft.
@@ -35,20 +49,18 @@ Diese Seite dient Mitgliedern des Fraktionsvorstands dazu, neue Kommunikationsli
     *   `public.users`: Dient zur Überprüfung der `is_fraktionsvorstand`-Berechtigung und zur Auswahl des zuständigen MdB.
 *   **Supabase Storage**:
     *   Bucket `communicationattachments`: Dient zur Speicherung der hochgeladenen PDF-Dateien.
-*   **API-Aufrufe (Client-seitig via Supabase JS SDK)**:
+*   **API-Aufrufe**:
     *   Abruf der Benutzerinformationen (insbesondere `is_fraktionsvorstand`).
-    *   Abruf der Liste aller MdB (Namen und IDs) für das Dropdown-Menü.
+    *   Abruf der Liste aller MdB (Namen und IDs) für das Dropdown-Menü über `/api/users/mdb-list`, gefiltert nach `role='MdB'`.
     *   Speichern der Formulardaten in `communication_lines`.
     *   Hochladen von Dateien in den `communicationattachments` Bucket.
     *   Speichern der Anhang-Metadaten in `communication_line_attachments`.
 
 ## Erwartete Benutzerinteraktion:
 
-*   Der Benutzer (Mitglied des Fraktionsvorstands) füllt die Felder des Formulars aus.
-*   Der Benutzer lädt optional PDF-Dateien als Anhänge hoch.
-*   Der Benutzer wählt optional ein Start- und Enddatum für die Gültigkeit der Kommunikationslinie.
-*   Der Benutzer sendet das Formular ab, um die Kommunikationslinie zu erstellen.
+*   Der Benutzer füllt das Formular in der neu strukturierten Anordnung aus.
+*   "Anhänge" und "Start-/End-Datum" sollten nun klar auf derselben horizontalen Ebene erscheinen.
 
 ## Mehrwert für das Büro eines MdB:
 
-Diese Seite ermöglicht es dem Fraktionsvorstand, schnell und effizient zentrale Kommunikationsleitlinien festzulegen und mit relevanten Informationen (Argumenten, Zahlen, weiterführenden Links, Dokumenten) anzureichern. Dies stellt sicher, dass alle Abgeordneten Zugriff auf konsistente und aktuelle Informationen für ihre Öffentlichkeitsarbeit und politische Kommunikation haben. 
+Die überarbeitete Struktur zielt darauf ab, eine endgültig korrekte und intuitive horizontale Ausrichtung der zusammengehörigen Elemente ("Anhänge" und "Daten") zu erreichen und gleichzeitig eine klare Gliederung der verschiedenen Eingabebereiche beizubehalten. Dies stellt sicher, dass alle Abgeordneten Zugriff auf konsistente und aktuelle Informationen für ihre Öffentlichkeitsarbeit und politische Kommunikation haben. 

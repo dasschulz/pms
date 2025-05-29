@@ -9,9 +9,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react'; // For loading spinner
+import { Loader2, CalendarIcon } from 'lucide-react'; // For loading spinner
+import { Skeleton } from '@/components/ui/skeleton';
+import { PageLayout } from '@/components/page-layout';
 import { toast } from 'sonner'; // Assuming sonner is used for toasts like in fraktionsruf
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 type UserProfile = {
   id: string;
@@ -50,8 +57,8 @@ export default function AgendaSettingPage() {
   const [zustaendigesMdbUserId, setZustaendigesMdbUserId] = useState<string | undefined>(undefined);
   const [furtherReading, setFurtherReading] = useState<string[]>(['']);
   const [attachments, setAttachments] = useState<File[]>([]);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (sessionStatus === 'loading') {
@@ -110,17 +117,18 @@ export default function AgendaSettingPage() {
 
       // User is Fraktionsvorstand, proceed to fetch MDBs
       console.log('AgendaSettingPage: User is Fraktionsvorstand. Access granted. Fetching MDBs...');
-      const { data: mdbs, error: mdbError } = await supabase
-        .from('users')
-        .select('id, name')
-        .order('name', { ascending: true });
-
-      if (mdbError) {
+      
+      try {
+        const response = await fetch('/api/users/mdb-list');
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const mdbs = await response.json();
+        setMdbUsers(mdbs as MdbUser[]);
+      } catch (fetchError: any) {
         toast.error('Fehler beim Laden der MdB-Liste.');
         setError('Fehler beim Laden der MdB-Liste.');
-        console.error('MDB fetch error:', mdbError);
-      } else {
-        setMdbUsers(mdbs as MdbUser[]);
+        console.error('MDB fetch error:', fetchError);
       }
       setIsLoading(false);
     };
@@ -174,8 +182,8 @@ export default function AgendaSettingPage() {
           zahl_der_woche_beschreibung: zahlDerWocheBeschreibung,
           zustaendiges_mdb_user_id: zustaendigesMdbUserId,
           further_reading: furtherReading.filter(link => link.trim() !== ''),
-          start_date: startDate || null,
-          end_date: endDate || null,
+          start_date: startDate ? format(startDate, 'yyyy-MM-dd') : null,
+          end_date: endDate ? format(endDate, 'yyyy-MM-dd') : null,
         })
         .select()
         .single();
@@ -215,8 +223,8 @@ export default function AgendaSettingPage() {
       // ... reset other form fields ...
       setFurtherReading(['']);
       setAttachments([]);
-      setStartDate('');
-      setEndDate('');
+      setStartDate(null);
+      setEndDate(null);
       setZustaendigesMdbUserId(undefined);
       setArgument1('');
       setArgument2('');
@@ -234,30 +242,121 @@ export default function AgendaSettingPage() {
     }
   };
 
-  if (isLoading || sessionStatus === 'loading') {
+  // Skeleton loading component for the form
+  function AgendaSettingSkeleton() {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Lade Agendasetting...</p>
-      </div>
+      <PageLayout
+        title="Neue Kommunikationslinie erstellen"
+        description="Definiere hier neue Themen und Argumentationshilfen für die Kommunikation."
+      >
+        {/* Outer container for the form sections, mimicking the new form structure */}
+        <div className="space-y-8">
+          {/* Main Grid for Top Sections */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Column 1 (Top Part) - Skeleton */}
+            <div className="space-y-6">
+              {/* Hauptthema */}
+              <div>
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              {/* Beschreibung */}
+              <div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+              {/* Arguments Grid - Taller */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Skeleton className="h-4 w-20 mb-2" />
+                  <Skeleton className="h-44 w-full" />
+                </div>
+                <div>
+                  <Skeleton className="h-4 w-20 mb-2" />
+                  <Skeleton className="h-44 w-full" />
+                </div>
+                <div>
+                  <Skeleton className="h-4 w-20 mb-2" />
+                  <Skeleton className="h-44 w-full" />
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2 (Top Part) - Skeleton */}
+            <div className="space-y-6">
+              {/* Zahl der Woche */}
+              <div>
+                <Skeleton className="h-4 w-28 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              {/* Zahl der Woche Beschreibung */}
+              <div>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+              {/* Zuständiges MdB */}
+              <div>
+                <Skeleton className="h-4 w-28 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              {/* Weiterführende Links - Skeleton */}
+              <div> 
+                <Skeleton className="h-4 w-32 mb-2" />
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-8 w-24" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* New Sub-Grid for Anhänge and Start/End-Datum - Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Sub-Grid Column 1: Anhänge - Skeleton */}
+            <div className="space-y-6">
+              <div> 
+                <Skeleton className="h-4 w-16 mb-2" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </div>
+            {/* Sub-Grid Column 2: Start/End-Datum - Skeleton */}
+            <div className="space-y-6">
+              <div> 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Skeleton className="h-4 w-20 mb-2" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                  <div>
+                    <Skeleton className="h-4 w-20 mb-2" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Erstellen Button - Skeleton */}
+          <div className="pt-4">
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+      </PageLayout>
     );
+  }
+
+  if (isLoading || sessionStatus === 'loading') {
+    return <AgendaSettingSkeleton />;
   }
 
   // Error display logic - simplified based on `error` state and userProfile check for Fraktionsvorstand
   // This will show if setError was called, e.g., for access denied or MDB fetch error
   if (error && (!userProfile?.is_fraktionsvorstand && error === 'Zugriff verweigert. Diese Seite ist nur für den Fraktionsvorstand zugänglich.')) {
     return (
-      <div className="container mx-auto p-4">
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Fehler</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600">{error}</p>
-            <Button onClick={() => router.push('/')} className="mt-4">Zur Startseite</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <PageLayout title="Fehler" description="">
+        <p className="text-red-600">{error}</p>
+        <Button onClick={() => router.push('/')} className="mt-4">Zur Startseite</Button>
+      </PageLayout>
     );
   }
   
@@ -266,96 +365,78 @@ export default function AgendaSettingPage() {
     // The above general error block might already catch this.
     // This explicit check ensures the message for non-Fraktionsvorstand is shown if not already handled.
      return (
-      <div className="container mx-auto p-4">
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Zugriff verweigert</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600">Diese Seite ist nur für den Fraktionsvorstand zugänglich.</p>
-            <Button onClick={() => router.push('/')} className="mt-4">Zur Startseite</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <PageLayout title="Zugriff verweigert" description="">
+        <p className="text-red-600">Diese Seite ist nur für den Fraktionsvorstand zugänglich.</p>
+        <Button onClick={() => router.push('/')} className="mt-4">Zur Startseite</Button>
+      </PageLayout>
     );
   }
 
   // Fallback for other critical errors if not Fraktionsvorstand specifically
   if (error && userProfile === null) { // E.g. profile fetch completely failed
        return (
-      <div className="container mx-auto p-4">
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Fehler</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-red-600">{error}</p>
-             <Button onClick={() => router.push('/anmelden')} className="mt-4">Erneut anmelden</Button>
-          </CardContent>
-        </Card>
-      </div>
+      <PageLayout title="Fehler" description="">
+        <p className="text-red-600">{error}</p>
+         <Button onClick={() => router.push('/anmelden')} className="mt-4">Erneut anmelden</Button>
+      </PageLayout>
     );
   }
 
 
   return (
-    <div className="container mx-auto p-4 max-w-3xl">
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Neue Kommunikationslinie erstellen</CardTitle>
-          <CardDescription>
-            Definieren Sie hier neue Themen und Argumentationshilfen für die Kommunikation.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Ensure userProfile exists and is Fraktionsvorstand before rendering form */}
-          {/* Otherwise, the error messages above should have handled it */}
-          {/* Or show a generic disabled message if preferred over full error UI for non-FV */}
-          {(!userProfile || !userProfile.is_fraktionsvorstand) && !isLoading && !error && (
-             <p className="text-red-500">Sie haben keine Berechtigung, diese Seite anzuzeigen oder Aktionen auszuführen.</p>
-          )}
+    <PageLayout
+      title="Neue Kommunikationslinie erstellen"
+      description="Definiere hier neue Themen und Argumentationshilfen für die Kommunikation."
+    >
+      {/* Ensure userProfile exists and is Fraktionsvorstand before rendering form */}
+      {(!userProfile || !userProfile.is_fraktionsvorstand) && !isLoading && !error && (
+         <p className="text-red-500">Du hast keine Berechtigung, diese Seite anzuzeigen oder Aktionen auszuführen.</p>
+      )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-8"> {/* Changed to space-y-8 for overall form spacing */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Column 1 (Top Part) */}
+          <div className="space-y-6">
             <div>
               <Label htmlFor="hauptthema">Hauptthema</Label>
               <Input id="hauptthema" value={hauptthema} onChange={(e) => setHauptthema(e.target.value)} required disabled={!userProfile?.is_fraktionsvorstand} />
             </div>
 
             <div>
-              <Label htmlFor="beschreibung">Beschreibung (Markdown unterstützt)</Label>
+              <Label htmlFor="beschreibung">Beschreibung</Label>
               <Textarea id="beschreibung" value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={5} placeholder="Markdown..." disabled={!userProfile?.is_fraktionsvorstand}/>
             </div>
             
-            {/* Other fields should also get 'disabled' prop based on !userProfile?.is_fraktionsvorstand */}
-            {/* Example for one argument field */}
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="argument1">Argument 1 (Markdown)</Label>
-                <Textarea id="argument1" value={argument1} onChange={(e) => setArgument1(e.target.value)} rows={3} placeholder="Markdown für Formatierung." disabled={!userProfile?.is_fraktionsvorstand} />
+                <Label htmlFor="argument1">Argument 1</Label>
+                <Textarea id="argument1" value={argument1} onChange={(e) => setArgument1(e.target.value)} rows={7} placeholder="Markdown für Formatierung." disabled={!userProfile?.is_fraktionsvorstand} />
               </div>
               <div>
-                <Label htmlFor="argument2">Argument 2 (Markdown)</Label>
-                <Textarea id="argument2" value={argument2} onChange={(e) => setArgument2(e.target.value)} rows={3} placeholder="Markdown für Formatierung." disabled={!userProfile?.is_fraktionsvorstand} />
+                <Label htmlFor="argument2">Argument 2</Label>
+                <Textarea id="argument2" value={argument2} onChange={(e) => setArgument2(e.target.value)} rows={7} placeholder="Markdown für Formatierung." disabled={!userProfile?.is_fraktionsvorstand} />
               </div>
               <div>
-                <Label htmlFor="argument3">Argument 3 (Markdown)</Label>
-                <Textarea id="argument3" value={argument3} onChange={(e) => setArgument3(e.target.value)} rows={3} placeholder="Markdown für Formatierung." disabled={!userProfile?.is_fraktionsvorstand} />
+                <Label htmlFor="argument3">Argument 3</Label>
+                <Textarea id="argument3" value={argument3} onChange={(e) => setArgument3(e.target.value)} rows={7} placeholder="Markdown für Formatierung." disabled={!userProfile?.is_fraktionsvorstand} />
               </div>
             </div>
-            
+          </div>
+
+          {/* Column 2 (Top Part) */}
+          <div className="space-y-6">
             <div>
               <Label htmlFor="zahlDerWoche">Zahl der Woche</Label>
               <Input id="zahlDerWoche" value={zahlDerWoche} onChange={(e) => setZahlDerWoche(e.target.value)} disabled={!userProfile?.is_fraktionsvorstand} />
             </div>
 
             <div>
-              <Label htmlFor="zahlDerWocheBeschreibung">Beschreibung (Zahl der Woche, Markdown)</Label>
-              <Textarea id="zahlDerWocheBeschreibung" value={zahlDerWocheBeschreibung} onChange={(e) => setZahlDerWocheBeschreibung(e.target.value)} rows={3} placeholder="Markdown für Formatierung." disabled={!userProfile?.is_fraktionsvorstand} />
+              <Label htmlFor="zahlDerWocheBeschreibung">Beschreibung</Label>
+              <Textarea id="zahlDerWocheBeschreibung" value={zahlDerWocheBeschreibung} onChange={(e) => setZahlDerWocheBeschreibung(e.target.value)} rows={5} placeholder="Markdown für Formatierung." disabled={!userProfile?.is_fraktionsvorstand} />
             </div>
 
             <div>
-              <Label htmlFor="zustaendigesMdbUserId">Zuständiges MdB (für Rückfragen)</Label>
-              {/* Select component for MdB users, also needs disabled prop */}
+              <Label htmlFor="zustaendigesMdbUserId">Zuständiges MdB</Label>
               <Select value={zustaendigesMdbUserId} onValueChange={setZustaendigesMdbUserId} disabled={!userProfile?.is_fraktionsvorstand}>
                 <SelectTrigger id="zustaendigesMdbUserId">
                   <SelectValue placeholder="MdB auswählen" />
@@ -369,39 +450,37 @@ export default function AgendaSettingPage() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div>
-              <Label>Weiterführende Links (Further Reading)</Label>
-              {furtherReading.map((link, index) => (
-                <div key={index} className="flex items-center space-x-2 mb-2">
-                  <Input
-                    type="url"
-                    value={link}
-                    onChange={(e) => handleFurtherReadingChange(index, e.target.value)}
-                    placeholder="https://beispiel.de"
-                    disabled={!userProfile?.is_fraktionsvorstand}
-                  />
-                  {furtherReading.length > 1 && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFurtherReading(index)} disabled={!userProfile?.is_fraktionsvorstand}>Entfernen</Button>
-                  )}
-                </div>
-              ))}
-              <Button type="button" variant="outline" size="sm" onClick={handleAddFurtherReading} disabled={!userProfile?.is_fraktionsvorstand}>Link hinzufügen</Button>
-            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Weiterführende Links - Now in Column 2, above the new sub-grid row */}
+            <div> 
+              <Label>Weiterführende Links</Label>
               <div>
-                <Label htmlFor="startDate">Start-Datum (aktiv ab)</Label>
-                <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={!userProfile?.is_fraktionsvorstand} />
-              </div>
-              <div>
-                <Label htmlFor="endDate">End-Datum (aktiv bis)</Label>
-                <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={!userProfile?.is_fraktionsvorstand} />
+                {furtherReading.map((link, index) => (
+                  <div key={index} className="flex items-center space-x-2 mb-2">
+                    <Input
+                      type="url"
+                      value={link}
+                      onChange={(e) => handleFurtherReadingChange(index, e.target.value)}
+                      placeholder="https://beispiel.de"
+                      disabled={!userProfile?.is_fraktionsvorstand}
+                    />
+                    {furtherReading.length > 1 && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFurtherReading(index)} disabled={!userProfile?.is_fraktionsvorstand}>Entfernen</Button>
+                    )}
+                  </div>
+                ))}
+                <Button type="button" variant="outline" size="sm" onClick={handleAddFurtherReading} disabled={!userProfile?.is_fraktionsvorstand}>Link hinzufügen</Button>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div>
-              <Label htmlFor="attachments">Anhänge (PDFs)</Label>
+        {/* New Sub-Grid for Anhänge and Start/End-Datum */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Sub-Grid Column 1: Anhänge */}
+          <div className="space-y-6">
+            <div> 
+              <Label htmlFor="attachments">Anhänge</Label>
               <Input id="attachments" type="file" multiple accept=".pdf" onChange={handleFileChange} disabled={!userProfile?.is_fraktionsvorstand} />
               {attachments.length > 0 && (
                 <ul className="mt-2 list-disc list-inside">
@@ -409,18 +488,87 @@ export default function AgendaSettingPage() {
                 </ul>
               )}
             </div>
-            
-            {/* Show form-specific error, not general page error if it's about form submission */}
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+          </div>
 
-            <CardFooter className="px-0 pt-6">
-              <Button type="submit" disabled={isSubmitting || !userProfile?.is_fraktionsvorstand}>
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Speichern...</> : 'Kommunikationslinie erstellen'}
-              </Button>
-            </CardFooter>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          {/* Sub-Grid Column 2: Start/End-Datum */}
+          <div className="space-y-6">
+            <div> 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="startDate">Start-Datum</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !startDate && "text-muted-foreground"
+                        )}
+                        disabled={!userProfile?.is_fraktionsvorstand}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? (
+                          format(startDate, "PPP", { locale: de })
+                        ) : (
+                          <span>Datum auswählen</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={startDate || undefined}
+                        onSelect={(date) => setStartDate(date || null)}
+                        locale={de}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="endDate">End-Datum</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !endDate && "text-muted-foreground"
+                        )}
+                        disabled={!userProfile?.is_fraktionsvorstand}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {endDate ? (
+                          format(endDate, "PPP", { locale: de })
+                        ) : (
+                          <span>Datum auswählen</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={endDate || undefined}
+                        onSelect={(date) => setEndDate(date || null)}
+                        locale={de}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Erstellen Button - In its own section below the sub-grid, effectively in Column 1 flow */}
+        <div className="pt-4"> {/* Added pt-4 for some spacing */}
+          {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+          <Button type="submit" disabled={isSubmitting || !userProfile?.is_fraktionsvorstand}>
+            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Speichern...</> : 'Erstellen'}
+          </Button>
+        </div>
+      </form>
+    </PageLayout>
   );
 } 

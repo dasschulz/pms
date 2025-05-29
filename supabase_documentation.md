@@ -29,6 +29,7 @@ The Airtable to Supabase migration has been successfully completed with 100% fun
 - **Core User Management**: 100% Complete  
 - **BPA Management System**: 100% Complete
 - **Parliamentary Tools**: 100% Complete
+- **Communication Management**: 100% Complete
 - **Utility & Debug Tools**: 100% Complete
 - **Frontend Migration**: 100% Complete
 - **Legacy Cleanup**: 100% Complete
@@ -49,14 +50,31 @@ The Airtable to Supabase migration has been successfully completed with 100% fun
 #### `users`
 Main user table containing MdB profiles and authentication data.
 - **Migration Status**: ✅ Complete
-- **Key Features**: UUID primary keys, role-based access, committee assignments
+- **Key Features**: UUID primary keys, role-based access (MdB, Landesverband, Partei, Verwaltung), committee assignments
 - **API Endpoints**: `/api/users`, `/api/user-details`
+- **Recent Update**: Agenda setting now properly filters for role='MdB' when populating "Zuständiges MdB" field
 
 #### `user_preferences`
 User interface preferences and dashboard configurations.
 - **Migration Status**: ✅ Complete
 - **Key Features**: Widget management, theme preferences
 - **API Endpoints**: `/api/user-preferences`
+
+### Communication Management
+
+#### `communication_lines`
+Communication lines and agenda setting management.
+- **Migration Status**: ✅ Complete
+- **Key Features**: Fraktionsvorstand-only creation, MdB assignment, argument management, PDF attachments
+- **API Endpoints**: `/agendasetting` (page), `/api/users/mdb-list` (MdB selection), storage in `communicationattachments` bucket
+- **Access Control**: Only users with `is_fraktionsvorstand=true` can create entries
+- **MdB Assignment**: "Zuständiges MdB" field uses `/api/users/mdb-list` endpoint to bypass RLS and show only users with role='MdB'
+
+#### `communication_line_attachments`
+PDF attachments for communication lines.
+- **Migration Status**: ✅ Complete
+- **Key Features**: File storage tracking, user ownership, cascade deletion
+- **Storage**: Supabase Storage bucket `communicationattachments`
 
 ### BPA Management System
 
