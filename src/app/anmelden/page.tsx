@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -8,27 +8,46 @@ import { ThreeDMarquee } from '@/components/ui/3d-marquee';
 import { LoginModal } from '@/components/ui/login-modal';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
+// Separate component for search params that will be wrapped in Suspense
+function SearchParamsHandler({ 
+  setIsLoginModalOpen, 
+  setIsReset, 
+  setAuthError 
+}: {
+  setIsLoginModalOpen: (open: boolean) => void;
+  setIsReset: (reset: boolean) => void;
+  setAuthError: (error: string | null) => void;
+}) {
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    const isReset = searchParams.get('reset') === 'true';
+    const authError = searchParams.get('error');
+    
+    setIsReset(isReset);
+    setAuthError(authError);
+    
+    // Auto-open login modal if there's an error or reset parameter
+    if (isReset || authError) {
+      setIsLoginModalOpen(true);
+    }
+  }, [searchParams, setIsLoginModalOpen, setIsReset, setAuthError]);
+
+  return null;
+}
+
 export default function AnmeldenPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  
-  const isReset = searchParams.get('reset') === 'true';
-  const authError = searchParams.get('error');
+  const [isReset, setIsReset] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'authenticated') {
       router.push('/');
     }
   }, [status, router]);
-
-  // Auto-open login modal if there's an error or reset parameter
-  useEffect(() => {
-    if (isReset || authError) {
-      setIsLoginModalOpen(true);
-    }
-  }, [isReset, authError]);
 
   const images = [
     "/images/anmelden/01.jpg",
@@ -73,6 +92,15 @@ export default function AnmeldenPage() {
         `
       }}
     >
+      {/* Search params handler wrapped in Suspense */}
+      <Suspense fallback={null}>
+        <SearchParamsHandler 
+          setIsLoginModalOpen={setIsLoginModalOpen}
+          setIsReset={setIsReset}
+          setAuthError={setAuthError}
+        />
+      </Suspense>
+
       <h1 className="relative z-20 mx-auto max-w-4xl text-center text-3xl font-bold text-balance text-foreground md:text-5xl lg:text-7xl font-work-sans font-black">
         Deine Webapp für den Bundestag:{" "}
         <span className="relative z-20 inline-block rounded-xl bg-primary/20 px-4 py-1 text-white backdrop-blur-sm">
