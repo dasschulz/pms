@@ -74,8 +74,8 @@ BPA trip applications and participant data.
 
 ### Parliamentary Work
 
-#### `kleine_anfragen`
-Small parliamentary questions management.
+#### `ka_generator`
+Small parliamentary questions management (formerly `kleine_anfragen`, mapped from Airtable `KA-Generator`).
 - **Migration Status**: ✅ Complete
 - **Key Features**: AI-generated questions, answer tracking, categorization
 - **API Endpoints**: `/api/kleine-anfragen/generate`

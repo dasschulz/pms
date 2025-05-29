@@ -359,7 +359,12 @@ export default function NewsPage() {
               <p className="text-sm whitespace-pre-wrap font-body">{selectedNewsItem.fullContent || selectedNewsItem.snippet}</p>
             </div>
             <DialogFooter className="sm:justify-start">
-              <Link href={selectedNewsItem.link} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+              <Link
+                href={selectedNewsItem.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full sm:w-auto"
+                legacyBehavior>
                 <Button variant="outline" className="font-body">
                   Auf Website lesen <ExternalLink className="ml-2 h-4 w-4" />
                 </Button>

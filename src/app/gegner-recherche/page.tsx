@@ -1013,7 +1013,7 @@ export default function GegnerRecherchePage() {
             <CardContent>
               {selectedPolitician.wikipediaControversiesHtml ? (
                 // Two-column layout if Wikipedia data exists
-                <div className="flex flex-col md:flex-row gap-6">
+                (<div className="flex flex-col md:flex-row gap-6">
                   {/* Left Column: Abgeordnetenwatch Info (65%) */}
                   <motion.div 
                     className="w-full md:w-[65%] space-y-6"
@@ -1172,12 +1172,10 @@ export default function GegnerRecherchePage() {
                       </>
                     )}
                   </motion.div>
-
-                  {/* Vertical Divider - visible on md screens and up */} 
+                  {/* Vertical Divider - visible on md screens and up */}
                   <div className="hidden md:block w-px bg-gray-300 dark:bg-gray-700 self-stretch"></div>
-                  {/* Horizontal Divider - visible on small screens */} 
+                  {/* Horizontal Divider - visible on small screens */}
                   <Separator className="md:hidden" />
-
                   {/* Right Column: Wikipedia Info (35%) */}
                   <motion.div 
                     className="w-full md:w-[35%] space-y-4"
@@ -1192,10 +1190,10 @@ export default function GegnerRecherchePage() {
                       className="prose prose-sm dark:prose-invert max-w-none overflow-auto pr-2 prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-blue-600"
                     />
                   </motion.div>
-                </div>
+                </div>)
               ) : (
                 // Single-column layout if no Wikipedia data
-                <div className="space-y-6">
+                (<div className="space-y-6">
                   <div className="flex flex-col md:flex-row gap-6">
                     <div className="w-32 h-32 md:w-48 md:h-48 flex-shrink-0">
                       {selectedPolitician.profile_image_url ? (
@@ -1353,7 +1351,7 @@ export default function GegnerRecherchePage() {
                       </div>
                     )}
                   </motion.div>
-                </div>
+                </div>)
               )}
 
               {/* Add the bottom section with links and "Create Dossier" button */}

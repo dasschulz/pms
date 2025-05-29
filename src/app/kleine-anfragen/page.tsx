@@ -14,7 +14,7 @@ export default async function MyMinorInquiriesPage() {
   try {
     // Fetch all Kleine Anfragen for the authenticated user, sorted by creation date
     const { data: inquiries, error } = await supabase
-      .from('kleine_anfragen')
+      .from('ka_generator')
       .select('*')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
@@ -32,19 +32,48 @@ export default async function MyMinorInquiriesPage() {
     const formattedInquiries = (inquiries || []).map((inquiry: any) => ({
       id: inquiry.id,
       fields: {
-        'Titel': inquiry.title,
-        'Text': inquiry.content,
-        'Kategorie': inquiry.category,
+        'Titel': inquiry.Titel,
+        'Prompt': inquiry.Prompt,
+        'Result final': inquiry['Result final'],
+        'Beteiligte MdB': inquiry['Beteiligte MdB'],
+        'Rubrum': inquiry.Rubrum,
+        'Signatur': inquiry.Signatur,
+        'Hintergrundinfos': inquiry.Hintergrundinfos,
+        'Politikfeld': inquiry.Politikfeld,
+        'Vorblatt_Heading': inquiry['Vorblatt_Heading'],
+        'Vorblatt': inquiry.Vorblatt,
+        'Politische Zielsetzung': inquiry['Politische Zielsetzung'],
+        'Öffentliche Botschaft': inquiry['Öffentliche Botschaft'],
+        'Maßnahmen': inquiry.Maßnahmen,
+        'Vorbemerkung': inquiry.Vorbemerkung,
+        'Fragenteil': inquiry.Fragenteil,
+        'content': inquiry.content,
+        'category': inquiry.category || inquiry.Politikfeld,
+        'drucksache': inquiry.drucksache,
+        'date_submitted': inquiry.date_submitted,
+        'answer_received': inquiry.answer_received,
         'Status': inquiry.answer_received ? 'Beantwortet' : 'Offen',
+        'answer_content': inquiry.answer_content,
         'Created': inquiry.created_at,
-        'Updated': inquiry.created_at,
+        'Updated': inquiry.updated_at || inquiry.created_at,
       }
     }));
+
+    if (formattedInquiries.length === 0) {
+      return (
+        <PageLayout
+          title="Meine Kleinen Anfragen"
+          description="Übersicht deiner erstellten Kleinen Anfragen"
+        >
+          <p>Du hast noch keine Kleinen Anfragen erstellt oder es konnten keine für dich gefunden werden.</p>
+        </PageLayout>
+      );
+    }
 
     return (
       <PageLayout
         title="Meine Kleinen Anfragen"
-        description="Übersicht Ihrer erstellten Kleinen Anfragen"
+        description="Übersicht deiner erstellten Kleinen Anfragen"
       >
         <MinorInquiriesList inquiries={formattedInquiries} />
       </PageLayout>

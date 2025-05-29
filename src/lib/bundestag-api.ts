@@ -25,8 +25,7 @@ export class BundestagAPI {
    */
   async fetchAgenda(): Promise<BundestagAgendaItem[]> {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const response = await fetch(`${baseUrl}/api/bundestag`);
+      const response = await fetch('/api/bundestag');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

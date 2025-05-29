@@ -406,7 +406,6 @@ export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps
           </PopoverContent>
         </Popover>
       </div>
-
       {/* Day Timeline */}
       <div className="relative max-h-[70vh] overflow-y-auto border rounded-lg bg-background">
         {/* Time Grid */}
@@ -525,18 +524,17 @@ export function DayView({ selectedDate, agendaData, onDateChange }: DayViewProps
                       </div>
                     </CardContent>
                   </Card>
-                )
+                );
               })
             )}
           </div>
         </div>
       </div>
-
       <AgendaDetailsModal 
         isOpen={isModalOpen}
         onOpenChange={setIsModalOpen}
         agendaItem={selectedAgendaItem}
       />
     </div>
-  )
+  );
 } 

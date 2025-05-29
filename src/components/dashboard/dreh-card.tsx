@@ -59,7 +59,7 @@ export function DrehCard({ className }: { className?: string }) {
       content = (
         <CardContent>
           <div className="text-muted-foreground mb-2">Kein anstehender Videodreh gefunden.</div>
-          <Link href="/videoplanung">
+          <Link href="/videoplanung" legacyBehavior>
             <Button variant="outline" className="w-full">
               Zur Videoplanung
             </Button>
@@ -79,7 +79,7 @@ export function DrehCard({ className }: { className?: string }) {
           <div className="text-sm text-muted-foreground line-clamp-3">
             {drehTask.detailview || "(Kein Beschreibungstext)"}
           </div>
-          <Link href="/videoplanung">
+          <Link href="/videoplanung" legacyBehavior>
             <Button variant="outline" className="w-full mt-2">
               Zur Videoplanung
             </Button>

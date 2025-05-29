@@ -626,12 +626,12 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
     const filteredParagraphs = paragraphs.filter(paragraph => {
       const trimmed = paragraph.trim();
       return !(
+        (// Remove separator lines
         trimmed.includes(`${politicianName} (`) && trimmed.includes('Dossier') ||
         trimmed.match(/^#+\s*.*Dossier.*$/i) ||
         trimmed === `${politicianName} - Dossier` ||
         trimmed === `Feinddossier: ${politicianName}` ||
-        trimmed === '---' || // Remove separator lines
-        trimmed.match(/^-{3,}$/) // Remove multiple dashes
+        trimmed === '---' || trimmed.match(/^-{3,}$/)) // Remove multiple dashes
       );
     });
     

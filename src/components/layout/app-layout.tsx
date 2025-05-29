@@ -155,22 +155,22 @@ function SidebarNav() {
 
     if (isSubItem) {
        return (
-        <SidebarMenuSubItem key={item.href || index}>
-          <Link href={item.href || "#"} passHref={false}>
-            <SidebarMenuSubButton
-              {...commonProps}
-              isActive={isActive}
-            >
-              {content}
-            </SidebarMenuSubButton>
-          </Link>
-        </SidebarMenuSubItem>
-      );
+         <SidebarMenuSubItem key={item.href || index}>
+           <Link href={item.href || "#"} passHref={false} legacyBehavior>
+             <SidebarMenuSubButton
+               {...commonProps}
+               isActive={isActive}
+             >
+               {content}
+             </SidebarMenuSubButton>
+           </Link>
+         </SidebarMenuSubItem>
+       );
     }
 
     return (
       <SidebarMenuItem key={item.href || index}>
-        <Link href={item.href || "#"} passHref={false}>
+        <Link href={item.href || "#"} passHref={false} legacyBehavior>
           <SidebarMenuButton {...commonProps} isActive={isActive && !item.children}>
             {content}
           </SidebarMenuButton>

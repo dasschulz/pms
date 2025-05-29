@@ -66,7 +66,7 @@ export function AgendaDetailsModal({ isOpen, onOpenChange, agendaItem }: AgendaD
       .replace(/Status\s*angenommen/gi, '')
       .replace(/Status\s*abgelehnt/gi, '')
       .replace(/Status\s*überwiesen/gi, '')
-      .trim()
+      .trim();
   }
 
   return (
