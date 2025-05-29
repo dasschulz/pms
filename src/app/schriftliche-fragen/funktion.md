@@ -14,7 +14,7 @@ Diese Seite dient der Erstellung, Verwaltung und Nachverfolgung von Schriftliche
 ## Integrationen
 
 - **DIP (Dokumentations- und Informationssystem für Parlamentarische Vorgänge)**: Abgleich und Verlinkung mit den offiziellen Daten im DIP (Fragen, Antworten, Drucksachennummern).
-- **Airtable**: Speicherung der Fragen, Antworten, Fristen und interner Bearbeitungsnotizen.
+- **Supabase**: Speicherung der Fragen, Antworten, Fristen und interner Bearbeitungsnotizen.
 - **Textverarbeitung/Kollaborationstools**: Mögliche Integration zur gemeinsamen Erarbeitung von Fragen.
 - `/api/schriftliche-fragen/generate`: API-Endpunkt zur potenziellen (KI-gestützten) Generierung von Fragenentwürfen.
 

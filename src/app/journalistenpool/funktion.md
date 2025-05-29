@@ -1,27 +1,29 @@
 # Funktionsweise Journalistenpool
 
-Diese Seite dient der Verwaltung und Pflege eines Pools von Journalistenkontakten für die Pressearbeit der Fraktion und der Abgeordneten.
+Diese Seite dient der Verwaltung und dem Zugriff auf eine Datenbank von Journalisten und Medienvertretern für Pressekontakte und -kommunikation.
 
 ## Kernfunktionen
 
-- **Kontaktverwaltung**: Erfassung und Bearbeitung von Kontaktdaten (Name, Medium, Ressort, E-Mail, Telefon, etc.).
-- **Kategorisierung/Tagging**: Zuordnung von Journalisten zu Themengebieten, Interessenschwerpunkten oder Verteilerlisten.
-- **Such- und Filterfunktion**: Schnelles Auffinden von relevanten Journalisten für spezifische Anliegen.
-- **Verteilererstellung**: Zusammenstellung von individuellen Verteilern für Pressemitteilungen oder Einladungen.
-- **Notizfunktion**: Möglichkeit, Interaktionen oder spezifische Informationen zu einzelnen Journalisten zu vermerken.
-- **Import/Export**: Funktionen zum Importieren bestehender Kontaktlisten oder zum Exportieren von Daten.
+- **Journalistensuche**: Suche nach Journalisten basierend auf Fachgebieten, Medienunternehmen oder anderen Kriterien.
+- **Detailprofile**: Anzeige umfassender Informationen zu jedem Journalisten (Fachgebiete, Medium, Kontaktdaten).
+- **Kontaktverwaltung**: Speicherung und Verwaltung der Kontaktinformationen und Kommunikationshistorie.
+- **Medienlisten**: Erstellung und Verwaltung themenspezifischer Verteiler.
+- **Interaktionstracking**: Dokumentation von Interaktionen und Kommunikation mit Journalisten.
+- **Export von Verteilerlisten**: Erstellen und Exportieren von Kontaktlisten für Presseverteiler.
 
 ## Integrationen
 
-- **Airtable**: Speicherung der Journalistenkontakte und zugehöriger Informationen.
-- **E-Mail-Marketing-Tools**: Mögliche Anbindung an Tools für den Versand von Pressemitteilungen (z.B. CleverReach, Sendinblue).
-- **CRM-Systeme**: Eventuelle Synchronisation mit einem übergeordneten CRM-System der Fraktion.
+- **Supabase**: Speicherung der Journalistendatenbank und Kommunikationshistorie.
+- **E-Mail-System**: Direkte Kommunikation und Versand von Pressemitteilungen.
+- **Pressemitteilungen (`/pressemitteilung`)**: Integration für den Versand von Pressemitteilungen an spezifische Verteiler.
+- **CRM-System**: Anbindung an übergeordnete Pressemanagement-Tools.
 
 ## Offene To-Dos und Implementierungsideen
 
-- Detaillierte Ausarbeitung der Datenfelder für Journalistenkontakte.
-- Implementierung der Import/Export-Funktionalitäten.
-- Entwicklung einer Schnittstelle zu E-Mail-Marketing-Tools für den direkten Versand.
-- Funktion zur Protokollierung von Kontaktaufnahmen und Versandaktivitäten.
-- Double-Opt-In Verfahren für die Aufnahme in Verteiler (Datenschutz).
-- Möglichkeit zur Erstellung von Presseverteilern basierend auf komplexen Filterkriterien. 
+- Aufbau einer umfassenden und aktuellen Journalistendatenbank.
+- Implementierung fortgeschrittener Such- und Filterfunktionen.
+- Entwicklung des Interaktionstracking-Systems.
+- Integration mit E-Mail-Marketing-Tools für Presseverteilung.
+- Automatisierte Aktualisierung von Kontaktdaten.
+- Segmentierung von Journalisten nach Interessensgebieten.
+- Datenschutzkonforme Verwaltung der Kontaktdaten. 

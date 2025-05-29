@@ -1,158 +1,184 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 
 interface TripData {
   id: string;
-  userID: any;
-  fahrtDatumVon: any;
-  zielort: any;
-  statusFahrt: any;
-  aktiv: any;
-  beschreibung: any;
+  user_id: string;
+  fahrt_datum_von: string | null;
+  zielort: string | null;
+  status_fahrt: string | null;
+  aktiv: boolean | null;
+  beschreibung: string | null;
+  airtable_id?: string;
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const airtableUserId = searchParams.get('airtableUserId');
+  const userId = searchParams.get('userId'); // Supabase UUID
   const lastName = searchParams.get('lastName');
 
   try {
+    // Get all users
+    const { data: userRecords, error: userError } = await supabase
+      .from('users')
+      .select('id, name, wahlkreis')
+      .eq('role', 'MdB')
+      .eq('active', true);
+
+    if (userError) {
+      console.error('Debug BPA Trips: Error fetching users:', userError);
+      return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
+    }
+
+    const allUsers = userRecords?.map(user => ({
+      id: user.id,
+      name: user.name,
+      wahlkreis: user.wahlkreis,
+    })) || [];
+
     // If we have a lastName, first get the MdB details
     let mdbData = null;
     if (lastName) {
-      const userRecords = await base('Users')
-        .select({
-          filterByFormula: `FIND(LOWER("${lastName}"), LOWER({Name})) > 0`,
-          fields: ['UserID', 'Name', 'Wahlkreis'],
-          maxRecords: 5,
-        })
-        .firstPage();
+      console.log('Debug BPA Trips: Searching for user with lastName:', lastName);
       
-      if (userRecords.length > 0) {
+      const { data: userRecords, error: userError } = await supabase
+        .from('users')
+        .select('id, name, wahlkreis, airtable_id')
+        .ilike('name', `%${lastName}%`)
+        .limit(5);
+
+      if (userError) {
+        console.error('Debug BPA Trips: User search error:', userError);
+      } else if (userRecords && userRecords.length > 0) {
+        const user = userRecords[0];
         mdbData = {
-          airtableRecordId: userRecords[0].id,
-          userIdNumeric: userRecords[0].fields.UserID,
-          name: userRecords[0].fields.Name,
-          wahlkreis: userRecords[0].fields.Wahlkreis,
+          id: user.id,
+          legacyId: user.airtable_id,
+          name: user.name,
+          wahlkreis: user.wahlkreis,
         };
+        console.log('Debug BPA Trips: Found user:', mdbData);
       }
     }
 
-    // Get ALL BPA trips (without filters) to see what's actually in the table
-    const allTrips = await base('BPA_Fahrten')
-      .select({
-        fields: ['UserID', 'Fahrt_Datum_von', 'Zielort', 'Status_Fahrt', 'Aktiv', 'Beschreibung'],
-      })
-      .all();
+    // Get ALL BPA trips to see what's in the table
+    console.log('Debug BPA Trips: Fetching all trips...');
+    const { data: allTrips, error: tripsError } = await supabase
+      .from('bpa_fahrten')
+      .select('id, user_id, fahrt_datum_von, zielort, status_fahrt, aktiv, beschreibung, airtable_id')
+      .order('fahrt_datum_von', { ascending: false });
 
-    const tripsData: TripData[] = allTrips.map(record => ({
-      id: record.id,
-      userID: record.fields.UserID,
-      fahrtDatumVon: record.fields.Fahrt_Datum_von,
-      zielort: record.fields.Zielort,
-      statusFahrt: record.fields.Status_Fahrt,
-      aktiv: record.fields.Aktiv,
-      beschreibung: record.fields.Beschreibung,
+    if (tripsError) {
+      console.error('Debug BPA Trips: Error fetching all trips:', tripsError);
+      return NextResponse.json({ error: 'Failed to fetch trips', details: tripsError.message }, { status: 500 });
+    }
+
+    const tripsData: TripData[] = allTrips.map(trip => ({
+      id: trip.id,
+      user_id: trip.user_id,
+      fahrt_datum_von: trip.fahrt_datum_von,
+      zielort: trip.zielort,
+      status_fahrt: trip.status_fahrt,
+      aktiv: trip.aktiv,
+      beschreibung: trip.beschreibung,
+      airtable_id: trip.airtable_id,
     }));
 
-    // If we have an airtableUserId, also show which trips would match the filter
+    // If we have a userId, show which trips match the filter
     let matchingTrips: TripData[] = [];
-    let filterFormula = '';
-    let alternativeFilterResults: TripData[] = [];
-    let numericUserIdResults: TripData[] = [];
-    if (airtableUserId || (mdbData?.airtableRecordId)) {
-      const targetUserId = airtableUserId || mdbData?.airtableRecordId;
+    let userIdFilterResults: TripData[] = [];
+    
+    if (userId || mdbData?.id) {
+      const targetUserId = userId || mdbData?.id;
       
-      // Test the new numeric UserID approach (like touranfragen does)
-      if (mdbData?.userIdNumeric) {
-        try {
-          const numericFilterFormula = `AND({UserID} = ${mdbData.userIdNumeric}, {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`;
-          const numericTrips = await base('BPA_Fahrten')
-            .select({
-              filterByFormula: numericFilterFormula,
-              fields: ['UserID', 'Fahrt_Datum_von', 'Zielort', 'Status_Fahrt', 'Aktiv', 'Beschreibung'],
-            })
-            .all();
+      console.log('Debug BPA Trips: Filtering trips for user:', targetUserId);
+      
+      // Test active trips filter (equivalent to the original Supabase filter)
+      const { data: filteredTrips, error: filterError } = await supabase
+        .from('bpa_fahrten')
+        .select('id, user_id, fahrt_datum_von, zielort, status_fahrt, aktiv, beschreibung, airtable_id')
+        .eq('user_id', targetUserId)
+        .eq('status_fahrt', 'Anmeldung offen')
+        .eq('aktiv', true)
+        .order('fahrt_datum_von', { ascending: false });
 
-          numericUserIdResults = numericTrips.map(record => ({
-            id: record.id,
-            userID: record.fields.UserID,
-            fahrtDatumVon: record.fields.Fahrt_Datum_von,
-            zielort: record.fields.Zielort,
-            statusFahrt: record.fields.Status_Fahrt,
-            aktiv: record.fields.Aktiv,
-            beschreibung: record.fields.Beschreibung,
-          }));
-        } catch (err) {
-          console.log('Numeric UserID filter failed:', err);
-        }
-      }
-      
-      // Test the original formula
-      filterFormula = `AND(SEARCH("${targetUserId}", ARRAYJOIN({UserID})), {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`;
-      
-      try {
-        const filteredTrips = await base('BPA_Fahrten')
-          .select({
-            filterByFormula: filterFormula,
-            fields: ['UserID', 'Fahrt_Datum_von', 'Zielort', 'Status_Fahrt', 'Aktiv', 'Beschreibung'],
-          })
-          .all();
-
-        matchingTrips = filteredTrips.map(record => ({
-          id: record.id,
-          userID: record.fields.UserID,
-          fahrtDatumVon: record.fields.Fahrt_Datum_von,
-          zielort: record.fields.Zielort,
-          statusFahrt: record.fields.Status_Fahrt,
-          aktiv: record.fields.Aktiv,
-          beschreibung: record.fields.Beschreibung,
+      if (filterError) {
+        console.error('Debug BPA Trips: Filter error:', filterError);
+      } else {
+        matchingTrips = filteredTrips.map(trip => ({
+          id: trip.id,
+          user_id: trip.user_id,
+          fahrt_datum_von: trip.fahrt_datum_von,
+          zielort: trip.zielort,
+          status_fahrt: trip.status_fahrt,
+          aktiv: trip.aktiv,
+          beschreibung: trip.beschreibung,
+          airtable_id: trip.airtable_id,
         }));
-      } catch (err) {
-        console.log('Original formula failed:', err);
       }
 
-      // Test alternative formula with CONCATENATE
-      const alternativeFormula = `AND(FIND("${targetUserId}", CONCATENATE({UserID})), {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`;
-      
-      try {
-        const alternativeTrips = await base('BPA_Fahrten')
-          .select({
-            filterByFormula: alternativeFormula,
-            fields: ['UserID', 'Fahrt_Datum_von', 'Zielort', 'Status_Fahrt', 'Aktiv', 'Beschreibung'],
-          })
-          .all();
+      // Also test just user_id filter (without status constraints)
+      const { data: userTrips, error: userFilterError } = await supabase
+        .from('bpa_fahrten')
+        .select('id, user_id, fahrt_datum_von, zielort, status_fahrt, aktiv, beschreibung, airtable_id')
+        .eq('user_id', targetUserId)
+        .order('fahrt_datum_von', { ascending: false });
 
-        alternativeFilterResults = alternativeTrips.map(record => ({
-          id: record.id,
-          userID: record.fields.UserID,
-          fahrtDatumVon: record.fields.Fahrt_Datum_von,
-          zielort: record.fields.Zielort,
-          statusFahrt: record.fields.Status_Fahrt,
-          aktiv: record.fields.Aktiv,
-          beschreibung: record.fields.Beschreibung,
+      if (userFilterError) {
+        console.error('Debug BPA Trips: User filter error:', userFilterError);
+      } else {
+        userIdFilterResults = userTrips.map(trip => ({
+          id: trip.id,
+          user_id: trip.user_id,
+          fahrt_datum_von: trip.fahrt_datum_von,
+          zielort: trip.zielort,
+          status_fahrt: trip.status_fahrt,
+          aktiv: trip.aktiv,
+          beschreibung: trip.beschreibung,
+          airtable_id: trip.airtable_id,
         }));
-      } catch (err) {
-        console.log('Alternative formula failed:', err);
       }
     }
+
+    // Count trips by status for debugging
+    const statusCounts = tripsData.reduce((acc, trip) => {
+      const status = trip.status_fahrt || 'null';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Count active trips
+    const activeCounts = {
+      active: tripsData.filter(trip => trip.aktiv === true).length,
+      inactive: tripsData.filter(trip => trip.aktiv === false).length,
+      null: tripsData.filter(trip => trip.aktiv === null).length,
+    };
 
     return NextResponse.json({
       mdbData,
       allTrips: tripsData,
-      matchingTrips,
-      alternativeFilterResults,
-      numericUserIdResults,
-      filterFormula,
-      alternativeFormula: `AND(FIND("${airtableUserId || mdbData?.airtableRecordId}", CONCATENATE({UserID})), {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`,
-      numericFilterFormula: mdbData?.userIdNumeric ? `AND({UserID} = ${mdbData.userIdNumeric}, {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())` : null,
+      matchingTrips, // Trips matching user + status + active filters
+      userIdFilterResults, // All trips for user (no status filter)
       debugInfo: {
         searchedLastName: lastName,
-        searchedUserId: airtableUserId,
+        searchedUserId: userId,
         totalTripsFound: tripsData.length,
         matchingTripsFound: matchingTrips.length,
-        alternativeMatchingTrips: alternativeFilterResults.length,
-        numericUserIdMatches: numericUserIdResults.length,
+        userIdTripsFound: userIdFilterResults.length,
+        statusCounts,
+        activeCounts,
+        filterUsed: {
+          user_id: userId || mdbData?.id,
+          status_fahrt: 'Anmeldung offen',
+          aktiv: true,
+        }
+      },
+      supabaseInfo: {
+        migration: 'Supabase migration complete',
+        primaryKey: 'Supabase UUID (id)',
+        userReference: 'Supabase UUID (user_id)',
+        maintainedFields: ['fahrt_datum_von', 'zielort', 'status_fahrt', 'aktiv', 'beschreibung'],
+        legacyTrackingField: 'airtable_id'
       }
     });
 

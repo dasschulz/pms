@@ -1,6 +1,6 @@
 # Funktionsweise BPA-Fahrten & Anmeldungsmanagement
 
-Verwaltung von BPA-Informationsfahrten durch MdBs. Umfasst eine Übersichtsseite, Detailansichten pro Fahrt mit Anmeldungsmanagement und Airtable-Integration über API-Endpunkte.
+Verwaltung von BPA-Informationsfahrten durch MdBs. Umfasst eine Übersichtsseite, Detailansichten pro Fahrt mit Anmeldungsmanagement und Supabase-Integration über API-Endpunkte.
 
 ## 1. Übersichtsseite (`/bpa-fahrten`)
 Zeigt BPA-Fahrten des MdB; Erstellen und Bearbeiten von Fahrten.
@@ -14,9 +14,9 @@ Zeigt BPA-Fahrten des MdB; Erstellen und Bearbeiten von Fahrten.
 - `GET, POST /api/bpa-fahrten`
 - `PUT /api/bpa-fahrten/[fahrtId]`
 
-### Airtable-Tabellen & Felder (Übersicht):
-- **`BPA_Fahrten`**: Fahrtdaten. Gelesen/Geschrieben u.a.: `Fahrt_Datum_von/Bis`, `Zielort`, `Kontingent_Max`, `Status_Fahrt`, `Aktiv`, `UserID` (Link `Users`). `Aktuelle_Anmeldungen`, `Bestaetigte_Anmeldungen` sind Rollups.
-- **`Users`**: MdB-Identifizierung. Gelesen: `UserID` (Nummer), Airtable Record ID.
+### Supabase-Tabellen & Felder (Übersicht):
+- **`bpa_fahrten`**: Fahrtdaten. Gelesen/Geschrieben u.a.: `fahrt_datum_von/bis`, `zielort`, `kontingent_max`, `status_fahrt`, `aktiv`, `user_id` (UUID Foreign Key zu `users`). Anmeldungsstatistiken werden durch Joins mit `bpa_formular` berechnet.
+- **`users`**: MdB-Identifizierung. Gelesen: Supabase UUID als Primärschlüssel.
 
 ## 2. Detailseite einer Fahrt (`/bpa-fahrten/[fahrtId]`)
 Details zu einer Fahrt; Liste und Verwaltung der Anmeldungen.
@@ -31,36 +31,36 @@ Details zu einer Fahrt; Liste und Verwaltung der Anmeldungen.
 - `GET /api/bpa-anmeldungen?fahrtId=[fahrtId]`
 - `PUT /api/bpa-anmeldungen/[anmeldungId]`
 
-### Airtable-Tabellen & Felder (Detail & Anmeldungen):
-- **`BPA_Fahrten`**: Gelesen für Details & Berechtigungen (`UserID`).
-- **`BPA_Formular`**: Anmeldungen.
-    - Gelesen: `id`, `FahrtID_ForeignKey` (Link `BPA_Fahrten`), `Vorname`, `Nachname`, `Email`, `Status_Teilnahme`, etc.
-    - Aktualisiert: `Status_Teilnahme`.
-- **`Users`**: Berechtigungsprüfung.
+### Supabase-Tabellen & Felder (Detail & Anmeldungen):
+- **`bpa_fahrten`**: Gelesen für Details & Berechtigungen (`user_id`).
+- **`bpa_formular`**: Anmeldungen.
+    - Gelesen: `id` (UUID), `fahrt_id` (UUID Foreign Key zu `bpa_fahrten`), `vorname`, `nachname`, `email`, `status_teilnahme`, etc.
+    - Aktualisiert: `status_teilnahme`.
+- **`users`**: Berechtigungsprüfung über Supabase UUID.
 
 ## 3. API-Endpunkte Details
 
 ### `/api/bpa-fahrten` (GET, POST)
-- **GET**: Holt Fahrten des MdB (Filter `BPA_Fahrten.UserID`).
-- **POST**: Erstellt neue Fahrt, verlinkt MdB (`BPA_Fahrten.UserID`).
+- **GET**: Holt Fahrten des MdB (Filter `bpa_fahrten.user_id` mit Supabase UUID).
+- **POST**: Erstellt neue Fahrt, verlinkt MdB (`bpa_fahrten.user_id`).
 
 ### `/api/bpa-fahrten/[fahrtId]` (GET, PUT)
-- **GET**: Holt spezifische Fahrt; prüft MdB-Berechtigung.
-- **PUT**: Aktualisiert Fahrt; prüft MdB-Berechtigung.
+- **GET**: Holt spezifische Fahrt; prüft MdB-Berechtigung über `user_id`.
+- **PUT**: Aktualisiert Fahrt; prüft MdB-Berechtigung über `user_id`.
 
 ### `/api/bpa-anmeldungen?fahrtId=[fahrtId]` (GET)
-- Holt Anmeldungen (`BPA_Formular`) für eine `fahrtId`.
-- Prüft MdB-Berechtigung über `BPA_Fahrten.UserID`.
+- Holt Anmeldungen (`bpa_formular`) für eine `fahrtId`.
+- Prüft MdB-Berechtigung über `bpa_fahrten.user_id`.
 
 ### `/api/bpa-anmeldungen/[anmeldungId]` (PUT)
-- Aktualisiert Anmeldung (`BPA_Formular.Status_Teilnahme`).
-- Prüft MdB-Berechtigung.
+- Aktualisiert Anmeldung (`bpa_formular.status_teilnahme`).
+- Prüft MdB-Berechtigung über Fahrt-Besitzervalidierung.
 
-## Wichtige Airtable Feldnamen:
-- **`BPA_Fahrten`**: `UserID`, `Fahrt_Datum_von`, `Fahrt_Datum_Bis`, `Zielort`, `Kontingent_Max`, `Status_Fahrt`, `Aktiv`.
-- **`BPA_Formular`**: `FahrtID_ForeignKey`, `Vorname`, `Nachname`, `Email`, `Status_Teilnahme`.
+## Wichtige Supabase Feldnamen:
+- **`bpa_fahrten`**: `user_id`, `fahrt_datum_von`, `fahrt_datum_bis`, `zielort`, `kontingent_max`, `status_fahrt`, `aktiv`.
+- **`bpa_formular`**: `fahrt_id`, `vorname`, `nachname`, `email`, `status_teilnahme`.
 
 ## Beobachtungen:
 - **Lösch-API für Fahrten fehlt**.
-- **Adressfelder-Inkonsistenz**: `Anschrift` (API) vs. `Strasse`/`Hausnummer` (Client-Interface `Anmeldung`).
-- **Berechtigungsmodell**: Basiert auf Verknüpfung `Users.RecordID` mit `BPA_Fahrten.UserID`.
+- **Adressfelder-Inkonsistenz**: `anschrift` (API) vs. `strasse`/`hausnummer` (Client-Interface `Anmeldung`).
+- **Berechtigungsmodell**: Basiert auf Supabase UUID-Verknüpfung zwischen `users` und `bpa_fahrten` über `user_id`.

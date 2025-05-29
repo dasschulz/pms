@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]/route';
 import { generateMinorInquiry } from '@/ai/flows/generate-minor-inquiry';
@@ -7,19 +7,28 @@ import { generateMinorInquiry } from '@/ai/flows/generate-minor-inquiry';
 export async function POST(request: NextRequest) {
   try {
     const { topic, context, desiredOutcome, targetAudience } = await request.json();
+    
     // Authenticate user
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
     }
-    // Map session.user.id (autoNumber) to Airtable record id
-    const userRecords = await base('Users')
-      .select({ filterByFormula: `{UserID} = '${session.user.id}'`, maxRecords: 1 })
-      .firstPage();
-    if (userRecords.length === 0) {
+
+    const userId = session.user.id; // Supabase UUID
+
+    console.log('Kleine Anfragen Generate: Creating inquiry for user:', userId);
+
+    // Verify user exists in Supabase
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id, name')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userRecord) {
+      console.log('Kleine Anfragen Generate: User not found:', userId, userError?.message);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-    const userAirtableId = userRecords[0].id;
 
     // Normalize targetAudience to array of strings
     const taArray: string[] = Array.isArray(targetAudience) ? targetAudience : [targetAudience];
@@ -29,39 +38,56 @@ export async function POST(request: NextRequest) {
     }
 
     const audienceText = taArray.join(', ');
-    const createResponse = await base('KA-Generator').create([
-      {
-        fields: {
-          Titel: topic,
-          Prompt: desiredOutcome,
-          'Beteiligte MdB': audienceText,
-          Hintergrundinfos: context,
-          'User-ID': userAirtableId,
-          Signatur: `Berlin, den ${new Date().toLocaleDateString('de-DE')} <br> Heidi Reichinnek, Sören Pellmann und Fraktion`,
-          Vorblatt_Heading: 'Vorblatt zur internen Verwendung',
-        },
-      },
-    ]);
-    const record = Array.isArray(createResponse) ? createResponse[0] : createResponse;
+
+    console.log('Kleine Anfragen Generate: Creating record for topic:', topic);
+
+    // Create initial record in Supabase
+    const inquiryData = {
+      user_id: userId,
+      title: topic, // Will be updated with AI-generated title
+      content: `Hintergrundinfos: ${context}\nPrompt: ${desiredOutcome}\nBeteiligte MdB: ${audienceText}`,
+      category: audienceText,
+    };
+
+    const { data: record, error: createError } = await supabase
+      .from('kleine_anfragen')
+      .insert(inquiryData)
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Kleine Anfragen Generate: Error creating record:', createError);
+      return NextResponse.json({ error: 'Failed to create inquiry record' }, { status: 500 });
+    }
+
     const recordId = record.id;
+    console.log('Kleine Anfragen Generate: Record created:', recordId);
 
     // Generate inquiry via AI flow
+    console.log('Kleine Anfragen Generate: Generating AI content');
     const aiResult = await generateMinorInquiry({ topic, context, desiredOutcome, targetAudience: audienceText });
 
     // Update record with AI result
-    await base('KA-Generator').update([
-      {
-        id: recordId,
-        fields: {
-          Titel: aiResult.title,
-          'Result final': aiResult.inquiryText,
-        },
-      },
-    ]);
+    const { data: updatedRecord, error: updateError } = await supabase
+      .from('kleine_anfragen')
+      .update({
+        title: aiResult.title,
+        content: aiResult.inquiryText,
+      })
+      .eq('id', recordId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Kleine Anfragen Generate: Error updating record with AI result:', updateError);
+      return NextResponse.json({ error: 'Failed to update inquiry with AI content' }, { status: 500 });
+    }
+
+    console.log('Kleine Anfragen Generate: AI content updated successfully');
 
     return NextResponse.json({ id: recordId, ...aiResult });
   } catch (error) {
-    console.error('Error in minor-inquiry/generate:', error);
+    console.error('Kleine Anfragen Generate: Error in generate:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

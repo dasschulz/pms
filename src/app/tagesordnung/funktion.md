@@ -51,9 +51,9 @@ Die Seite `/tagesordnung` zeigt die aktuelle und zukünftige Tagesordnung des De
     4. Gibt den ersten Termin dieser sortierten Liste (den nächstgelegenen) oder `null` zurück.
 - **Verwendung**: Dieser Endpunkt wird wahrscheinlich an anderer Stelle in der Anwendung genutzt (z.B. Dashboard), um auf den nächsten Termin der Linksfraktion hinzuweisen.
 
-## Airtable-Interaktion
+## Supabase-Interaktion
 
-- **Keine.** Diese Funktion ist vollständig von der externen `hutt.io`-API abhängig und nutzt keine Airtable-Tabellen für die Tagesordnungsdaten.
+- **Keine.** Diese Funktion ist vollständig von der externen `hutt.io`-API abhängig und nutzt keine Supabase-Tabellen für die Tagesordnungsdaten.
 
 ## Integrationen
 

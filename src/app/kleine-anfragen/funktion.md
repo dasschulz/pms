@@ -1,30 +1,26 @@
 # Funktionsweise Kleine Anfragen
 
-Diese Seite dient der Erstellung, Verwaltung, Analyse und Nachverfolgung von Kleinen Anfragen, die von Abgeordneten oder der Fraktion an die Bundesregierung gerichtet werden.
+Diese Seite dient der Erstellung, Verwaltung und Nachverfolgung von Kleinen Anfragen, die von Abgeordneten an die Bundesregierung gerichtet werden.
 
 ## Kernfunktionen
 
-- **Themenfindung und Recherche**: Unterstützung bei der Identifizierung relevanter Themen für Kleine Anfragen (ggf. Anbindung an `/anfragenplanung`).
-- **Fragenerstellung und -formulierung**: Editor zur Ausarbeitung der Fragenkataloge, inklusive Begründung.
-- **Einreichungsmanagement**: Verwaltung des Einreichungsprozesses und der Fristen.
-- **Antworten-Management**: Erfassung und Darstellung der Antworten der Bundesregierung.
-- **Analyse-Tools (`/kleine-anfragen/analyze`)**: Funktionen zur inhaltlichen und quantitativen Analyse der Antworten (z.B. Identifizierung von Mustern, Ausweichantworten, statistische Auswertungen).
-- **Generierungs-Unterstützung (`/kleine-anfragen/generate`)**: KI-basierte Hilfe bei der Formulierung von Fragen oder der Strukturierung von Anfragen.
-- **Archiv und Suche**: Durchsuchbares Archiv aller Kleinen Anfragen und Antworten.
+- **Fragenerstellung**: Eingabe und Formatierung von Fragen (häufig in nummerierter Form).
+- **Themenrecherche**: Zugriff auf Hintergrundinformationen und relevante Daten zu den Themen der Anfrage.
+- **Einreichungsmanagement**: Unterstützung beim ordnungsgemäßen Einreichen der Anfrage beim Bundestag.
+- **Antworten-Tracking**: Erfassung und Analyse der Antworten der Bundesregierung.
+- **Archiv und Verlinkung**: Speicherung und Verlinkung zu den offiziellen Veröffentlichungen auf bundestag.de oder im DIP.
 
 ## Integrationen
 
-- **DIP (Dokumentations- und Informationssystem für Parlamentarische Vorgänge)**: Abgleich mit den offiziellen Daten im DIP.
-- **Airtable**: Speicherung der Anfragen, Antworten, Analysen und interner Notizen.
-- **Anfragenplanung (`/anfragenplanung`)**: Enge Verzahnung für den gesamten Prozess von der Idee bis zur Anfrage.
-- **KI-Dienste**: Nutzung der Endpunkte unter `/api/kleine-anfragen/generate` und `/api/ai/...` für Analyse und Generierung.
+- **Supabase**: Speicherung der Anfragen, Antworten, Analysen und interner Notizen.
+- **DIP (Dokumentations- und Informationssystem für Parlamentarische Vorgänge)**: Abruf und Verlinkung von offiziellen Daten und Drucksachen.
+- **KI-Generierung** (`/api/kleine-anfragen/generate`): Nutzung KI-gestützter Tools zur Unterstützung bei der Formulierung von Fragen.
 
 ## Offene To-Dos und Implementierungsideen
 
-- Vertiefte Implementierung der Analysefunktionen unter `/kleine-anfragen/analyze`.
-- Ausbau der KI-gestützten Generierungs- und Formulierhilfen unter `/kleine-anfragen/generate`.
-- Entwicklung von Visualisierungen für die Analyseergebnisse.
-- Workflow für die interne Abstimmung und Freigabe von Kleinen Anfragen.
-- Automatisierte Benachrichtigungen über eingegangene Antworten oder nahende Fristen.
-- Exportfunktionen für Anfragen, Antworten und Analyseberichte.
-- Vergleichsfunktion für Antworten auf ähnliche Anfragen über die Zeit. 
+- Implementierung der Schnittstelle zum DIP für automatisierte Datenabfragen.
+- Entwicklung von Analysewerkzeugen für die Auswertung der Regierungsantworten.
+- Aufbau einer Datenbank mit thematischen Vorlagen und häufig genutzten Formulierungen.
+- Verbindung zu `/dokumentensuche` für umfassende Recherche.
+- Exportfunktionen für fertige Anfragen (z.B. als DOCX oder PDF).
+- Kollaborative Funktionen für die gemeinsame Erarbeitung von Anfragen im Team. 

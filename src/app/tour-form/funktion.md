@@ -14,7 +14,7 @@ Diese Seite stellt ein Formular zur Anmeldung für spezifische Besuchertouren od
 
 ## Integrationen
 
-- **Airtable**: Speicherung der Anmeldedaten, verknüpft mit der spezifischen Tour/Veranstaltung und dem verwendeten Token.
+- **Supabase**: Speicherung der Anmeldedaten, verknüpft mit der spezifischen Tour/Veranstaltung und dem verwendeten Token.
 - **Touranfragen-Management**: Enge Kopplung mit `/touranfragen`, wo die Touren geplant und die Tokens generiert werden.
 - **E-Mail-Versanddienst**: Für den Versand von Bestätigungs-E-Mails.
 - **Kalendersystem**: Optionale Möglichkeit für Angemeldete, den Termin in ihren Kalender zu exportieren.

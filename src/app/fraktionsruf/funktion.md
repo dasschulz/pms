@@ -1,15 +1,15 @@
 # Funktionsweise Fraktionsruf
 
-Hier können Mitglieder des Fraktionsvorstandes (Check in Airtable: Users -> IsFraktionsvorstand: true) einen Fraktionsruf versenden, wenn zu wenige Abgeordnete im Plenum sind. 
+Hier können Mitglieder des Fraktionsvorstandes (Check in Supabase: users -> is_fraktionsvorstand: true) einen Fraktionsruf versenden, wenn zu wenige Abgeordnete im Plenum sind. 
 
-Aus Kostengründen sind SMS auf 6 pro Monat limitiert (eine typische SMS-Kampagne an den Fraktionsvorstand kostet ca. 6 USD für 64 SMS). Hierzu läuft ein Counter, der die versendeten SMS pro Monat zählt (gespeichert in Airtable: `FraktionsrufCounter`).
+Aus Kostengründen sind SMS auf 6 pro Monat limitiert (eine typische SMS-Kampagne an den Fraktionsvorstand kostet ca. 6 USD für 64 SMS). Hierzu läuft ein Counter, der die versendeten SMS pro Monat zählt (gespeichert in Supabase: `fraktionsruf_counter`).
 
 Die Seite bietet folgende Kommunikationsformen:
 - **Mail**: Versendet eine E-Mail an alle Hauptaccounts der Fraktionsmitglieder.
 - **SMS**: Versendet eine SMS an die hinterlegten Nummern (limitiert auf 6 pro Monat).
 - **WebApp-Reminder**: Schickt eine sichtbare Benachrichtigung (Toast) mit Ton an alle aktuell im MdB-App Studio eingeloggten Nutzer.
 
-**Wichtiger Hinweis:** Die konkreten Sendefunktionen (Mailversand, SMS-Versand, WebApp-Toast-Logik) für diese Kommunikationsformen müssen noch implementiert werden. Aktuell wird bei Auswahl von "SMS" nur der Zähler in der Airtable-Datenbank (`FraktionsrufCounter`) erhöht bzw. ein neuer Eintrag für den aktuellen Monat erstellt.
+**Wichtiger Hinweis:** Die konkreten Sendefunktionen (Mailversand, SMS-Versand, WebApp-Toast-Logik) für diese Kommunikationsformen müssen noch implementiert werden. Aktuell wird bei Auswahl von "SMS" nur der Zähler in der Supabase-Datenbank (`fraktionsruf_counter`) erhöht bzw. ein neuer Eintrag für den aktuellen Monat erstellt.
 
 ## Integration Tagesordnung (BT-TO-API)
 
@@ -22,19 +22,19 @@ Durch einen Klick auf diesen angezeigten Termin können die relevanten Informati
 Folgende Kernfunktionen müssen im API-Endpunkt `/api/fraktionsruf/submit/route.ts` noch implementiert werden:
 
 1.  **E-Mail-Versand (`sendMail`):
-    *   **Logik**: Beim Auswählen dieser Option soll eine E-Mail an eine vordefinierte Gruppe von Empfängern (z.B. alle Nutzer mit `isFraktionsvorstand = true` oder eine spezifische Mailingliste) gesendet werden.
+    *   **Logik**: Beim Auswählen dieser Option soll eine E-Mail an eine vordefinierte Gruppe von Empfängern (z.B. alle Nutzer mit `is_fraktionsvorstand = true` oder eine spezifische Mailingliste) gesendet werden.
     *   **Inhalt der E-Mail**: Die E-Mail sollte die im Formular eingegebenen Informationen enthalten (MdB im Plenum, Thema, TOP-Zeit).
     *   **Technische Umsetzungsideen**:
         *   Nutzung eines E-Mail-Services wie SendGrid, AWS SES, Resend oder eines eigenen SMTP-Servers.
         *   Erstellung einer HTML-Vorlage für die E-Mails für ein ansprechendes Design.
-        *   Abruf der Empfängerliste aus Airtable (z.B. alle Nutzer der `Users`-Tabelle, die als `isFraktionsvorstand` markiert sind und eine E-Mail-Adresse haben).
+        *   Abruf der Empfängerliste aus Supabase (z.B. alle Nutzer der `users`-Tabelle, die als `is_fraktionsvorstand` markiert sind und eine E-Mail-Adresse haben).
 
 2.  **SMS-Versand (`sendSMS`):
-    *   **Logik**: Beim Auswählen dieser Option soll eine SMS an eine vordefinierte Gruppe von Telefonnummern gesendet werden, nachdem der Zähler in `FraktionsrufCounter` erfolgreich geprüft und ggf. ein Eintrag erstellt wurde.
+    *   **Logik**: Beim Auswählen dieser Option soll eine SMS an eine vordefinierte Gruppe von Telefonnummern gesendet werden, nachdem der Zähler in `fraktionsruf_counter` erfolgreich geprüft und ggf. ein Eintrag erstellt wurde.
     *   **Inhalt der SMS**: Die SMS sollte eine kurze, prägnante Nachricht enthalten, die auf den dringenden Fraktionsruf hinweist und die wichtigsten Informationen (z.B. Thema) beinhaltet. Aufgrund der Längenbeschränkung von SMS muss der Inhalt ggf. gekürzt werden.
     *   **Technische Umsetzungsideen**:
         *   Nutzung eines SMS-Gateway-Anbieters wie Twilio, Vonage (Nexmo) oder Sipgate.
-        *   Abruf der Telefonnummern aus Airtable (z.B. aus einem speziellen Feld in der `Users`-Tabelle für Fraktionsvorstandsmitglieder oder einer separaten Tabelle für Notfallkontakte).
+        *   Abruf der Telefonnummern aus Supabase (z.B. aus einem speziellen Feld in der `users`-Tabelle für Fraktionsvorstandsmitglieder oder einer separaten Tabelle für Notfallkontakte).
         *   Sicherstellen, dass die Kostenkontrolle (6 SMS/Monat) serverseitig robust ist.
 
 3.  **WebApp-Reminder (`webappReminder`):

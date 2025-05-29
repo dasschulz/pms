@@ -18,7 +18,7 @@ Diese Seite liefert allgemeine Informationen über die MdB-App, ihre Entwickler,
 ## Offene To-Dos und Implementierungsideen
 
 - Finalisierung der Inhalte für die About-Seite.
-- Klärung, ob Inhalte statisch oder dynamisch aus einer Datenquelle (z.B. `aboutcards.md` oder Airtable) geladen werden sollen.
+- Klärung, ob Inhalte statisch oder dynamisch aus einer Datenquelle (z.B. `aboutcards.md` oder Supabase) geladen werden sollen.
 - Gestaltung des Layouts für eine ansprechende Präsentation.
 - Implementierung der Mehrsprachigkeit, falls erforderlich.
 - Regelmäßige Überprüfung und Aktualisierung der Informationen.

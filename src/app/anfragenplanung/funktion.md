@@ -1,28 +1,29 @@
 # Funktionsweise Anfragenplanung
 
-Diese Seite dient der internen Planung, Koordination und Erstellung von parlamentarischen Anfragen (z.B. Kleine Anfragen, Schriftliche Fragen) durch die Abgeordneten und ihre Mitarbeiter.
+Diese Seite dient der strategischen Planung und Koordination von parlamentarischen Anfragen (Kleine Anfragen, Schriftliche Fragen, Große Anfragen).
 
 ## Kernfunktionen
 
-- **Themensammlung**: Erfassung und Diskussion von potenziellen Themen für Anfragen.
-- **Recherche-Unterstützung**: Tools und Links zu relevanten Datenbanken (DIP, Dokumentationssysteme) zur Recherche.
-- **Entwurfs-Erstellung**: Kollaboratives Erstellen und Bearbeiten von Anfragetexten.
-- **Freigabe-Workflow**: Prozess zur internen Abstimmung und Freigabe der fertigen Anfrage.
-- **Fristenmanagement**: Übersicht über Einreichungsfristen und Bearbeitungsstände.
-- **Archivierung**: Speicherung und Zugriff auf bereits gestellte Anfragen und deren Antworten.
+- **Themen-Brainstorming**: Sammlung und Diskussion von Ideen für mögliche Anfragen.
+- **Prioritätensetzung**: Bewertung und Priorisierung der verschiedenen Anfrageenthemen.
+- **Terminplanung**: Koordination der Einreichungsfristen und zeitlichen Abläufe.
+- **Ressourcenplanung**: Zuweisung von Verantwortlichkeiten und benötigten Ressourcen für die Ausarbeitung.
+- **Status-Tracking**: Verfolgung des Fortschritts von der Idee bis zur fertigen Anfrage.
+- **Verlinkung zu anderen Modulen**: Überleitung zu den spezifischen Anfrage-Modulen (`/kleine-anfragen`, `/schriftliche-fragen`).
 
 ## Integrationen
 
-- **DIP (Dokumentations- und Informationssystem für Parlamentarische Vorgänge)**: Schnittstelle zum DIP für Recherche und ggf. teilautomatisierte Übernahme von Daten.
-- **Textverarbeitungstools**: Mögliche Integration mit Texteditoren oder Kollaborationstools.
-- **Airtable**: Nutzung von Airtable zur Verwaltung von Themen, Entwürfen, Fristen und Verantwortlichkeiten.
-- **Kalender**: Synchronisation von Fristen mit persönlichen oder Team-Kalendern.
+- **Supabase**: Nutzung von Supabase zur Verwaltung von Themen, Entwürfen, Fristen und Verantwortlichkeiten.
+- **Kleine Anfragen (`/kleine-anfragen`)**: Direkte Überleitung zur Ausarbeitung von Kleinen Anfragen.
+- **Schriftliche Fragen (`/schriftliche-fragen`)**: Anbindung zur Erstellung von Schriftlichen Fragen.
+- **Kalendersystem**: Integration mit Kalenderfunktionen für Fristenmanagement.
+- **Task-Management**: Mögliche Anbindung an Task-Management-Tools für die Aufgabenverteilung.
 
 ## Offene To-Dos und Implementierungsideen
 
-- Implementierung der Schnittstelle zum DIP.
-- Entwicklung eines Versionskontrollsystems für Anfrageentwürfe.
-- Automatisierte Benachrichtigungen bei Statusänderungen oder nahenden Fristen.
-- Vorlagen für verschiedene Anfragetypen.
-- Analyse-Tools zur Auswertung der Antworten auf gestellte Anfragen.
-- Zuweisung von Verantwortlichkeiten und Aufgaben innerhalb des Planungsprozesses. 
+- Entwicklung einer strukturierten Ideensammlung mit Bewertungsmöglichkeiten.
+- Implementierung eines Workflow-Systems für die Anfragenerstellung.
+- Fristenmanagement mit automatischen Erinnerungen.
+- Kollaborative Funktionen für die Teamarbeit an Anfragen.
+- Analyse-Tools zur Bewertung der Erfolgsraten verschiedener Anfragetypen.
+- Template-System für wiederkehrende Anfragetypen. 

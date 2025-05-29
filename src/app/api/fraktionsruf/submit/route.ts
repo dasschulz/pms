@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { base } from '@/lib/airtable';
-
-const FRAKTIONSRUF_COUNTER_TABLE_ID = 'tblMfoWD86aQnZ9Ll';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +12,9 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    const userId = session.user.id; // Supabase UUID
+    console.log('Fraktionsruf Submit: Processing request for user:', userId);
 
     // webappReminder is now a field collected from the form
     const { mdbImPlenum, thema, topZeit, sendMail, sendSMS, webappReminder } = await request.json();
@@ -29,17 +30,24 @@ export async function POST(request: NextRequest) {
     const currentMonth = currentDate.getMonth() + 1; // 1-12
     const currentYear = currentDate.getFullYear();
 
-    // If SMS is selected, check the limit and log it in FraktionsrufCounter table
+    console.log('Fraktionsruf Submit: Current period:', { month: currentMonth, year: currentYear });
+
+    // If SMS is selected, check the limit and log it in fraktionsruf_counter table
     if (sendSMS) {
-      let currentSmsCount = 0;
-      await base(FRAKTIONSRUF_COUNTER_TABLE_ID)
-        .select({
-          filterByFormula: `AND({Month} = ${currentMonth}, {Year} = ${currentYear})`,
-        })
-        .eachPage((records, fetchNextPage) => {
-          currentSmsCount += records.length;
-          fetchNextPage();
-        });
+      // Check current SMS count for this month and year
+      const { data: currentEntries, error: countError } = await supabase
+        .from('fraktionsruf_counter')
+        .select('id')
+        .eq('month', currentMonth)
+        .eq('year', currentYear);
+
+      if (countError) {
+        console.error('Fraktionsruf Submit: Error checking SMS count:', countError);
+        return NextResponse.json({ error: 'Fehler beim Prüfen des SMS-Limits' }, { status: 500 });
+      }
+
+      const currentSmsCount = currentEntries?.length || 0;
+      console.log('Fraktionsruf Submit: Current SMS count:', currentSmsCount);
 
       if (currentSmsCount >= 6) {
         return NextResponse.json(
@@ -48,26 +56,23 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Log the SMS sending action in FraktionsrufCounter table
-      // The 'Count' field in FraktionsrufCounter is an Airtable Count-type field and will auto-update.
-      // 'FraktionsrufID' is an Auto Number.
-      // 'UserID (from Assignee)' is a lookup and will auto-populate.
-      const logResult = await base(FRAKTIONSRUF_COUNTER_TABLE_ID).create([
-        {
-          fields: {
-            Month: currentMonth,
-            Year: currentYear,
-            Assignee: [session.user.id], // Link to the user who sent it. Must be an array of record IDs.
-            // 'Created' field in Airtable for FraktionsrufCounter is a Date type.
-            // Let Airtable handle its default creation timestamp or set it explicitly if specific format needed.
-            // For simplicity, we'll let Airtable set it based on record creation time.
-            // If your 'Created' field needs a specific format (e.g. just YYYY-MM-DD), adjust as needed.
-          },
-        },
-      ]);
-      if (!logResult || logResult.length === 0) {
-        throw new Error('Failed to log SMS in FraktionsrufCounter table');
+      // Log the SMS sending action in fraktionsruf_counter table
+      const { data: logResult, error: logError } = await supabase
+        .from('fraktionsruf_counter')
+        .insert({
+          user_id: userId,
+          month: currentMonth,
+          year: currentYear,
+        })
+        .select()
+        .single();
+
+      if (logError) {
+        console.error('Fraktionsruf Submit: Error logging SMS usage:', logError);
+        return NextResponse.json({ error: 'Failed to log SMS in counter table' }, { status: 500 });
       }
+
+      console.log('Fraktionsruf Submit: SMS usage logged:', logResult.id);
     }
 
     // Placeholder for actual sending logic (Mail, SMS, WebApp Toast)
@@ -86,12 +91,14 @@ export async function POST(request: NextRequest) {
       console.log('Placeholder: Sending WebApp Reminder...', { mdbImPlenum, thema, topZeit });
     }
 
+    console.log('Fraktionsruf Submit: Action processed successfully');
+
     return NextResponse.json({
       success: true,
       message: 'Fraktionsruf-Aktion verarbeitet (Sendefunktionen sind Platzhalter)',
     });
   } catch (error) {
-    console.error('Error submitting fraktionsruf:', error);
+    console.error('Fraktionsruf Submit: Error in submit:', error);
     let errorMessage = 'Fehler bei der Verarbeitung des Fraktionsrufs';
     if (error instanceof Error) {
       errorMessage = error.message;

@@ -12,7 +12,7 @@ Diese Seite dient als zentraler Anlaufpunkt für alle Aktivitäten und Informati
 
 ## Integrationen
 
-- **Airtable**: Zentrale Datenhaltung für Kontingente, allgemeine BPA-Informationen und Verknüpfungen zu spezifischen Fahrten.
+- **Supabase**: Zentrale Datenhaltung für Kontingente, allgemeine BPA-Informationen und Verknüpfungen zu spezifischen Fahrten.
 - **BPA-Webseite**: Verlinkung zu relevanten Seiten und Ressourcen auf der offiziellen Webseite des BPA.
 - **Interne Dokumentenablage**: Zugriff auf intern gespeicherte Dokumente und Vorlagen zum Thema BPA.
 

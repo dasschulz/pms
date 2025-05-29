@@ -1,61 +1,71 @@
-# TaskManager Table Schema for Airtable
+# TaskManager Table Schema for Supabase
 
-## Table: TaskManager
+## Table: task_manager
 
-This table stores video planning tasks for the videoplanung feature.
+### Fields
 
-### Required Fields:
+1. **id** (Primary Key, UUID)
+   - Supabase auto-generated UUID
+   - Unique identifier for each task
 
-| Field Name | Field Type | Description | Required |
-|------------|------------|-------------|----------|
-| **Task-ID** | Auto Number | Automatically incremented unique task ID | Yes |
-| **Name** | Single line text | Task name/title | Yes |
-| **UserID** | Link to another record | Links to Users table records | Yes |
-| **Detailview** | Long text | Detailed task description | No |
-| **IsSubtask** | Checkbox | Whether this is a subtask | No |
-| **ParentTaskID** | Link to another record | Links to parent TaskManager records | No |
-| **Fälligkeitsdatum** | Date | Due date for the task | No |
-| **NextJob** | Single select | Current status/stage of the task | No |
-| **Priority** | Single select | Task priority level | No |
-| **PublishDate** | Date | Planned publication date | No |
-| **SortOrder** | Number | Order for sorting tasks | No |
-| **CreatedDate** | Date | Date when task was created | No |
-| **ModifiedDate** | Date | Date when task was last modified | No |
+2. **task_name** (Text, Required)
+   - Brief title of the task
+   - Examples: "Kleine Anfrage zur Digitalisierung", "Pressemitteilung Klimaschutz"
 
-### Single Select Options:
+3. **beschreibung** (Long Text, Optional)
+   - Detailed description of the task
+   - Additional context, requirements, or notes
 
-#### NextJob Field Options:
-- Brainstorming
-- Skript
-- Dreh
-- Schnitt
-- Veröffentlichung
-- Erledigt
+4. **priority** (Single Select, Required)
+   - Options: "Niedrig", "Mittel", "Hoch", "Urgent"
+   - Default: "Mittel"
 
-#### Priority Field Options:
-- Dringend
-- Hoch
-- Normal
-- Niedrig
-- -
+5. **status** (Single Select, Required)
+   - Options: "Offen", "In Bearbeitung", "Warten auf Feedback", "Abgeschlossen", "Abgebrochen"
+   - Default: "Offen"
 
-### Relationships:
-- **UserID** field links to the **Users** table (tblmRrA9DEFEuuYi1)
-- **ParentTaskID** field links to the same **TaskManager** table (for subtasks)
+6. **due_date** (Date, Optional)
+   - Target completion date
+   - Format: YYYY-MM-DD
 
-### Notes:
-- The table must be named exactly "TaskManager"
-- The UserID field should be a linked record field that allows multiple records
-- The ParentTaskID field should be a linked record field that allows multiple records
-- Default values can be set in Airtable for better UX
+7. **category** (Single Select, Optional)
+   - Options: "Kleine Anfrage", "Pressemitteilung", "Rede", "Termine", "Korrespondenz", "Sonstiges"
+   - Helps categorize tasks by type
 
-### API Endpoints:
-- **GET** `/api/task-manager` - Fetch user tasks
-- **POST** `/api/task-manager` - Create new task
-- **PUT** `/api/task-manager` - Update existing task
-- **DELETE** `/api/task-manager` - Delete task
+8. **user_id** (UUID, Required, Foreign Key)
+   - References users.id
+   - Links task to responsible user
 
-### Filter Logic:
-Tasks are filtered by user using: `FIND("${userAirtableId}", ARRAYJOIN({UserID}))`
+9. **created_at** (Timestamp, Auto-generated)
+   - Supabase auto-generated creation timestamp
 
-This allows for flexible user assignment including potential shared tasks in the future. 
+10. **updated_at** (Timestamp, Auto-updated)
+    - Supabase auto-updated modification timestamp
+
+11. **completed_at** (Timestamp, Optional)
+    - Timestamp when task was marked as completed
+    - Set when status changes to "Abgeschlossen"
+
+12. **airtable_id** (Text, Optional)
+    - Legacy tracking field for data lineage
+    - Not used in business logic
+
+## Implementation Notes
+
+- Use Supabase RLS (Row Level Security) for user access control
+- Default values can be set in Supabase for better UX
+- Index on user_id, due_date, and status for performance
+- Consider adding notifications for approaching due dates
+
+## Sample Query Patterns
+
+### Get user's active tasks:
+```sql
+SELECT * FROM task_manager 
+WHERE user_id = $1 
+AND status NOT IN ('Abgeschlossen', 'Abgebrochen')
+ORDER BY due_date ASC NULLS LAST, priority DESC;
+```
+
+### Filter by user:
+Tasks are filtered by user using: `WHERE user_id = $userId` 

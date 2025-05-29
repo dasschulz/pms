@@ -13,7 +13,7 @@ Diese Seite dient der (teil-)automatisierten Erstellung von Skripten für versch
 
 ## Integrationen
 
-- **Airtable**: Speicherung von Vorlagen, generierten Skripten und Nutzereingaben.
+- **Supabase**: Speicherung von Vorlagen, generierten Skripten und Nutzereingaben.
 - **KI-Textgenerierungsmodelle (optional)**: Anbindung an APIs wie GPT (OpenAI) oder ähnliche Modelle zur Unterstützung der Textgenerierung, ggf. über einen zentralen AI-Service der App.
 - **Videoplanung (`/videoplanung`)**: Direkte Übernahme von generierten Skripten in die Videoplanung.
 - **Bürgerpost (`/buergerpost`)**: Nutzung für die Erstellung von Antwortentwürfen.

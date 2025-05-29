@@ -99,7 +99,7 @@ export default function BpaFormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Implement form submission to an API endpoint
-    // This endpoint would save the data to the BPA_Formular table in Airtable
+    // This endpoint would save the data to the BPA_Formular table in Supabase
     // linking it to the MdB (UserID) and the specific Fahrt (FahrtID) via the token.
     console.log('Form submitted:', formData);
     alert('Anmeldung gesendet! (Placeholder)');

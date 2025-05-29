@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,21 @@ export async function POST(request: NextRequest) {
         success: false, 
         error: 'Nicht autorisiert' 
       }, { status: 401 });
+    }
+
+    const userId = session.user.id; // Supabase UUID
+    console.log('Schriftliche Fragen Generate: Processing for user:', userId);
+
+    // Verify user exists in Supabase
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id, name')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userRecord) {
+      console.log('Schriftliche Fragen Generate: User not found:', userId, userError?.message);
+      return NextResponse.json({ error: 'Benutzer nicht gefunden' }, { status: 404 });
     }
 
     const { context, specificFocus } = await request.json();
@@ -45,6 +61,7 @@ Erstelle eine schriftliche Frage zu diesem Thema, die alle GOBT-Regeln befolgt. 
 - Keine Einleitung oder Begründung enthalten`;
 
     // Make request to OpenAI API
+    console.log('Schriftliche Fragen Generate: Calling OpenAI API...');
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -79,6 +96,8 @@ Erstelle eine schriftliche Frage zu diesem Thema, die alle GOBT-Regeln befolgt. 
         error: 'Keine Frage generiert'
       }, { status: 500 });
     }
+
+    console.log('Schriftliche Fragen Generate: Question generated successfully');
 
     // Validate the generated question
     const characterCount = generatedQuestion.length;
@@ -131,9 +150,41 @@ Erstelle eine schriftliche Frage zu diesem Thema, die alle GOBT-Regeln befolgt. 
 
     const isValid = validationIssues.length === 0 && characterCount <= 1800;
 
+    // Save to Supabase if valid
+    let recordId: string | null = null;
+    if (isValid) {
+      try {
+        // Generate a title based on the first few words of the question
+        const titleMatch = generatedQuestion.match(/^(.{1,80})/);
+        const title = titleMatch ? `${titleMatch[1]}${generatedQuestion.length > 80 ? '...' : ''}` : 'Schriftliche Frage';
+
+        const { data: record, error: createError } = await supabase
+          .from('schriftliche_fragen')
+          .insert({
+            user_id: userId,
+            title: title,
+            content: generatedQuestion,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Schriftliche Fragen Generate: Error saving to Supabase:', createError);
+          // Don't fail the request if save fails - just log it
+        } else {
+          recordId = record.id;
+          console.log('Schriftliche Fragen Generate: Question saved to Supabase:', recordId);
+        }
+      } catch (supabaseError) {
+        console.error('Schriftliche Fragen Generate: Supabase save error:', supabaseError);
+        // Don't fail the request if save fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
       question: {
+        id: recordId,
         question: generatedQuestion,
         characterCount,
         isValid,
@@ -143,7 +194,7 @@ Erstelle eine schriftliche Frage zu diesem Thema, die alle GOBT-Regeln befolgt. 
     });
 
   } catch (error) {
-    console.error('Generation error:', error);
+    console.error('Schriftliche Fragen Generate: Error in generate:', error);
     return NextResponse.json({
       success: false,
       error: 'Interner Serverfehler bei der Fragengenerierung'

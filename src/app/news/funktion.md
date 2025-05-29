@@ -38,13 +38,13 @@ Diese Seite dient der Anzeige von Nachrichtenartikeln. Sie unterscheidet zwische
             - `type`: Wird im API-Mapping als `"person"` gesetzt.
         - Gibt die gemappten Artikel (`items`), die Gesamtanzahl (`totalItems`) und den nächsten Cursor (`nextPageCursor`) zurück.
 
-## Airtable Integration
+## Supabase Integration
 
-- **Keine direkte Airtable-Nutzung** ist in der aktuellen Implementierung der News-Seite oder des zugehörigen API-Endpunkts ersichtlich. Die Daten stammen entweder aus statischen Platzhaltern oder von der externen NewsData.io API.
+- **Keine direkte Supabase-Nutzung** ist in der aktuellen Implementierung der News-Seite oder des zugehörigen API-Endpunkts ersichtlich. Die Daten stammen entweder aus statischen Platzhaltern oder von der externen NewsData.io API.
 
 ## Offene To-Dos und Implementierungsideen (basierend auf Analyse)
 
-- **Themen-News dynamisch gestalten**: Aktuell sind Themen-News statisch. Es könnte überlegt werden, diese ebenfalls aus einer externen Quelle oder einer internen Datenbank (z.B. Airtable, falls gewünscht) zu laden.
+- **Themen-News dynamisch gestalten**: Aktuell sind Themen-News statisch. Es könnte überlegt werden, diese ebenfalls aus einer externen Quelle oder einer internen Datenbank (z.B. Supabase, falls gewünscht) zu laden.
 - **Fehlerbehandlung erweitern**: Detailliertere Fehlermeldungen für den Nutzer, falls NewsData.io nicht erreichbar ist oder keine Ergebnisse liefert.
 - **Quellen-Management für Themen-News**: Wenn Themen-News dynamisch werden, ist eine Verwaltung der Quellen und Inhalte notwendig.
 - **Caching**: Implementierung von Caching-Strategien für die API-Antworten von NewsData.io, um API-Limits zu schonen und die Ladezeiten zu verbessern.

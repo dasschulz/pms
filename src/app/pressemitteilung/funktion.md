@@ -15,7 +15,7 @@ Diese Seite dient der Erstellung, Verwaltung, Freigabe und ggf. dem Versand von 
 
 ## Integrationen
 
-- **Airtable**: Speicherung von Pressemitteilungsentwürfen, Metadaten, Freigabestatus und Verteilern.
+- **Supabase**: Speicherung von Pressemitteilungsentwürfen, Metadaten, Freigabestatus und Verteilern.
 - **Journalistenpool (`/journalistenpool`)**: Zugriff auf Journalistenkontakte und Verteilerlisten.
 - **E-Mail-Versanddienste**: Anbindung an Tools wie SendGrid, Resend etc. für den Massenversand.
 - **Fraktionswebsite/CMS**: Schnittstelle zur automatischen Übertragung und Veröffentlichung der PMs.

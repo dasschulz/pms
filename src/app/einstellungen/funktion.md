@@ -1,15 +1,16 @@
 # Funktionsweise Einstellungen
 
-Diese Seite ermöglicht es Nutzern, ihre persönlichen Präferenzen und Einstellungen für die MdB-App anzupassen. Administratoren können hier ggf. auch globale Anwendungseinstellungen verwalten.
+Diese Seite ermöglicht es Nutzern, ihre persönlichen Einstellungen und Präferenzen für die MdB-App zu verwalten. Administratoren können hier ggf. auch globale Anwendungseinstellungen verwalten.
 
 ## Kernfunktionen (Nutzerperspektive)
 
-- **Profilverwaltung**: Bearbeitung persönlicher Daten (Name, E-Mail, ggf. Passwortänderung).
-- **Benachrichtigungseinstellungen**: Konfiguration, welche Benachrichtigungen (E-Mail, In-App) für welche Ereignisse erhalten werden sollen.
-- **Interface-Anpassungen**: Ggf. Auswahl von Farbschemata (Hell-/Dunkelmodus), Schriftgrößen oder Layout-Präferenzen.
-- **Datenschutzeinstellungen**: Verwaltung von Einwilligungen zur Datenverarbeitung (z.B. Tracking, Newsletter).
-- **API-Schlüssel-Verwaltung**: Falls die App externe Dienste nutzt, die nutzerspezifische API-Schlüssel erfordern.
-- **Abmeldung**: Sicherer Logout aus der Anwendung.
+- **Profilbearbeitung**: Aktualisierung persönlicher Informationen (Name, E-Mail, Kontaktdaten).
+- **Passwort ändern**: Sichere Möglichkeit zur Änderung des Benutzerpassworts.
+- **Benachrichtigungseinstellungen**: Konfiguration von E-Mail- und In-App-Benachrichtigungen.
+- **Design/Theme-Einstellungen**: Auswahl zwischen verschiedenen Farbschemata oder Dark/Light Mode.
+- **Datenschutzoptionen**: Verwaltung der Datenschutzeinstellungen und Einwilligungen.
+- **App-spezifische Präferenzen**: Konfiguration app-spezifischer Einstellungen (z.B. Standard-Ansichten, Filter-Voreinstellungen).
+- **Account-Verwaltung**: Optionen zur Deaktivierung oder Löschung des Accounts (falls implementiert).
 
 ## Kernfunktionen (Adminperspektive, falls zutreffend)
 
@@ -20,16 +21,22 @@ Diese Seite ermöglicht es Nutzern, ihre persönlichen Präferenzen und Einstell
 
 ## Integrationen
 
-- **Airtable**: Speicherung von Nutzerprofilen, Präferenzen und Rollen (`user_preferences_table.md` deutet auf eine solche Tabelle hin).
-- **Authentifizierungssystem (NextAuth)**: Anbindung an das verwendete Authentifizierungssystem für Profil- und Passwortmanagement.
-- **Datenbank**: Direkte Interaktion mit der Datenbank zur Speicherung der Einstellungen.
+- **Supabase**: Speicherung von Nutzerprofilen, Präferenzen und Rollen (`user_preferences_table.md` deutet auf eine solche Tabelle hin).
+- **Authentifizierungssystem**: Anbindung für Passwort-Änderungen und Sicherheitseinstellungen.
+- **E-Mail-Service**: Für die Verwaltung von E-Mail-Benachrichtigungen.
+- **Theme-Management**: System zur Handhabung verschiedener UI-Themes.
 - `/api/user-preferences/route.ts` und `/api/user-details/route.ts`: API-Endpunkte zur Verwaltung von Nutzereinstellungen und -details.
 
 ## Offene To-Dos und Implementierungsideen
 
+- Implementierung der Profilbearbeitungsfunktionen mit entsprechender Validierung.
+- Entwicklung sicherer Passwort-Änderungsprozesse.
+- Aufbau des Benachrichtigungsmanagements.
+- Integration verschiedener UI-Themes und Dark/Light Mode.
+- Datenschutz-Dashboard mit granularen Einstellungsmöglichkeiten.
+- Export-Funktion für persönliche Daten (DSGVO-Konformität).
+- Backup und Wiederherstellung von Einstellungen.
 - Ausbau der konfigurierbaren Benachrichtigungseinstellungen.
-- Implementierung von Optionen zur Interface-Anpassung (z.B. Dark Mode, falls noch nicht vorhanden).
 - Detaillierte Ausgestaltung der Administrationsfunktionen für Nutzer- und Rechteverwaltung.
 - Zwei-Faktor-Authentifizierung (2FA) für erhöhte Sicherheit.
-- Export/Import von Nutzereinstellungen.
 - Übersichtliche Darstellung der Audit-Logs für Administratoren. 

@@ -1,10 +1,56 @@
-# BPA-Fahrten Implementation
-
-Complete implementation of the BPA (Bundespresseamt) trip management system for the MdB App.
+# BPA (Bundespresseamt) Implementation
 
 ## Overview
 
-The BPA-Fahrten system provides comprehensive trip management for Members of Bundestag, allowing them to organize, manage and accept applications for citizen trips to Berlin.
+The BPA (Bundespresseamt-Informationsfahrten) system allows Members of Parliament to organize and manage information trips for constituents. The system has been fully migrated from Airtable to Supabase for improved performance and security.
+
+## Database Schema
+
+### Main Tables in Supabase
+
+1. **bpa_fahrten** - Information trips
+2. **bpa_anmeldungen** - Trip applications  
+3. **users** - User management
+
+## Key Features
+
+1. **Trip Management** (`/bpa-fahrten`)
+   - Create and edit information trips
+   - Set capacity, dates, and destinations
+   - Manage trip status and registration deadlines
+
+2. **Public Registration** (`/bpa/[lastName]`)
+   - Public-facing registration form
+   - Accessible via MdB's last name
+   - Real-time capacity checking
+
+3. **Application Management**
+   - Review and process applications
+   - Status management (requested, confirmed, cancelled, waitlist)
+   - Participant communication
+
+## Implementation Status
+
+✅ **Database Schema**: All tables migrated to Supabase  
+✅ **Backend APIs**: All endpoints using Supabase  
+✅ **Frontend Components**: Updated for Supabase integration  
+✅ **Public Forms**: Working with new database  
+✅ **Authentication**: Integrated with Supabase auth  
+
+## Technical Details
+
+- **Database**: PostgreSQL via Supabase
+- **Authentication**: Supabase Auth with NextAuth.js
+- **Real-time Updates**: Supabase real-time capabilities
+- **File Storage**: Supabase Storage for documents
+
+## Benefits of Supabase Migration
+
+- Improved query performance
+- Better data integrity with foreign keys
+- Real-time capabilities
+- Enhanced security with RLS
+- Cost efficiency
 
 ## Features Implemented
 
@@ -169,25 +215,3 @@ The BPA-Fahrten system provides comprehensive trip management for Members of Bun
 - **PDF Generation**: Automatic participant lists and documents
 - **API Rate Limiting**: Protection against abuse
 - **Audit Logging**: Complete audit trail for compliance
-
-## Deployment Notes
-
-### Environment Variables Required
-```env
-AIRTABLE_API_KEY=your_api_key
-AIRTABLE_BASE_ID=your_base_id
-NEXTAUTH_URL=your_domain
-NEXTAUTH_SECRET=your_secret
-```
-
-### Build Configuration
-- Next.js 14 with App Router
-- TypeScript strict mode enabled
-- Tailwind CSS for styling
-- shadcn/ui component library
-- date-fns for date handling with German locale
-
-## Support
-
-For technical issues or feature requests, contact the development team.
-The implementation follows modern web standards and accessibility guidelines. 

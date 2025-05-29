@@ -1,4 +1,157 @@
-# TaskManager Table Setup for Airtable
+# TaskManager Table Setup for Supabase
+
+## Database Schema
+
+### Table: task_manager
+
+Create the task_manager table in Supabase with the following structure:
+
+```sql
+CREATE TABLE task_manager (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  task_name TEXT NOT NULL,
+  beschreibung TEXT,
+  priority TEXT DEFAULT 'Mittel' CHECK (priority IN ('Niedrig', 'Mittel', 'Hoch', 'Urgent')),
+  status TEXT DEFAULT 'Offen' CHECK (status IN ('Offen', 'In Bearbeitung', 'Warten auf Feedback', 'Abgeschlossen', 'Abgebrochen')),
+  due_date DATE,
+  category TEXT CHECK (category IN ('Kleine Anfrage', 'Pressemitteilung', 'Rede', 'Termine', 'Korrespondenz', 'Sonstiges')),
+  user_id UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  completed_at TIMESTAMP WITH TIME ZONE,
+  legacy_id TEXT -- For data lineage tracking
+);
+```
+
+### Indexes
+
+```sql
+-- Performance indexes
+CREATE INDEX idx_task_manager_user_id ON task_manager(user_id);
+CREATE INDEX idx_task_manager_due_date ON task_manager(due_date);
+CREATE INDEX idx_task_manager_status ON task_manager(status);
+CREATE INDEX idx_task_manager_priority ON task_manager(priority);
+```
+
+### Row Level Security (RLS)
+
+```sql
+-- Enable RLS
+ALTER TABLE task_manager ENABLE ROW LEVEL SECURITY;
+
+-- Policy for users to access their own tasks
+CREATE POLICY "Users can access own tasks" ON task_manager
+  FOR ALL USING (auth.uid() = user_id);
+
+-- Policy for admins to access all tasks
+CREATE POLICY "Admins can access all tasks" ON task_manager
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.role = 'admin'
+    )
+  );
+```
+
+### Triggers
+
+```sql
+-- Update timestamp trigger
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_task_manager_updated_at 
+    BEFORE UPDATE ON task_manager 
+    FOR EACH ROW 
+    EXECUTE PROCEDURE update_updated_at_column();
+
+-- Set completed_at when status changes to 'Abgeschlossen'
+CREATE OR REPLACE FUNCTION set_completed_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'Abgeschlossen' AND OLD.status != 'Abgeschlossen' THEN
+        NEW.completed_at = NOW();
+    ELSIF NEW.status != 'Abgeschlossen' THEN
+        NEW.completed_at = NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER set_task_completed_at 
+    BEFORE UPDATE ON task_manager 
+    FOR EACH ROW 
+    EXECUTE PROCEDURE set_completed_at();
+```
+
+## API Integration
+
+### Common Queries
+
+```sql
+-- Get user's active tasks
+SELECT * FROM task_manager 
+WHERE user_id = $1 
+AND status NOT IN ('Abgeschlossen', 'Abgebrochen')
+ORDER BY due_date ASC NULLS LAST, priority DESC;
+
+-- Get overdue tasks
+SELECT * FROM task_manager 
+WHERE user_id = $1 
+AND due_date < CURRENT_DATE 
+AND status NOT IN ('Abgeschlossen', 'Abgebrochen');
+
+-- Get tasks by category
+SELECT * FROM task_manager 
+WHERE user_id = $1 
+AND category = $2
+ORDER BY created_at DESC;
+```
+
+### Supabase Client Usage
+
+```typescript
+// Get user tasks
+const { data: tasks, error } = await supabase
+  .from('task_manager')
+  .select('*')
+  .eq('user_id', userId)
+  .neq('status', 'Abgeschlossen')
+  .order('due_date', { ascending: true, nullsFirst: false });
+
+// Create new task
+const { data: newTask, error } = await supabase
+  .from('task_manager')
+  .insert({
+    task_name: 'New Task',
+    beschreibung: 'Task description',
+    priority: 'Hoch',
+    user_id: userId
+  })
+  .select()
+  .single();
+
+// Update task status
+const { data: updatedTask, error } = await supabase
+  .from('task_manager')
+  .update({ status: 'Abgeschlossen' })
+  .eq('id', taskId)
+  .select()
+  .single();
+```
+
+## Migration Notes
+
+- Legacy `airtable_id` field preserved for data lineage
+- All enum values translated to German
+- Maintains existing API compatibility
+- RLS provides automatic user filtering
 
 ## Critical: Table Missing from Current Schema
 

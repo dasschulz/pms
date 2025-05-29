@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('Tour Form Submit: Starting tour request submission');
+    
     const requestData = await req.json();
     const {
       token,
@@ -25,17 +27,28 @@ export async function POST(req: NextRequest) {
       programmvorschlag,
     } = requestData;
 
-    // Verify the token is valid
-    const linkRecords = await base('Touranfragen_Links')
-      .select({
-        filterByFormula: `AND({Token} = '${token}', {Active} = TRUE())`,
-        maxRecords: 1,
-      })
-      .firstPage();
+    console.log('Tour Form Submit: Verifying token:', token);
 
-    if (linkRecords.length === 0) {
+    // Verify the token is valid and active
+    const { data: linkRecords, error: linkError } = await supabase
+      .from('touranfragen_links')
+      .select('*')
+      .eq('token', token)
+      .eq('active', true)
+      .limit(1);
+
+    if (linkError) {
+      console.error('Tour Form Submit: Error verifying token:', linkError);
+      return NextResponse.json({ error: 'Failed to verify token' }, { status: 500 });
+    }
+
+    if (!linkRecords || linkRecords.length === 0) {
+      console.log('Tour Form Submit: Invalid or expired token:', token);
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 400 });
     }
+
+    const linkRecord = linkRecords[0];
+    console.log('Tour Form Submit: Token verified, creating tour request for user:', userId);
 
     // Combine time periods into a readable format
     const zeitraume = [];
@@ -49,36 +62,55 @@ export async function POST(req: NextRequest) {
       zeitraume.push(`${formatDate(zeitraum3Von)} - ${formatDate(zeitraum3Bis)}`);
     }
 
-    // Create the tour request record
-    const tourRequestRecord = await base('Touranfragen').create({
-      'UserID': [userId],
-      'Kreisverband': kreisverband,
-      'Landesverband': landesverband,
-      'Kandidat Name': kandidatName,
-      'Zeitraum Von': zeitraum1Von || '',
-      'Zeitraum Bis': zeitraum1Bis || '',
-      'Zeitraum Alle': zeitraume.join('\n'),
-      'Themen': themen,
-      'Video': video === 'Ja',
-      'Ansprechpartner 1 Name': ansprechpartner1Name,
-      'Ansprechpartner 1 Phone': ansprechpartner1Phone,
-      'Ansprechpartner 2 Name': ansprechpartner2Name || '',
-      'Ansprechpartner 2 Phone copy': ansprechpartner2Phone || '',
-      'Programmvorschlag': programmvorschlag === 'füge ich an',
-      'Status': 'Neu',
-      'Created': new Date().toISOString().split('T')[0],
-      'Token Used': token,
-    });
+    // Prepare tour request data for Supabase
+    const tourRequestData = {
+      user_id: userId,
+      kreisverband: kreisverband,
+      landesverband: landesverband,
+      kandidat_name: kandidatName,
+      zeitraum_von: zeitraum1Von || null,
+      zeitraum_bis: zeitraum1Bis || null,
+      zeitraum_alle: zeitraume.join('\n'),
+      themen: themen,
+      video: video === 'Ja',
+      ansprechpartner_1_name: ansprechpartner1Name,
+      ansprechpartner_1_phone: ansprechpartner1Phone,
+      ansprechpartner_2_name: ansprechpartner2Name || null,
+      ansprechpartner_2_phone: ansprechpartner2Phone || null,
+      programmvorschlag: programmvorschlag === 'füge ich an' ? 'füge ich an' : 'möchte ich mit dem Büro klären',
+      status: 'Neu',
+      token_used: token,
+    };
 
-    console.log('Tour request created:', tourRequestRecord.id);
+    // Create the tour request record in Supabase
+    const { data: tourRequestRecord, error: createError } = await supabase
+      .from('touranfragen')
+      .insert(tourRequestData)
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Tour Form Submit: Error creating tour request:', createError);
+      return NextResponse.json({ error: 'Failed to submit tour request' }, { status: 500 });
+    }
+
+    console.log('Tour Form Submit: Tour request created:', tourRequestRecord.id);
 
     // Hard delete the used token/link after successful submission
     try {
-      const linkRecord = linkRecords[0];
-      await base('Touranfragen_Links').destroy([linkRecord.id]);
-      console.log('Form link deleted after successful submission:', linkRecord.id);
+      const { error: deleteError } = await supabase
+        .from('touranfragen_links')
+        .delete()
+        .eq('id', linkRecord.id);
+
+      if (deleteError) {
+        console.error('Tour Form Submit: Error deleting form link:', deleteError);
+        // Don't fail the entire request if link deletion fails
+      } else {
+        console.log('Tour Form Submit: Form link deleted after successful submission:', linkRecord.id);
+      }
     } catch (deleteError) {
-      console.error('Error deleting form link:', deleteError);
+      console.error('Tour Form Submit: Exception while deleting form link:', deleteError);
       // Don't fail the entire request if link deletion fails
     }
 
@@ -87,7 +119,7 @@ export async function POST(req: NextRequest) {
       requestId: tourRequestRecord.id 
     });
   } catch (error) {
-    console.error('Error submitting tour request:', error);
+    console.error('Tour Form Submit: Supabase error submitting tour request:', error);
     return NextResponse.json({ error: 'Failed to submit tour request' }, { status: 500 });
   }
 }

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { base } from '@/lib/airtable';
-
-const FRAKTIONSRUF_COUNTER_TABLE = 'tblMfoWD86aQnZ9Ll'; // New Table ID
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,24 +13,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('Fraktionsruf SMS Counter: Fetching count for user:', session.user.id);
+
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth() + 1; // 1-12
     const currentYear = currentDate.getFullYear();
 
+    console.log('Fraktionsruf SMS Counter: Current period:', { month: currentMonth, year: currentYear });
+
     // Count records for the current month and year
-    let count = 0;
-    await base(FRAKTIONSRUF_COUNTER_TABLE)
-      .select({
-        filterByFormula: `AND({Month} = ${currentMonth}, {Year} = ${currentYear})`,
-        // We only need the count, not the actual records data for this endpoint
-        // However, to count, we retrieve all and count length.
-        // If performance becomes an issue for very large numbers of Fraktionsrufe,
-        // a summary table or a more direct counting method in Airtable might be needed.
-      })
-      .eachPage((records, fetchNextPage) => {
-        count += records.length;
-        fetchNextPage();
-      });
+    const { data: entries, error: countError } = await supabase
+      .from('fraktionsruf_counter')
+      .select('id')
+      .eq('month', currentMonth)
+      .eq('year', currentYear);
+
+    if (countError) {
+      console.error('Fraktionsruf SMS Counter: Error fetching count:', countError);
+      return NextResponse.json(
+        { success: false, error: 'Fehler beim Laden des SMS-Zählers' },
+        { status: 500 }
+      );
+    }
+
+    const count = entries?.length || 0;
+    console.log('Fraktionsruf SMS Counter: Found', count, 'entries for current period');
 
     return NextResponse.json({
       success: true,
@@ -41,7 +46,7 @@ export async function GET(request: NextRequest) {
       year: currentYear,
     });
   } catch (error) {
-    console.error('Error fetching SMS counter:', error);
+    console.error('Fraktionsruf SMS Counter: Error in GET:', error);
     return NextResponse.json(
       { success: false, error: 'Fehler beim Laden des SMS-Zählers' },
       { status: 500 }

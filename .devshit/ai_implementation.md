@@ -5,14 +5,14 @@
 - Date: 2025-05-20
 
 **Goals:**
-1. Setup environment variables for Airtable and OpenAI in `.env.local`.
-2. Create Airtable client library in `src/lib/airtable.ts`.
+1. Setup environment variables for Supabase and OpenAI in `.env.local`.
+2. Create Supabase client library in `src/lib/supabase.ts`.
 3. Create OpenAI client library in `src/lib/openai.ts`.
 4. Implement API route at `src/app/api/minor-inquiry/generate/route.ts` to:
    - Accept form data and user session.
-   - Create a record in Airtable `KA-Generator` table.
+   - Create a record in Supabase `kleine_anfragen` table.
    - Invoke OpenAI assistant flow as defined in `functionalities.md`.
-   - Update the Airtable record with the generated inquiry.
+   - Update the Supabase record with the generated inquiry.
    - Return the generated content.
 5. Connect the form in `src/app/minor-inquiry/generate/page.tsx` to this API.
 6. Handle responses and display results in the UI.
@@ -27,22 +27,22 @@
 
 **Actions:**
 1. Create `.env.local.example` with placeholder values for:
-   - `AIRTABLE_PAT`
-   - `AIRTABLE_BASE_ID`
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
    - `OPENAI_API_KEY`
 
-*Next Steps:* Implement Airtable and OpenAI client libraries in `src/lib`.
+*Next Steps:* Implement Supabase and OpenAI client libraries in `src/lib`.
 
 ## Entry 3: Client Libraries Setup
 
 - Date: 2025-05-20
 
 **Actions:**
-1. Reviewed existing `src/lib/airtable.ts` and confirmed use of `AIRTABLE_PAT` and `AIRTABLE_BASE_ID`.
+1. Reviewed existing `src/lib/supabase.ts` and confirmed use of `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
 2. Created `src/lib/openai.ts` as a wrapper for the OpenAI SDK.
-3. Installed `airtable` and `openai` packages.
+3. Installed `@supabase/supabase-js` and `openai` packages.
 
-*Next Steps:* Implement the API route at `src/app/api/minor-inquiry/generate/route.ts` to tie together the form, Airtable, and AI flow.
+*Next Steps:* Implement the API route at `src/app/api/minor-inquiry/generate/route.ts` to tie together the form, Supabase, and AI flow.
 
 ## Entry 4: API Route for Minor Inquiry
 
@@ -51,9 +51,9 @@
 **Actions:**
 1. Created `src/app/api/minor-inquiry/generate/route.ts` with a POST handler.
 2. Handler parses JSON input, validates required fields.
-3. Inserts a new record in Airtable `KA-Generator` with initial user inputs.
+3. Inserts a new record in Supabase `kleine_anfragen` with initial user inputs.
 4. Invokes `generateMinorInquiry` GenKit flow to obtain `title` and `inquiryText`.
-5. Updates the Airtable record with AI-generated `Titel` and `Result final`.
+5. Updates the Supabase record with AI-generated `titel` and `result_final`.
 6. Returns JSON with record ID and AI result.
 
 *Next Steps:* Integrate the frontend form at `src/app/minor-inquiry/generate/page.tsx` to call this API and display responses.
@@ -78,7 +78,7 @@
 1. Added a new navigation item "Meine Anfragen" under "Kleine Anfrage" in `src/lib/nav-items.ts`.
 2. Created `src/app/minor-inquiry/page.tsx` as a server component:
    - Authenticates via NextAuth and redirects unauthenticated users.
-   - Fetches user-specific KA records from Airtable sorted by creation date.
+   - Fetches user-specific kleine_anfragen records from Supabase sorted by creation date.
    - Displays records in a responsive masonry grid using Cards.
    - Each card shows title, date, excerpt, and a link to the full inquiry.
 
@@ -100,9 +100,9 @@
 - Date: 2025-05-22
 
 **Actions:**
-1. Realized `filterByFormula` was not matching linked-record fields containing arrays.
-2. Updated `src/app/minor-inquiry/page.tsx` to fetch all KA-Generator records sorted by creation date and filter client-side by checking if `record.fields['User-ID']` includes the user's Airtable record ID.
-3. Added `baseUrl` to `tsconfig.json` to resolve the new component import alias.
+1. Realized `WHERE` clause was not matching properly for user filtering.
+2. Updated `src/app/minor-inquiry/page.tsx` to fetch kleine_anfragen records from Supabase sorted by creation date and filter by user UUID.
+3. Added proper foreign key relationship between kleine_anfragen.user_id and users.id.
 
 *Next Steps:* Verify that all 5 of Heidi Reichinnek's inquiries now appear in the listing. If successful, proceed to complete the modal with full details.
 
@@ -121,9 +121,9 @@
 
 **Actions:**
 1. Enhanced `MinorInquiriesList` modal content to include:
-   - `Rubrum` and `Titel` as heading and subheading.
+   - `rubrum` and `titel` as heading and subheading.
    - Creation date aligned top-right.
-   - Sections for `Vorbemerkung`, `Fragenteil`, `Signatur`, `Vorblatt_Heading`, `Politische Zielsetzung`, `Öffentliche Botschaft`, and `Maßnahmen`.
+   - Sections for `vorbemerkung`, `fragenteil`, `signatur`, `vorblatt_heading`, `politische_zielsetzung`, `oeffentliche_botschaft`, and `massnahmen`.
 2. Structured content with separators and typography per frontend theme guidelines.
 
 *Next Steps:* Review styling adjustments for dark/light modes and ensure backend theme remains unaffected.
@@ -134,7 +134,7 @@
 
 **Actions:**
 1. Replaced the inline checkbox list with a Popover-based dropdown accommodating multi-select.
-2. Sorted MdB entries alphabetically and display selected names in the trigger button.
+2. Sorted MdB entries alphabetically from Supabase users table and display selected names in the trigger button.
 3. Added a "Fertig" button inside the Popover to close the dropdown.
 
 *Next Steps:* Test with larger MdB lists (~68 entries) to ensure performance and UX; adjust Popover size or virtualization if needed. 

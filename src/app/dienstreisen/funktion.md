@@ -12,7 +12,7 @@ Diese Seite dient der Beantragung, Genehmigung und Abrechnung von Dienstreisen f
 
 ## Integrationen
 
-- **Airtable**: Speicherung der Dienstreiseanträge, Genehmigungen und Abrechnungen.
+- **Supabase**: Speicherung der Dienstreiseanträge, Genehmigungen und Abrechnungen.
 - **Buchhaltungssystem**: Schnittstelle zum Buchhaltungssystem für die Übertragung der Abrechnungsdaten.
 - **Kalendersystem**: Optionale Eintragung genehmigter Dienstreisen in den Kalender.
 - **Bahn-/Flugbuchungsportale**: Mögliche Integration zur direkten Buchung von Transportmitteln oder Anzeige von Verbindungen.

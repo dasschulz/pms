@@ -51,10 +51,6 @@ Die Seite `/dokumentensuche` ermöglicht eine detaillierte Suche im "Dokumentati
     7.  **Transformiert die Dokumentdaten** in das von der Frontend-Komponente erwartete Format (`DIPDocument`-Interface). Dies beinhaltet das Mapping von Feldern wie `id`, `titel`, `dokumentart`, `datum`, `drucksachetyp`, `nummer`, `wahlperiode`, `herausgeber`, `fundstelle`, `urheber` etc.
     8.  Gibt eine JSON-Antwort zurück, die `success` (boolean), `documents` (Array), `numFound` (Gesamtzahl), `start` und `num` enthält.
 
-## Airtable-Interaktion
-
-- **Keine.** Die Funktionalität der Dokumentensuche basiert vollständig auf der externen DIP-API. Es findet keine Speicherung oder Abfrage von Daten aus Airtable statt.
-
 ## Integrationen
 
 - **Externe DIP API**: `https://search.dip.bundestag.de/api/v1` (Bundestag Dokumentations- und Informationssystem).

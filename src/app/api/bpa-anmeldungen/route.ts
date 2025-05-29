@@ -1,79 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (!token || !token.airtableRecordId) { // MdBs should be logged in to see applications
+  if (!token || !token.id) { // MdBs should be logged in to see applications
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const mdbAirtableUserId = token.airtableRecordId as string; // For permission check
+  const userId = token.id as string; // Supabase UUID
 
   const { searchParams } = new URL(req.url);
-  const fahrtId = searchParams.get('fahrtId'); // Airtable Record ID of the BPA_Fahrt
+  const fahrtId = searchParams.get('fahrtId'); // Supabase UUID of the BPA trip
 
   if (!fahrtId) {
     return NextResponse.json({ error: 'Missing fahrtId parameter' }, { status: 400 });
   }
 
-  // Permission check: ensure the logged-in MdB (mdbAirtableUserId)
-  // is the owner of the fahrtId before showing applications.
-  // UserID in BPA_Fahrten is fldNHxKrcJ0Hv4x1s
+  console.log('BPA Applications API: Fetching applications for trip:', fahrtId, 'user:', userId);
+
+  // Permission check: ensure the logged-in MdB owns the trip before showing applications
   try {
-    const fahrtRecord = await base('BPA_Fahrten').find(fahrtId);
-    if (!fahrtRecord) {
-      return NextResponse.json({ error: 'BPA Trip not found for this fahrtId' }, { status: 404 });
-    }
-    const linkedMdbUserIds = (fahrtRecord.fields.UserID as string[]) || [];
-    if (!linkedMdbUserIds.includes(mdbAirtableUserId)) {
-      // If not owner, don't reveal trip exists, just say no applications or forbidden
+    // First verify trip ownership
+    const { data: fahrtRecord, error: fahrtError } = await supabase
+      .from('bpa_fahrten')
+      .select('id, user_id')
+      .eq('id', fahrtId)
+      .eq('user_id', userId) // Ensure user owns this trip
+      .single();
+
+    if (fahrtError || !fahrtRecord) {
+      console.log('BPA Applications API: Trip not found or access denied:', fahrtId, fahrtError?.message);
       return NextResponse.json({ error: 'Forbidden. You do not own the BPA trip associated with this fahrtId.' }, { status: 403 });
     }
 
-    // If permission check passes, proceed to fetch applications
-    const records = await base('BPA_Formular')
-      .select({
-        // Filter by the FahrtID_ForeignKey linking to BPA_Fahrten table
-        filterByFormula: `SEARCH("${fahrtId}", ARRAYJOIN({FahrtID_ForeignKey}))`,
-        // TODO: Consider which fields to return. For now, returning most of them.
-        fields: [
-          'Vorname', 'Nachname', 'Geburtsdatum', 'Email', 'Anschrift',
-          'Postleitzahl', 'Ort', 'Parteimitglied', 'Zustieg',
-          'Essenspräferenzen', 'Status', 'Status_Teilnahme', 'Created',
-          'Telefonnummer', 'Geburtsort', 'Themen', 'Teilnahme_5J', 'Einzelzimmer'
-        ],
-        sort: [{ field: 'Created', direction: 'asc' }],
-      })
-      .all();
+    console.log('BPA Applications API: Trip ownership verified, fetching applications');
 
-    const anmeldungen = records.map(record => ({
-      id: record.id, // Airtable Record ID of the BPA_Formular entry
-      vorname: record.fields.Vorname,
-      nachname: record.fields.Nachname,
-      geburtsdatum: record.fields.Geburtsdatum,
-      email: record.fields.Email,
-      anschrift: record.fields.Anschrift,
-      postleitzahl: record.fields.Postleitzahl,
-      ort: record.fields.Ort,
-      parteimitglied: record.fields.Parteimitglied,
-      zustieg: record.fields.Zustieg,
-      essenspraeferenz: record.fields.Essenspräferenzen,
-      status: record.fields.Status,
-      statusTeilnahme: record.fields.Status_Teilnahme,
-      telefonnummer: record.fields.Telefonnummer,
-      geburtsort: record.fields.Geburtsort,
-      themen: record.fields.Themen,
-      teilnahme5J: record.fields.Teilnahme_5J,
-      einzelzimmer: record.fields.Einzelzimmer,
-      created: record.fields.Created,
-    }));
+    // Fetch applications for this trip
+    const { data: records, error: recordsError } = await supabase
+      .from('bpa_formular')
+      .select('*')
+      .eq('fahrt_id', fahrtId)
+      .order('created_at', { ascending: true });
 
-    return NextResponse.json({ anmeldungen });
-  } catch (error) {
-    console.error('[API /bpa-anmeldungen GET] Airtable Error:', error);
-     if (error instanceof Error && error.message && error.message.includes('FIELD_NAME_NOT_FOUND')) {
-        console.error("Potential issue: Field names/IDs in BPA_Formular table might be incorrect (e.g. FahrtID_ForeignKey).");
+    if (recordsError) {
+      console.error('BPA Applications API: Error fetching applications:', recordsError);
+      return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
     }
+
+    console.log('BPA Applications API: Found', records?.length || 0, 'applications');
+
+    // Transform Supabase records to match expected format
+    const applications = records?.map(record => ({
+      id: record.id, // Use Supabase UUID for frontend operations
+      vorname: record.vorname,
+      nachname: record.nachname,
+      geburtsdatum: record.geburtsdatum,
+      email: record.email,
+      anschrift: record.anschrift,
+      postleitzahl: record.postleitzahl,
+      ort: record.ort,
+      parteimitglied: record.parteimitglied,
+      zustieg: record.zustieg,
+      essenspraeferenz: record.essenspraeferenzen,
+      status: record.status,
+      statusTeilnahme: record.status_teilnahme,
+      telefonnummer: record.telefonnummer,
+      geburtsort: record.geburtsort,
+      themen: record.themen,
+      teilnahme5J: record.teilnahme_5j,
+      einzelzimmer: record.einzelzimmer,
+      created: record.created_at,
+    })) || [];
+
+    return NextResponse.json({ applications });
+  } catch (error) {
+    console.error('[API /bpa-anmeldungen GET] Supabase Error:', error);
     return NextResponse.json({ error: 'Failed to fetch applications' }, { status: 500 });
   }
 } 

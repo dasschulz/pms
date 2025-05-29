@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 import { getToken } from 'next-auth/jwt';
 
 export async function GET(req: NextRequest) {
   console.log('TaskManager API: Starting GET request');
   
-  if (!process.env.AIRTABLE_PAT) {
-    console.error('TaskManager API: AIRTABLE_PAT not configured');
-    return NextResponse.json({ error: 'Airtable configuration missing' }, { status: 500 });
-  }
-  if (!process.env.AIRTABLE_BASE_ID) {
-    console.error('TaskManager API: AIRTABLE_BASE_ID not configured');
-    return NextResponse.json({ error: 'Airtable base ID missing' }, { status: 500 });
-  }
-
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   // console.log('TaskManager API: Token check:', !!token, !!token?.id);
 
@@ -22,340 +13,222 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = token.id as string; // This is the numeric UserID from your Users table (e.g., "1")
-  // console.log('TaskManager API: User ID (from token, numeric):', userId);
+  const userId = token.id as string; // This is now the Supabase UUID
+  console.log('TaskManager API: Fetching tasks for userId:', userId);
 
   try {
-    // We don't need to fetch userAirtableId if filtering by numeric userId directly in TaskManager
-    // const userRecords = await base('Users').select({ filterByFormula: `{UserID} = ${userId}`, maxRecords: 1 }).firstPage();
-    // if (userRecords.length === 0) {
-    //   console.log('TaskManager API: User not found in Airtable Users table');
-    //   return NextResponse.json({ error: 'User not found in database' }, { status: 404 });
-    // }
-    // const userAirtableId = userRecords[0].id;
-    // console.log('TaskManager API: User Airtable ID (for filtering tasks):', userAirtableId);
+    // Fetch tasks from Supabase
+    const { data: records, error } = await supabase
+      .from('task_manager')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-    // console.log('TaskManager API: Fetching tasks from TaskManager table');
-    
-    try {
-      const filterFormula = `{fldirhqhpcbGphbdD} = ${userId}`;
-      // console.log('TaskManager API: Using filter formula (lookup field):', filterFormula);
-      
-      let records = await base('TaskManager')
-        .select({
-          filterByFormula: filterFormula,
-          sort: [{ field: ' SortOrder ', direction: 'asc' }],
-        })
-        .all();
-      
-      // console.log('TaskManager API: Records found by Airtable (before mapping):', records.length);
-      
-      const tasks = records.map(record => ({
-        id: record.id,
-        taskId: record.get('Task-ID') as number,
-        name: record.get(' Name ') as string,
-        detailview: record.get(' Detailview ') as string || '',
-        isSubtask: record.get(' IsSubtask ') as boolean || false,
-        parentTaskId: record.get('ParentTaskID') as string[] || null,
-        fälligkeitsdatum: record.get(' Fälligkeitsdatum ') as string || null,
-        nextJob: record.get(' NextJob ') as string || 'Brainstorming',
-        priority: record.get(' Priority ') as string || 'Normal',
-        publishDate: record.get(' PublishDate ') as string || null,
-        sortOrder: record.get(' SortOrder ') as number || 0,
-        createdDate: record.get(' CreatedDate ') as string,
-        modifiedDate: record.get(' ModifiedDate') as string,
-      }));
-
-      // console.log('TaskManager API: Tasks processed and returning to client:', tasks.length);
-      return NextResponse.json({ tasks });
-      
-    } catch (sortError: any) {
-      if (sortError?.error === 'UNKNOWN_FIELD_NAME' && sortError?.message?.includes('SortOrder')) {
-        // console.log('TaskManager API: SortOrder field not found, fetching without sort');
-        const filterFormula = `{fldirhqhpcbGphbdD} = ${userId}`;
-        // console.log('TaskManager API: Using filter formula (no sort, lookup field):', filterFormula);
-        
-        let records = await base('TaskManager')
-          .select({
-            filterByFormula: filterFormula,
-          })
-          .all();
-        
-        // console.log('TaskManager API: Records found by Airtable (no sort, before mapping):', records.length);
-        
-        const tasks = records.map(record => ({
-          id: record.id,
-          taskId: record.get('Task-ID') as number,
-          name: record.get(' Name ') as string,
-          detailview: record.get(' Detailview ') as string || '',
-          isSubtask: record.get(' IsSubtask ') as boolean || false,
-          parentTaskId: record.get('ParentTaskID') as string[] || null,
-          fälligkeitsdatum: record.get(' Fälligkeitsdatum ') as string || null,
-          nextJob: record.get(' NextJob ') as string || 'Brainstorming',
-          priority: record.get(' Priority ') as string || 'Normal',
-          publishDate: record.get(' PublishDate ') as string || null,
-          sortOrder: 0,
-          createdDate: record.get(' CreatedDate ') as string,
-          modifiedDate: record.get(' ModifiedDate') as string,
-        }));
-
-        // console.log('TaskManager API: Tasks processed (no sort) and returning to client:', tasks.length);
-        return NextResponse.json({ tasks });
-      } else {
-        console.error('TaskManager API: Error during task fetch (could be sort or other issue):', sortError);
-        throw sortError;
-      }
+    if (error) {
+      console.error('TaskManager API: Error fetching tasks from Supabase:', error);
+      return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
     }
+
+    console.log('TaskManager API: Found', records?.length || 0, 'tasks');
+
+    // Transform Supabase records to match expected format
+    const tasks = records?.map((record) => ({
+      id: record.id, // Use Supabase UUID for frontend operations
+      supabaseId: record.id, // Include Supabase UUID
+      name: record.name,
+      description: record.description,
+      priority: record.priority,
+      nextJob: record.next_job,
+      deadline: record.deadline,
+      completed: record.completed,
+      userId: record.user_id,
+      createdAt: record.created_at,
+    })) || [];
+
+    return NextResponse.json(tasks);
   } catch (error) {
-    console.error('TaskManager API: General Airtable API Error fetching tasks:', error);
-    if (error instanceof Error) {
-      console.error('TaskManager API: Error message:', error.message);
-      if (error.message.includes('NOT_FOUND')) {
-        return NextResponse.json({ error: 'TaskManager table not found. Please check table name.' }, { status: 500 });
-      }
-      if (error.message.includes('INVALID_PERMISSIONS')) {
-        return NextResponse.json({ error: 'Insufficient permissions for Airtable. Check API key.' }, { status: 500 });
-      }
-      if (error.message.includes('AUTHENTICATION_REQUIRED')) {
-        return NextResponse.json({ error: 'Airtable authentication failed. Check API key.' }, { status: 500 });
-      }
-    }
-    return NextResponse.json({ 
-      error: 'Failed to fetch tasks', 
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('TaskManager API: Error:', error);
+    return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
-  // console.log('TaskManager API: Starting POST request (create task)');
+  console.log('TaskManager API: Starting POST request');
+  
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   if (!token || !token.id) {
-    // console.log('TaskManager API: No valid token for POST request');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = token.id as string;
-  // console.log('TaskManager API: Creating task for user:', userId);
+  const userId = token.id as string; // This is now the Supabase UUID
 
   try {
-    // console.log('TaskManager API: Fetching user from Airtable for task creation');
-    const userRecords = await base('Users')
-      .select({
-        filterByFormula: `{UserID} = ${userId}`,
-        maxRecords: 1,
+    const body = await req.json();
+    const { name, description, priority, nextJob, deadline } = body;
+
+    console.log('TaskManager API: Creating task:', { name, description, priority, nextJob, deadline });
+
+    // Create task in Supabase
+    const { data: newTask, error } = await supabase
+      .from('task_manager')
+      .insert({
+        user_id: userId,
+        name,
+        description: description || null,
+        priority: priority || 'Normal',
+        next_job: nextJob || 'Brainstorming',
+        deadline: deadline || null,
+        completed: false,
       })
-      .firstPage();
+      .select()
+      .single();
 
-    // console.log('TaskManager API: User records found for creation:', userRecords.length);
-
-    if (userRecords.length === 0) {
-      // console.log('TaskManager API: User not found for task creation');
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (error) {
+      console.error('TaskManager API: Error creating task:', error);
+      return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
     }
 
-    const userAirtableId = userRecords[0].id;
-    console.log('TaskManager API: User Airtable ID for creation:', userAirtableId);
-    
-    const requestData = await req.json();
-    // console.log('TaskManager API: Request data for task creation:', requestData);
-    
-    const {
-      name,
-      detailview,
-      isSubtask,
-      parentTaskId,
-      fälligkeitsdatum,
-      nextJob,
-      priority,
-      publishDate,
-      sortOrder
-    } = requestData;
+    console.log('TaskManager API: Task created successfully:', newTask.id);
 
-    const createFields: any = {
-      ' Name ': name,
-      ' UserID ': [userAirtableId],
-      ' NextJob ': nextJob || 'Brainstorming',
-      ' Priority ': priority || 'Normal',
-      ' CreatedDate ': new Date().toISOString().split('T')[0],
-      ' ModifiedDate': new Date().toISOString().split('T')[0],
-      ' SortOrder ': sortOrder || 0,
+    // Transform response to match expected format
+    const task = {
+      id: newTask.auto_id || newTask.id,
+      supabaseId: newTask.id,
+      name: newTask.name,
+      description: newTask.description,
+      priority: newTask.priority,
+      nextJob: newTask.next_job,
+      deadline: newTask.deadline,
+      completed: newTask.completed,
+      userId: newTask.user_id,
+      createdAt: newTask.created_at,
     };
 
-    console.log('TaskManager API: nextJob value:', nextJob, 'type:', typeof nextJob);
-    console.log('TaskManager API: priority value:', priority, 'type:', typeof priority);
-
-    if (detailview) createFields[' Detailview '] = detailview;
-    if (isSubtask) createFields[' IsSubtask '] = isSubtask;
-    if (parentTaskId) {
-      console.log('TaskManager API: parentTaskId received:', parentTaskId, 'type:', typeof parentTaskId, 'isArray:', Array.isArray(parentTaskId));
-      createFields['ParentTaskID'] = Array.isArray(parentTaskId) ? parentTaskId : [parentTaskId];
-    }
-    if (fälligkeitsdatum) createFields[' Fälligkeitsdatum '] = fälligkeitsdatum;
-    if (publishDate) createFields[' PublishDate '] = publishDate;
-
-    console.log('TaskManager API: Creating task with fields (FULL DUMP):', JSON.stringify(createFields, null, 2));
-
-    const record = await base('TaskManager').create([{
-      fields: createFields
-    }]);
-
-    // console.log('TaskManager API: Task created successfully:', record[0].id);
-
-    const newTask = record[0];
-    const responseData = {
-      id: newTask.id,
-      taskId: newTask.get('Task-ID'),
-      name: newTask.get(' Name '),
-      detailview: newTask.get(' Detailview ') || '',
-      isSubtask: newTask.get(' IsSubtask ') || false,
-      parentTaskId: newTask.get('ParentTaskID') || null,
-      fälligkeitsdatum: newTask.get(' Fälligkeitsdatum ') || null,
-      nextJob: newTask.get(' NextJob ') || 'Brainstorming',
-      priority: newTask.get(' Priority ') || 'Normal',
-      publishDate: newTask.get(' PublishDate ') || null,
-      sortOrder: newTask.get(' SortOrder ') || 0,
-      createdDate: newTask.get(' CreatedDate '),
-      modifiedDate: newTask.get(' ModifiedDate'),
-    };
-
-    // console.log('TaskManager API: Returning created task:', responseData);
-    return NextResponse.json(responseData);
+    return NextResponse.json(task);
   } catch (error) {
-    console.error('TaskManager API: Airtable API Error creating task:', error);
-    if (error instanceof Error) {
-      console.error('TaskManager API: Create error message:', error.message);
-      // console.error('TaskManager API: Create error stack:', error.stack);
-      if (error.message.includes('NOT_FOUND')) {
-        return NextResponse.json({ 
-          error: 'TaskManager table not found. Please check table name in Airtable.',
-          details: error.message 
-        }, { status: 500 });
-      }
-      if (error.message.includes('INVALID_PERMISSIONS')) {
-        return NextResponse.json({ 
-          error: 'Insufficient permissions to create task. Please check API key permissions.',
-          details: error.message 
-        }, { status: 500 });
-      }
-      if (error.message.includes('AUTHENTICATION_REQUIRED')) {
-        return NextResponse.json({ 
-          error: 'Airtable authentication failed. Please check API key.',
-          details: error.message 
-        }, { status: 500 });
-      }
-      if (error.message.includes('UNKNOWN_FIELD_NAME')) {
-        return NextResponse.json({ 
-          error: 'Invalid field name in TaskManager table. Please check table schema.',
-          details: error.message 
-        }, { status: 500 });
-      }
-    }
-    return NextResponse.json({ 
-      error: 'Failed to create task', 
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('TaskManager API: Error creating task:', error);
+    return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
   }
 }
 
 export async function PUT(req: NextRequest) {
+  console.log('TaskManager API: Starting PUT request');
+  
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   if (!token || !token.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userId = token.id as string;
+
   try {
-    const requestData = await req.json();
-    const { id, ...updateData } = requestData;
+    const body = await req.json();
+    const { id, name, description, priority, nextJob, deadline, completed } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Task ID is required' }, { status: 400 });
     }
 
-    const updateFields: any = {
-      ' ModifiedDate': new Date().toISOString().split('T')[0],
+    console.log('TaskManager API: Updating task:', id);
+
+    // First check if the task belongs to the user
+    const { data: existingTask, error: fetchError } = await supabase
+      .from('task_manager')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !existingTask) {
+      console.log('TaskManager API: Task not found or access denied:', id);
+      return NextResponse.json({ error: 'Task not found or access denied' }, { status: 404 });
+    }
+
+    // Update the task
+    const updateFields: any = {};
+    if (name !== undefined) updateFields.name = name;
+    if (description !== undefined) updateFields.description = description;
+    if (priority !== undefined) updateFields.priority = priority;
+    if (nextJob !== undefined) updateFields.next_job = nextJob;
+    if (deadline !== undefined) updateFields.deadline = deadline;
+    if (completed !== undefined) updateFields.completed = completed;
+
+    const { data: updatedTask, error: updateError } = await supabase
+      .from('task_manager')
+      .update(updateFields)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('TaskManager API: Error updating task:', updateError);
+      return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
+    }
+
+    console.log('TaskManager API: Task updated successfully:', updatedTask.id);
+
+    // Transform response to match expected format
+    const task = {
+      id: updatedTask.auto_id || updatedTask.id,
+      supabaseId: updatedTask.id,
+      name: updatedTask.name,
+      description: updatedTask.description,
+      priority: updatedTask.priority,
+      nextJob: updatedTask.next_job,
+      deadline: updatedTask.deadline,
+      completed: updatedTask.completed,
+      userId: updatedTask.user_id,
+      createdAt: updatedTask.created_at,
     };
 
-    // Map the update data to Airtable fields
-    if (updateData.name !== undefined) updateFields[' Name '] = updateData.name;
-    if (updateData.detailview !== undefined) updateFields[' Detailview '] = updateData.detailview;
-    if (updateData.isSubtask !== undefined) updateFields[' IsSubtask '] = updateData.isSubtask;
-    if (updateData.parentTaskId !== undefined) {
-      console.log('TaskManager API: UPDATE parentTaskId received:', updateData.parentTaskId, 'type:', typeof updateData.parentTaskId, 'isArray:', Array.isArray(updateData.parentTaskId));
-      if (updateData.parentTaskId === null) {
-        updateFields['ParentTaskID'] = null;
-      } else if (Array.isArray(updateData.parentTaskId)) {
-        updateFields['ParentTaskID'] = updateData.parentTaskId;
-      } else {
-        updateFields['ParentTaskID'] = [updateData.parentTaskId];
-      }
-    }
-    if (updateData.fälligkeitsdatum !== undefined) {
-      console.log('TaskManager API: UPDATE fälligkeitsdatum received:', updateData.fälligkeitsdatum, 'type:', typeof updateData.fälligkeitsdatum);
-      updateFields[' Fälligkeitsdatum '] = updateData.fälligkeitsdatum;
-    }
-    if (updateData.nextJob !== undefined) {
-      console.log('TaskManager API: UPDATE nextJob received:', updateData.nextJob, 'type:', typeof updateData.nextJob);
-      updateFields[' NextJob '] = updateData.nextJob;
-    }
-    if (updateData.priority !== undefined) {
-      console.log('TaskManager API: UPDATE priority received:', updateData.priority, 'type:', typeof updateData.priority);
-      updateFields[' Priority '] = updateData.priority;
-    }
-    if (updateData.publishDate !== undefined) {
-      console.log('TaskManager API: UPDATE publishDate received:', updateData.publishDate, 'type:', typeof updateData.publishDate);
-      updateFields[' PublishDate '] = updateData.publishDate;
-    }
-    if (updateData.sortOrder !== undefined) updateFields[' SortOrder '] = updateData.sortOrder;
-
-    const updatedRecord = await base('TaskManager').update([{
-      id: id,
-      fields: updateFields
-    }]);
-
-    const task = updatedRecord[0];
-    return NextResponse.json({
-      id: task.id,
-      taskId: task.get('Task-ID'),
-      name: task.get(' Name '),
-      detailview: task.get(' Detailview ') || '',
-      isSubtask: task.get(' IsSubtask ') || false,
-      parentTaskId: task.get('ParentTaskID') || null,
-      fälligkeitsdatum: task.get(' Fälligkeitsdatum ') || null,
-      nextJob: task.get(' NextJob ') || 'Brainstorming',
-      priority: task.get(' Priority ') || 'Normal',
-      publishDate: task.get(' PublishDate ') || null,
-      sortOrder: task.get(' SortOrder ') || 0,
-      createdDate: task.get(' CreatedDate '),
-      modifiedDate: task.get(' ModifiedDate'),
-    });
+    return NextResponse.json(task);
   } catch (error) {
-    console.error('Airtable API Error updating task:', error);
+    console.error('TaskManager API: Error updating task:', error);
     return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest) {
+  console.log('TaskManager API: Starting DELETE request');
+  
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   if (!token || !token.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userId = token.id as string;
+
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
+    const url = new URL(req.url);
+    const id = url.searchParams.get('id');
 
     if (!id) {
       return NextResponse.json({ error: 'Task ID is required' }, { status: 400 });
     }
 
-    await base('TaskManager').destroy([id]);
+    console.log('TaskManager API: Deleting task:', id);
+
+    // Delete the task (only if it belongs to the user)
+    const { error } = await supabase
+      .from('task_manager')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('TaskManager API: Error deleting task:', error);
+      return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });
+    }
+
+    console.log('TaskManager API: Task deleted successfully:', id);
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Airtable API Error deleting task:', error);
+    console.error('TaskManager API: Error deleting task:', error);
     return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });
   }
 } 

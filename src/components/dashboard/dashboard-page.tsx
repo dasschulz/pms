@@ -1,51 +1,37 @@
 import { DraggableDashboard } from "./draggable-dashboard";
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { base } from '@/lib/airtable';
 
-async function fetchUserPreferences(userEmail: string) {
+async function fetchUserPreferences(userId: string) {
   try {
-    // First, find the user record by email in Users table
-    const userRecords = await base('Users')
-      .select({
-        filterByFormula: `{Email} = "${userEmail}"`,
-        maxRecords: 1
-      })
-      .firstPage();
+    // Use the migrated user-preferences API endpoint
+    const response = await fetch(`${process.env.NEXTAUTH_URL}/api/user-preferences`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${userId}`, // Pass the user ID for server-side lookup
+        'Content-Type': 'application/json',
+      },
+    });
 
-    if (userRecords.length === 0) {
-      // User not found, return defaults
+    if (!response.ok) {
+      throw new Error('Failed to fetch preferences');
+    }
+
+    const data = await response.json();
+    
+    if (data.success && data.preferences) {
       return {
-        widgetOrder: ['weather', 'trains', 'activity'],
-        activeWidgets: ['weather', 'trains', 'activity'],
-        themePreference: 'system' as const
+        widgetOrder: data.preferences.widget_order || ['weather', 'trains', 'activity'],
+        activeWidgets: data.preferences.active_widgets || ['weather', 'trains', 'activity'],
+        themePreference: data.preferences.theme_preference || 'system'
       };
     }
 
-    const userRecordId = userRecords[0].id;
-
-    // Now find user preferences by linked user record
-    const prefRecords = await base('User-Preferences')
-      .select({
-        filterByFormula: `FIND("${userRecordId}", ARRAYJOIN({Name})) > 0`,
-        maxRecords: 1
-      })
-      .firstPage();
-
-    if (prefRecords.length === 0) {
-      // Return default preferences if none found
-      return {
-        widgetOrder: ['weather', 'trains', 'activity'],
-        activeWidgets: ['weather', 'trains', 'activity'],
-        themePreference: 'system' as const
-      };
-    }
-
-    const record = prefRecords[0];
+    // Return defaults if no preferences found
     return {
-      widgetOrder: JSON.parse(record.get('Widget Order') as string || '["weather", "trains", "activity"]'),
-      activeWidgets: JSON.parse(record.get('Active Widgets') as string || '["weather", "trains", "activity"]'),
-      themePreference: (record.get('Theme Preference') as 'light' | 'dark' | 'system') || 'system'
+      widgetOrder: ['weather', 'trains', 'activity'],
+      activeWidgets: ['weather', 'trains', 'activity'],
+      themePreference: 'system' as const
     };
 
   } catch (error) {
@@ -66,8 +52,8 @@ export async function DashboardPage() {
 
   // Fetch user preferences if authenticated
   let preferences = undefined;
-  if (session?.user?.email) {
-    preferences = await fetchUserPreferences(session.user.email);
+  if (session?.user?.id) {
+    preferences = await fetchUserPreferences(session.user.id);
   }
 
   return (

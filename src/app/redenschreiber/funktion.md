@@ -14,7 +14,7 @@ Diese Seite unterstützt Abgeordnete und ihre Mitarbeiter beim Verfassen, Übera
 
 ## Integrationen
 
-- **Airtable**: Speicherung von Redenentwürfen, Metadaten, Status und Feedback.
+- **Supabase**: Speicherung von Redenentwürfen, Metadaten, Status und Feedback.
 - **Meine Reden (`/meine-reden`)**: Enge Verknüpfung zur Archivierung und Verwaltung der fertigen Reden.
 - **Dokumentensuche (`/dokumentensuche`)**: Zur Recherche von Hintergrundinformationen.
 - **Cloud-Speicher**: Für die Ablage von umfangreichen Recherchematerialien.

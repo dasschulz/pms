@@ -1,26 +1,29 @@
 # Funktionsweise Referentenpool
 
-Diese Seite dient der Verwaltung eines Pools von Referenten, Experten und Sachverständigen, die für Veranstaltungen, Anhörungen oder Beratungen kontaktiert werden können.
+Diese Seite dient der Verwaltung und dem Zugriff auf eine Datenbank von Fachexperten und Referenten für verschiedene politische Themenbereiche.
 
 ## Kernfunktionen
 
-- **Profilverwaltung**: Erfassung und Pflege von detaillierten Profilen der Referenten (Name, Fachgebiete, Publikationen, Kontaktdaten, Verfügbarkeit, Honorarvorstellungen etc.).
-- **Thematische Suche**: Ermöglicht die Suche nach Referenten basierend auf Fachgebieten, Schlagworten oder spezifischen Kompetenzen.
-- **Bewertungs-/Feedbacksystem**: Möglichkeit für interne Nutzer, Feedback zu bisherigen Einsätzen von Referenten zu geben.
-- **Verfügbarkeitskalender**: Optionale Angabe und Einsicht in die Verfügbarkeit von Referenten.
-- **Anfrage-Management**: System zur Verwaltung von Anfragen an Referenten und deren Zusagen/Absagen.
+- **Expertensuche**: Suche nach Referenten basierend auf Fachgebieten, Standort oder anderen Kriterien.
+- **Detailprofile**: Anzeige umfassender Informationen zu jedem Experten (Fachgebiete, Qualifikationen, Kontaktdaten).
+- **Kontaktverwaltung**: Speicherung und Verwaltung der Kontaktinformationen.
+- **Verfügbarkeitsstatus**: Informationen über die aktuelle Verfügbarkeit der Referenten.
+- **Bewertungs- und Feedback-System**: Möglichkeit, Erfahrungen mit Referenten zu dokumentieren.
+- **Export von Kontaktlisten**: Erstellen und Exportieren von themenspezifischen Kontaktlisten.
 
 ## Integrationen
 
-- **Airtable**: Speicherung der Referentendatenbank und zugehöriger Informationen.
-- **Externe Datenbanken/Netzwerke**: Mögliche Anbindung an wissenschaftliche Datenbanken oder Expertennetzwerke zur Identifizierung potenzieller Referenten.
-- **Veranstaltungsmanagement-Tools**: Anbindung an Tools zur Planung und Durchführung von Veranstaltungen.
+- **Supabase**: Speicherung der Referentendatenbank und zugehöriger Informationen.
+- **E-Mail-System**: Direkte Kontaktaufnahme mit Referenten über die Plattform.
+- **Kalendersystem**: Mögliche Integration für Terminvereinbarungen.
+- **CRM-System**: Anbindung an ein übergeordnetes Customer Relationship Management System.
 
 ## Offene To-Dos und Implementierungsideen
 
-- Definition der detaillierten Profilfelder für Referenten.
-- Entwicklung eines robusten Such- und Filtersystems.
-- Implementierung des internen Feedback- und Bewertungssystems.
-- Aufbau des Anfrage-Management-Workflows, inklusive Benachrichtigungen.
-- Klärung datenschutzrechtlicher Aspekte bei der Speicherung und Verarbeitung von Referentendaten.
-- Funktion zum Vorschlagen neuer Referenten durch Nutzer. 
+- Aufbau einer umfassenden und aktuellen Referentendatenbank.
+- Implementierung fortgeschrittener Suchfunktionen und Filter.
+- Entwicklung des Bewertungs- und Feedback-Systems.
+- Integration von Kalender- und Terminvereinbarungsfunktionen.
+- Automatisierte Benachrichtigungen bei neuen passenden Referenten.
+- Export- und Druckfunktionen für Kontaktlisten.
+- Datenschutzkonforme Verwaltung der Kontaktdaten. 

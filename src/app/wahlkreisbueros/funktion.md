@@ -12,7 +12,7 @@ Diese Seite ermöglicht Abgeordneten und deren Teams die Verwaltung der Informat
 
 ## Integrationen
 
-- **Airtable**: Direkte Bearbeitung der in Airtable gespeicherten Daten des eigenen Wahlkreisbüros.
+- **Supabase**: Direkte Bearbeitung der in Supabase gespeicherten Daten des eigenen Wahlkreisbüros.
 - **Website des Abgeordneten**: Mögliche Synchronisation von Terminen und Nachrichten mit der persönlichen Webseite des MdB.
 - **Kalendersysteme**: Export von Terminen in gängige Kalenderformate.
 

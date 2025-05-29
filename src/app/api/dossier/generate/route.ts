@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -392,17 +392,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
     }
 
-    // Get user's Airtable record ID and UserID
-    const userRecords = await base('Users')
-      .select({ filterByFormula: `{UserID} = '${session.user.id}'`, maxRecords: 1 })
-      .firstPage();
-    
-    if (userRecords.length === 0) {
+    const userId = session.user.id; // Supabase UUID
+    console.log('Dossier Generate: Processing for user:', userId);
+
+    // Verify user exists in Supabase
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id, name, email')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userRecord) {
+      console.log('Dossier Generate: User not found:', userId, userError?.message);
       return NextResponse.json({ error: 'Benutzer nicht gefunden' }, { status: 404 });
     }
-    
-    const userAirtableId = userRecords[0].id;
-    const userAirtableUserID = userRecords[0].fields.UserID; // Get the actual UserID number
 
     // Use Perplexity Sonar Pro API for dossier generation
     const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
@@ -1011,22 +1014,21 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
       throw new Error(`PDF save failed: ${errorMessage}`);
     }
 
-    // Save to Airtable with proper error handling
+    // Save to Supabase with proper error handling
     try {
-      await base('tblEnUsrZekSFiOUx').create([
-        {
-          fields: {
-            'fldKC3zwRAgLUaWjv': session.user.email, // User-ID field (collaborator - use email string)
-            'fldzzro62bWdYNPbA': politicianName, // Gegner field
-            'fldEuC8DXovmJHkPa': dossierContent, // Notes field (full content)
-            'fldhzIEIMtrdXs0fz': new Date().toISOString().split('T')[0] // Date field
-          },
-        },
-      ]);
-      console.log('Successfully saved dossier record to Feinddossier table');
-    } catch (airtableError) {
-      console.error('Failed to save to Airtable:', airtableError);
-      // Continue even if Airtable save fails - don't block PDF generation
+      await supabase
+        .from('feinddossier')
+        .insert([
+          {
+            user_id: userId,
+            gegner: politicianName,
+            notes: dossierContent,
+          }
+        ]);
+      console.log('Successfully saved dossier record to Supabase');
+    } catch (supabaseError) {
+      console.error('Failed to save to Supabase:', supabaseError);
+      // Continue even if Supabase save fails - don't block PDF generation
     }
 
     return NextResponse.json({
@@ -1059,9 +1061,9 @@ Ich brauche Kritikpunkte, Skandale, Angriffspunkte und rhetorische Kniffe, um ih
           details: process.env.NODE_ENV === 'development' ? error.message : undefined
         }, { status: 500 });
       }
-      if (error.message.includes('Airtable')) {
-        // Don't fail the whole request for Airtable issues, just log it
-        console.warn('Airtable error (non-blocking):', error.message);
+      if (error.message.includes('Supabase')) {
+        // Don't fail the whole request for Supabase issues, just log it
+        console.warn('Supabase error (non-blocking):', error.message);
       }
     }
     

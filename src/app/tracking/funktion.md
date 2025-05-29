@@ -13,7 +13,7 @@ Diese Seite dient der Erfassung, Analyse und Visualisierung von verschiedenen Tr
 
 ## Integrationen
 
-- **Airtable**: Mögliche Speicherung von aggregierten Daten, Zielen oder Konfigurationen für das Tracking.
+- **Supabase**: Mögliche Speicherung von aggregierten Daten, Zielen oder Konfigurationen für das Tracking.
 - **Google Analytics**: Direkte Anbindung zur Erfassung von Website-Traffic-Daten.
 - **Social Media Plattform APIs** (Facebook Insights, Twitter Analytics, Instagram Insights, YouTube Analytics etc.): Zur Erfassung von Performance-Daten der Social-Media-Kanäle.
 - **Newsletter-Tools**: Anbindung an Newsletter-Systeme zur Erfassung von Öffnungs- und Klickraten.

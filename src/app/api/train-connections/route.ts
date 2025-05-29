@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 import { getToken } from 'next-auth/jwt';
 import { createClient } from 'db-vendo-client';
 import { profile as dbnavProfile } from 'db-vendo-client/p/dbnav/index.js';
@@ -114,27 +114,40 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = token.id as string;
+  const userId = token.id as string; // Supabase UUID
+  
+  // Validate UUID format to catch old Airtable IDs
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(userId)) {
+    console.error('Train Connections: Invalid user ID format (not UUID):', userId);
+    return NextResponse.json({ 
+      error: 'Invalid user ID format', 
+      message: 'Please re-login to refresh your session',
+      userId: userId,
+      expectedFormat: 'UUID'
+    }, { status: 400 });
+  }
+  
   const { searchParams } = new URL(req.url);
   const isDebug = searchParams.get('debug') === 'true';
   const forceRefresh = searchParams.get('refresh') === 'true';
 
   try {
-    // First, get the user's Heimatbahnhof from Airtable
-    const records = await base('Users')
-      .select({
-        filterByFormula: `{UserID} = '${userId}'`,
-        fields: ['Heimatbahnhof', 'Name'],
-        maxRecords: 1,
-      })
-      .firstPage();
+    // Get the user's Heimatbahnhof from Supabase
+    console.log('Train Connections: Looking up user heimatbahnhof for:', userId);
+    
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id, name, heimatbahnhof')
+      .eq('id', userId)
+      .single();
 
-    if (records.length === 0) {
+    if (userError || !userRecord) {
+      console.log('Train Connections: User not found:', userId, userError?.message);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const userRecord = records[0];
-    const heimatbahnhof = userRecord.get('Heimatbahnhof') as string | undefined;
+    const heimatbahnhof = userRecord.heimatbahnhof;
     
     if (!heimatbahnhof) {
       return NextResponse.json({ 
@@ -142,6 +155,8 @@ export async function GET(req: NextRequest) {
         message: 'Bitte konfiguriere deinen Heimatbahnhof in den Einstellungen' 
       }, { status: 404 });
     }
+
+    console.log('Train Connections: Found heimatbahnhof:', heimatbahnhof);
 
     // If debug mode, just return the station info
     if (isDebug) {

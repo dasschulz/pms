@@ -224,7 +224,7 @@ export default function BpaFahrtenPage() {
       await response.json(); 
       toast.success("BPA-Fahrt erfolgreich erstellt!");
       setIsCreateDialogOpen(false);
-      // Add small delay to ensure Airtable has processed the new record
+      // Add small delay to ensure Supabase has processed the new record
       setTimeout(() => {
         fetchFahrten(); 
       }, 500);
@@ -313,7 +313,7 @@ export default function BpaFahrtenPage() {
       setIsEditDialogOpen(false);
       setEditingFahrtData(null);
       setCurrentEditingFahrtId(null);
-      // Add small delay to ensure Airtable has processed the updated record
+      // Add small delay to ensure Supabase has processed the updated record
       setTimeout(() => {
         fetchFahrten();
       }, 500);

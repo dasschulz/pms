@@ -26,7 +26,7 @@ interface BpaFahrt {
   beschreibung?: string;
   zustaiegsorteConfig?: string;
   aktiv?: boolean;
-  // Potentially other fields from your Airtable schema if needed for display
+  // Other fields from the Supabase schema as needed for display
 }
 
 type TeilnahmeStatus = 'Angefragt' | 'Bestätigt' | 'Abgesagt' | 'Nachrücker';

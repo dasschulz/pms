@@ -1,27 +1,25 @@
-# Funktionsweise BPA-Formular (Anmeldung)
+# Funktionsweise BPA-Formular (via Nachname)
 
-Diese Seite stellt spezifische Formulare zur Anmeldung von Teilnehmern für BPA-finanzierte Informationsfahrten bereit. Die Formulare sind oft personalisiert oder spezifisch für den einladenden Abgeordneten (erkennbar am `[lastName]` im Pfad).
+Diese Seite stellt ein Anmeldeformular für spezifische BPA-Fahrten (Bundespresseamt-Informationsfahrten) bereit. Der Zugriff erfolgt über den Nachnamen des jeweiligen Abgeordneten (`[lastName]` im Pfad).
 
 ## Kernfunktionen
 
-- **Dynamische Formulargenerierung**: Anzeige des korrekten Anmeldeformulars basierend auf der jeweiligen BPA-Fahrt und/oder dem einladenden Abgeordneten.
-- **Datenerfassung**: Sichere Erfassung der notwendigen Teilnehmerdaten (Name, Adresse, Geburtsdatum, Kontaktdaten, ggf. spezielle Anforderungen wie Diätwünsche oder Barrierefreiheit).
-- **Datenschutzhinweise**: Klare Darstellung der Datenschutzbestimmungen und Einholung der notwendigen Einwilligungen.
-- **Validierung**: Prüfung der eingegebenen Daten auf Vollständigkeit und Plausibilität.
-- **Bestätigungsnachricht**: Anzeige einer Bestätigung nach erfolgreicher Übermittlung der Daten.
-- **Datenübermittlung**: Sichere Weiterleitung der Anmeldedaten an die zuständige Stelle (z.B. an das BPA-Fahrten Management oder direkt in eine Airtable-Datenbank).
+- **Auswahl verfügbarer Fahrten**: Anzeige der für Anmeldungen offenen BPA-Fahrten des jeweiligen Abgeordneten.
+- **Teilnehmerdatenerfassung**: Erfassung der Daten der sich anmeldenden Person (Personalien, Kontakt, ggf. spezielle Anforderungen).
+- **Kapazitätsprüfung**: Überprüfung der Verfügbarkeit von Plätzen auf der gewählten Fahrt.
+- **Bestätigung**: Nach erfolgreicher Anmeldung wird eine Bestätigung gezeigt (und ggf. eine Bestätigungs-E-Mail versendet).
+- **Weiterleitung der Daten**: Die Anmeldung wird an das interne BPA-Fahrten Management oder direkt in eine Supabase-Datenbank übertragen.
 
 ## Integrationen
 
-- **Airtable**: Speicherung der über das Formular erfassten Teilnehmerdaten, oft in Verknüpfung mit einer spezifischen BPA-Fahrt.
-- **BPA-Fahrten Management**: Enge Kopplung mit `/bpa-fahrten` zur Zuordnung der Anmeldungen zu konkreten Fahrten.
-- **E-Mail-Benachrichtigung**: Optionale automatische Benachrichtigung an den Teilnehmer und/oder den Organisator nach erfolgreicher Anmeldung.
+- **Supabase**: Speicherung der über das Formular erfassten Teilnehmerdaten, oft in Verknüpfung mit einer spezifischen BPA-Fahrt.
+- **BPA-Fahrten Management (`/bpa-fahrten`)**: Enge Kopplung zur Verwaltung der BPA-Fahrten und deren Anmeldungen.
+- **E-Mail-Versanddienst**: Für den Versand von Bestätigungs-E-Mails.
 
 ## Offene To-Dos und Implementierungsideen
 
-- Implementierung der Logik zur dynamischen Auswahl und Anzeige des korrekten Formulars basierend auf `[lastName]` oder einer Fahrt-ID.
-- Entwicklung der serverseitigen Validierungs- und Speicherlogik.
-- Sicherstellung der Einhaltung aller Datenschutzanforderungen (DSGVO).
-- Implementierung eines Systems zur Verwaltung von Wartelisten, falls die Teilnehmerzahl begrenzt ist.
-- Möglichkeit für Teilnehmer, ihre Anmeldung zu einem späteren Zeitpunkt zu bearbeiten oder zu stornieren (mit entsprechenden Sicherheitsmaßnahmen).
-- Erstellung von individualisierbaren Formularvorlagen. 
+- Implementierung der Logik zur Zuordnung des `[lastName]` zu einem spezifischen Abgeordneten.
+- Entwicklung der serverseitigen Anmeldungsverarbeitung.
+- Kapazitätsverwaltung und Wartelistensystem.
+- Automatische Bestätigungs-E-Mails und Erinnerungen vor der Fahrt.
+- Anbindung an `/api/tour-form/submit` oder einen speziellen BPA-Endpunkt für die Datenverarbeitung. 

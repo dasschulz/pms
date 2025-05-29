@@ -2,21 +2,33 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { ThreeDMarquee } from '@/components/ui/3d-marquee';
 import { LoginModal } from '@/components/ui/login-modal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function AnmeldenPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  
+  const isReset = searchParams.get('reset') === 'true';
+  const authError = searchParams.get('error');
 
   useEffect(() => {
     if (status === 'authenticated') {
       router.push('/');
     }
   }, [status, router]);
+
+  // Auto-open login modal if there's an error or reset parameter
+  useEffect(() => {
+    if (isReset || authError) {
+      setIsLoginModalOpen(true);
+    }
+  }, [isReset, authError]);
 
   const images = [
     "/images/anmelden/01.jpg",
@@ -72,6 +84,35 @@ export default function AnmeldenPage() {
         Deine zentrale Anlaufstelle für politische Arbeit und Kommunikation.
         Nutze unsere professionellen Tools für deinen politischen Alltag.
       </p>
+
+      {/* Authentication Issue Alert */}
+      {(isReset || authError) && (
+        <div className="relative z-20 mx-auto max-w-lg mb-6">
+          <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+            <AlertDescription>
+              {isReset ? (
+                <div className="text-center space-y-2">
+                  <p className="font-semibold text-blue-800 dark:text-blue-200">
+                    ✅ Authentication Reset Complete
+                  </p>
+                  <p className="text-blue-700 dark:text-blue-300 text-sm">
+                    Your session has been cleared. Please log in again with your credentials.
+                  </p>
+                </div>
+              ) : authError ? (
+                <div className="text-center space-y-2">
+                  <p className="font-semibold text-orange-800 dark:text-orange-200">
+                    🔑 Authentication Required
+                  </p>
+                  <p className="text-orange-700 dark:text-orange-300 text-sm">
+                    Please log in to continue. If you were having issues, they should now be resolved.
+                  </p>
+                </div>
+              ) : null}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
 
       <div className="relative z-20 flex flex-wrap items-center justify-center gap-4 pt-4">
         <button 

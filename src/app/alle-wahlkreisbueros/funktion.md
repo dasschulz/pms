@@ -11,7 +11,7 @@ Diese Seite bietet eine zentrale Übersicht und Informationen zu allen Wahlkreis
 
 ## Integrationen
 
-- **Airtable**: Speicherung der Daten zu den Wahlkreisbüros (Adressen, Kontaktdaten, Öffnungszeiten, etc.).
+- **Supabase**: Speicherung der Daten zu den Wahlkreisbüros (Adressen, Kontaktdaten, Öffnungszeiten, etc.).
 - **Geocoding-Dienste**: Nutzung von Diensten wie Google Maps oder OpenStreetMap zur Umwandlung von Adressen in Koordinaten für die Kartenansicht.
 - **MdB-Profile**: Verlinkung zu den Profilseiten der jeweiligen Abgeordneten.
 

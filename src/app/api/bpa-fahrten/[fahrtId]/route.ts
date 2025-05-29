@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 
 interface UpdateBpaFahrtBody {
   fahrtDatumVon?: string;
@@ -21,59 +21,50 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ fahr
   if (!token || !token.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const userId = token.id as string;
-
-  const { fahrtId } = await params;
-  if (!fahrtId) {
-    return NextResponse.json({ error: 'Missing fahrtId parameter' }, { status: 400 });
-  }
+  const userId = token.id as string; // This is now the Supabase UUID
 
   try {
-    // Get the user's Airtable record ID for permission check
-    const userRecords = await base('Users')
-      .select({
-        filterByFormula: `{UserID} = '${userId}'`,
-        maxRecords: 1,
-      })
-      .firstPage();
+    const { fahrtId } = await params;
+    console.log('BPA Fahrt Details API: Fetching trip:', fahrtId, 'for user:', userId);
 
-    if (userRecords.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    // Fetch trip from Supabase and verify ownership
+    const { data: fahrtRecord, error } = await supabase
+      .from('bpa_fahrten')
+      .select('*')
+      .eq('id', fahrtId)
+      .eq('user_id', userId) // Ensure user owns this trip
+      .single();
+
+    if (error || !fahrtRecord) {
+      console.log('BPA Fahrt Details API: Trip not found or access denied:', fahrtId, error?.message);
+      return NextResponse.json({ error: 'BPA trip not found or access denied' }, { status: 404 });
     }
 
-    const userAirtableId = userRecords[0].id;
+    console.log('BPA Fahrt Details API: Found trip:', fahrtRecord.id);
 
-    const fahrtRecord = await base('BPA_Fahrten').find(fahrtId);
-    if (!fahrtRecord) {
-      return NextResponse.json({ error: 'BPA Trip not found' }, { status: 404 });
-    }
+    // Transform for frontend
+    const fahrt = {
+      id: fahrtRecord.id,
+      fahrtDatumVon: fahrtRecord.fahrt_datum_von,
+      fahrtDatumBis: fahrtRecord.fahrt_datum_bis,
+      zielort: fahrtRecord.zielort,
+      hotelName: fahrtRecord.hotel_name,
+      hotelAdresse: fahrtRecord.hotel_adresse,
+      kontingentMax: fahrtRecord.kontingent_max,
+      // These calculated fields would need to be computed from bpa_formular table
+      aktuelleAnmeldungen: 0, // TODO: Add count query from bpa_formular
+      bestaetigteAnmeldungen: 0, // TODO: Add count query from bpa_formular
+      statusFahrt: fahrtRecord.status_fahrt,
+      anmeldefrist: fahrtRecord.anmeldefrist,
+      beschreibung: fahrtRecord.beschreibung,
+      zustaiegsorteConfig: fahrtRecord.zustiegsorte_config,
+      aktiv: fahrtRecord.aktiv === true,
+    };
 
-    const linkedMdbUserIds = (fahrtRecord.fields.UserID as string[]) || [];
-    if (!linkedMdbUserIds.includes(userAirtableId)) {
-      return NextResponse.json({ error: 'Forbidden. You do not own this BPA trip.' }, { status: 403 });
-    }
-    
-    const fahrtDetails = {
-        id: fahrtRecord.id,
-        fahrtDatumVon: fahrtRecord.fields.Fahrt_Datum_von,
-        fahrtDatumBis: fahrtRecord.fields.Fahrt_Datum_Bis,
-        zielort: fahrtRecord.fields.Zielort,
-        hotelName: fahrtRecord.fields.Hotel_Name,
-        hotelAdresse: fahrtRecord.fields.Hotel_Adresse,
-        kontingentMax: fahrtRecord.fields.Kontingent_Max,
-        aktuelleAnmeldungen: fahrtRecord.fields.Aktuelle_Anmeldungen,
-        bestaetigteAnmeldungen: fahrtRecord.fields.Bestaetigte_Anmeldungen,
-        statusFahrt: fahrtRecord.fields.Status_Fahrt,
-        anmeldefrist: fahrtRecord.fields.Anmeldefrist,
-        beschreibung: fahrtRecord.fields.Beschreibung,
-        zustaiegsorteConfig: fahrtRecord.fields.Zustiegsorte_Config,
-        aktiv: fahrtRecord.fields.Aktiv === true,
-      };
-
-    return NextResponse.json({ fahrt: fahrtDetails });
+    return NextResponse.json({ fahrt: fahrt });
 
   } catch (error) {
-    console.error(`[API /bpa-fahrten/${fahrtId} GET] Error:`, error);
+    console.error(`[API /bpa-fahrten/${params} GET] Error:`, error);
     return NextResponse.json({ error: 'Failed to fetch BPA trip details' }, { status: 500 });
   }
 }
@@ -83,72 +74,69 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ fahr
   if (!token || !token.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const userId = token.id as string;
-
-  const { fahrtId } = await params;
-  if (!fahrtId) {
-    return NextResponse.json({ error: 'Missing fahrtId parameter' }, { status: 400 });
-  }
+  const userId = token.id as string; // This is now the Supabase UUID
 
   try {
-    // Get the user's Airtable record ID for permission check
-    const userRecords = await base('Users')
-      .select({
-        filterByFormula: `{UserID} = '${userId}'`,
-        maxRecords: 1,
-      })
-      .firstPage();
+    const { fahrtId } = await params;
+    console.log('BPA Fahrt Update API: Updating trip:', fahrtId, 'for user:', userId);
 
-    if (userRecords.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    // First verify that the trip exists and belongs to the user
+    const { data: existingTrip, error: fetchError } = await supabase
+      .from('bpa_fahrten')
+      .select('*')
+      .eq('id', fahrtId)
+      .eq('user_id', userId)
+      .single();
 
-    const userAirtableId = userRecords[0].id;
-
-    const fahrtRecord = await base('BPA_Fahrten').find(fahrtId);
-    if (!fahrtRecord) {
-      return NextResponse.json({ error: 'BPA Trip not found' }, { status: 404 });
-    }
-    
-    const linkedMdbUserIds = (fahrtRecord.fields.UserID as string[]) || [];
-    if (!linkedMdbUserIds.includes(userAirtableId)) {
-      return NextResponse.json({ error: 'Forbidden. You do not own this BPA trip.' }, { status: 403 });
+    if (fetchError || !existingTrip) {
+      console.log('BPA Fahrt Update API: Trip not found or access denied:', fahrtId, fetchError?.message);
+      return NextResponse.json({ error: 'BPA trip not found or access denied' }, { status: 404 });
     }
 
     const body: UpdateBpaFahrtBody = await req.json();
-    const fieldsToUpdate: { [key: string]: any } = {};
 
-    if (body.fahrtDatumVon !== undefined) fieldsToUpdate['Fahrt_Datum_von'] = body.fahrtDatumVon;
-    if (body.fahrtDatumBis !== undefined) fieldsToUpdate['Fahrt_Datum_Bis'] = body.fahrtDatumBis;
-    if (body.zielort !== undefined) fieldsToUpdate['Zielort'] = body.zielort;
-    if (body.hotelName !== undefined) fieldsToUpdate['Hotel_Name'] = body.hotelName;
-    if (body.hotelAdresse !== undefined) fieldsToUpdate['Hotel_Adresse'] = body.hotelAdresse;
-    if (body.kontingentMax !== undefined) fieldsToUpdate['Kontingent_Max'] = body.kontingentMax;
-    if (body.statusFahrt !== undefined) fieldsToUpdate['Status_Fahrt'] = body.statusFahrt;
-    if (body.anmeldefrist !== undefined) fieldsToUpdate['Anmeldefrist'] = body.anmeldefrist;
-    if (body.beschreibung !== undefined) fieldsToUpdate['Beschreibung'] = body.beschreibung;
-    if (body.zustaiegsorteConfig !== undefined) fieldsToUpdate['Zustiegsorte_Config'] = body.zustaiegsorteConfig;
-    if (body.aktiv !== undefined) fieldsToUpdate['Aktiv'] = body.aktiv;
+    // Build update object with only provided fields
+    const updateFields: any = {};
+    if (body.fahrtDatumVon !== undefined) updateFields.fahrt_datum_von = body.fahrtDatumVon;
+    if (body.fahrtDatumBis !== undefined) updateFields.fahrt_datum_bis = body.fahrtDatumBis;
+    if (body.zielort !== undefined) updateFields.zielort = body.zielort;
+    if (body.hotelName !== undefined) updateFields.hotel_name = body.hotelName;
+    if (body.hotelAdresse !== undefined) updateFields.hotel_adresse = body.hotelAdresse;
+    if (body.kontingentMax !== undefined) updateFields.kontingent_max = body.kontingentMax;
+    if (body.statusFahrt !== undefined) updateFields.status_fahrt = body.statusFahrt;
+    if (body.anmeldefrist !== undefined) updateFields.anmeldefrist = body.anmeldefrist;
+    if (body.beschreibung !== undefined) updateFields.beschreibung = body.beschreibung;
+    if (body.zustaiegsorteConfig !== undefined) updateFields.zustiegsorte_config = body.zustaiegsorteConfig;
+    if (body.aktiv !== undefined) updateFields.aktiv = body.aktiv;
 
-    if (Object.keys(fieldsToUpdate).length === 0) {
+    if (Object.keys(updateFields).length === 0) {
       return NextResponse.json({ error: 'No fields to update provided' }, { status: 400 });
     }
 
-    const updatedRecords = await base('BPA_Fahrten').update([
-      {
-        id: fahrtId,
-        fields: fieldsToUpdate,
-      },
-    ]);
+    console.log('BPA Fahrt Update API: Updating fields:', updateFields);
+
+    // Update the trip in Supabase
+    const { error: updateError } = await supabase
+      .from('bpa_fahrten')
+      .update(updateFields)
+      .eq('id', fahrtId)
+      .eq('user_id', userId);
+
+    if (updateError) {
+      console.error('BPA Fahrt Update API: Error updating trip:', updateError);
+      return NextResponse.json({ error: 'Failed to update BPA trip' }, { status: 500 });
+    }
+
+    console.log('BPA Fahrt Update API: Trip updated successfully:', fahrtId);
 
     return NextResponse.json({ 
       success: true, 
       message: 'BPA trip updated successfully', 
-      recordId: updatedRecords[0].id 
+      recordId: fahrtId 
     });
 
   } catch (error) {
-    console.error(`[API /bpa-fahrten/${fahrtId} PUT] Airtable Error:`, error);
+    console.error(`[API /bpa-fahrten/${params} PUT] Supabase Error:`, error);
     return NextResponse.json({ error: 'Failed to update BPA trip' }, { status: 500 });
   }
 } 

@@ -1,70 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const airtableUserId = searchParams.get('airtableUserId'); // Airtable Record ID of the MdB from Users table
+  const userId = searchParams.get('userId'); // Supabase UUID of the MdB from users table
 
-  if (!airtableUserId) {
-    return NextResponse.json({ error: 'Missing airtableUserId parameter' }, { status: 400 });
+  if (!userId) {
+    return NextResponse.json({ error: 'Missing userId parameter' }, { status: 400 });
   }
 
+  console.log('[BPA Public Active Trips] Fetching active trips for user:', userId);
+
   try {
-    // First, get the numeric UserID from the airtableUserId
-    const userRecord = await base('Users').find(airtableUserId);
-    if (!userRecord) {
+    // Verify that the user exists
+    const { data: userRecord, error: userError } = await supabase
+      .from('users')
+      .select('id, name')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userRecord) {
+      console.log('[BPA Public Active Trips] User not found:', userId, userError?.message);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const numericUserId = userRecord.fields.UserID;
-    if (!numericUserId) {
-      return NextResponse.json({ error: 'User has no UserID' }, { status: 400 });
+    console.log('[BPA Public Active Trips] User verified, fetching active trips');
+
+    // Fetch active trips for the user where applications are open
+    const { data: records, error } = await supabase
+      .from('bpa_fahrten')
+      .select('id, fahrt_datum_von, fahrt_datum_bis, anmeldefrist, zielort, beschreibung, status_fahrt, aktiv')
+      .eq('user_id', userId)
+      .eq('status_fahrt', 'Anmeldung offen')
+      .eq('aktiv', true)
+      .order('fahrt_datum_von', { ascending: true });
+
+    if (error) {
+      console.error('[BPA Public Active Trips] Error fetching active trips from Supabase:', error);
+      return NextResponse.json({ error: 'Failed to fetch active BPA trips' }, { status: 500 });
     }
 
-    // Try filtering directly by numeric UserID like touranfragen does
-    let records;
-    try {
-      records = await base('BPA_Fahrten')
-        .select({
-          filterByFormula: `AND({UserID} = ${numericUserId}, {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`,
-          fields: ['Fahrt_Datum_von', 'Fahrt_Datum_Bis', 'Anmeldefrist', 'Zielort', 'Beschreibung', 'Status_Fahrt', 'Aktiv'],
-          sort: [{ field: 'Fahrt_Datum_von', direction: 'asc' }],
-        })
-        .all();
-      
-      console.log('[BPA Public Active Trips] Records found with numeric UserID filter:', records.length);
-    } catch (error) {
-      console.log('[BPA Public Active Trips] Numeric UserID filter failed, trying Airtable record ID approach:', error);
-      
-      // Fallback to the Airtable record ID approach if numeric filter doesn't work
-      records = await base('BPA_Fahrten')
-        .select({
-          filterByFormula: `AND(SEARCH("${airtableUserId}", ARRAYJOIN({UserID})), {Status_Fahrt} = 'Anmeldung offen', {Aktiv} = TRUE())`,
-          fields: ['Fahrt_Datum_von', 'Fahrt_Datum_Bis', 'Anmeldefrist', 'Zielort', 'Beschreibung', 'Status_Fahrt', 'Aktiv'],
-          sort: [{ field: 'Fahrt_Datum_von', direction: 'asc' }],
-        })
-        .all();
-      
-      console.log('[BPA Public Active Trips] Records found with Airtable ID fallback:', records.length);
-    }
+    console.log('[BPA Public Active Trips] Found', records?.length || 0, 'active trips');
 
-    const activeTrips = records.map(record => ({
-      id: record.id,
-      name: `Fahrt nach ${record.fields.Zielort || 'Berlin'} (ab ${record.fields.Fahrt_Datum_von || 'N/A'})`,
-      startDate: record.fields.Fahrt_Datum_von,
-      endDate: record.fields.Fahrt_Datum_Bis,
-      anmeldefrist: record.fields.Anmeldefrist,
-      fahrtDatumVon: record.fields.Fahrt_Datum_von,
-      fahrtDatumBis: record.fields.Fahrt_Datum_Bis,
-      zielort: record.fields.Zielort,
-      beschreibung: record.fields.Beschreibung,
-      aktiv: record.fields.Aktiv === true,
-    }));
+    // Transform Supabase records to match expected frontend format
+    const activeTrips = records?.map(record => ({
+      id: record.id, // Use Supabase UUID
+      name: `Fahrt nach ${record.zielort || 'Berlin'} (ab ${record.fahrt_datum_von || 'N/A'})`,
+      startDate: record.fahrt_datum_von,
+      endDate: record.fahrt_datum_bis,
+      anmeldefrist: record.anmeldefrist,
+      fahrtDatumVon: record.fahrt_datum_von,
+      fahrtDatumBis: record.fahrt_datum_bis,
+      zielort: record.zielort,
+      beschreibung: record.beschreibung,
+      aktiv: record.aktiv === true,
+    })) || [];
 
     return NextResponse.json({ activeTrips });
 
   } catch (error) {
-    console.error('[API /bpa-public/active-trips GET] Airtable Error:', error);
+    console.error('[API /bpa-public/active-trips GET] Supabase Error:', error);
     return NextResponse.json({ error: 'Failed to fetch active BPA trips' }, { status: 500 });
   }
 } 

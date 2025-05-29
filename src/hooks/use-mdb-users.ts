@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 export interface MdBUser {
-  id: number;
-  airtableId: string;
+  id: string;
   name: string;
   email: string;
   profilePictureUrl: string | null;

@@ -1,6 +1,6 @@
 1. Kleine Anfragen generieren
 
-1.1 When input is sent, create airtable records in table "KA-Generator":
+1.1 When input is sent, create Supabase records in table "kleine_anfragen":
 Titel (input from user)
 Beteiligte MdB (input from user)
 Signatur ("Berlin, den $date <br> Heidi Reichinnek, Sören Pellmann und Fraktion")
@@ -56,7 +56,7 @@ Fragenteil | Der Teil des Textes, in dem in Listenform die an die Bundesregierun
 
 2. Generierte Elemente anzeigen
 
-So in order to display the generated KA on the page, we want to create a preview card and a full Kleine Anfrage. All displayed content should be derived from the KA-Generator table. A user should only see KAs associated with their User-ID.
+So in order to display the generated KA on the page, we want to create a preview card and a full Kleine Anfrage. All displayed content should be derived from the kleine_anfragen table. A user should only see KAs associated with their User-ID.
 
 The preview card should contain:
 The top of the card should contain the image from {{Status (from Picture-Records)}}, on that image a status chip containing {{Politikfeld}}. Below: a heading containing {{Titel}}, and in regular text we want  and a "Zur Anfrage" button. Clicking "Zur Anfrage" should open the Kleine Anfrage in a modal. 

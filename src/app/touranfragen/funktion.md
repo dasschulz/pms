@@ -23,76 +23,76 @@ Diese Seite ermöglicht es Abgeordneten (MdBs), Anfragen für Wahlkampftouren od
     - Eine Statusänderung ruft `PATCH /api/touranfragen` auf.
     - Anfragen mit dem Status 'Neu' werden beim ersten Laden automatisch auf 'Eingegangen' gesetzt.
 
-## API-Endpunkte und Airtable-Interaktion:
+## API-Endpunkte und Supabase-Interaktion:
 
 ### 1. `GET /api/touranfragen`
 - **Zweck**: Abrufen aller Touranfragen für den eingeloggten MdB.
-- **Airtable-Tabelle**: `Touranfragen`.
+- **Supabase-Tabelle**: `touranfragen`.
 - **Authentifizierung**: Erfordert angemeldeten MdB.
-- **Filterung**: Filtert Einträge in `Touranfragen` basierend auf der `UserID` des MdB. Versucht erst direkten numerischen Filter, dann Fallback über Airtable Record ID des Users aus der `Users`-Tabelle und `SEARCH` im `UserID`-Linkfeld der `Touranfragen`-Tabelle.
-- **Sortierung**: Nach `Created` (Erstellungsdatum der Anfrage), absteigend.
-- **Datenmapping (Airtable-Felder zu UI-Daten)**:
-    - `id` (Record ID), `Created` (`createdAt`), `Kreisverband`, `Landesverband`, `Kandidat Name`, `Zeitraum Von`, `Zeitraum Bis`, `Themen`, `Video` (Boolean zu 'Ja'/'Nein'), `Ansprechpartner 1 Name`, `Ansprechpartner 1 Phone`, `Ansprechpartner 2 Name`, `Ansprechpartner 2 Phone copy`, `Programmvorschlag` (Boolean zu Text), `Status`.
+- **Filterung**: Filtert Einträge in `touranfragen` basierend auf der `user_id` des MdB unter Verwendung der Supabase UUID aus der Authentifizierungssession.
+- **Sortierung**: Nach `created_at` (Erstellungsdatum der Anfrage), absteigend.
+- **Datenmapping (Supabase-Felder zu UI-Daten)**:
+    - `id` (UUID), `created_at` (`createdAt`), `kreisverband`, `landesverband`, `kandidat_name`, `zeitraum_von`, `zeitraum_bis`, `themen`, `video` (Boolean zu 'Ja'/'Nein'), `ansprechpartner_1_name`, `ansprechpartner_1_phone`, `ansprechpartner_2_name`, `ansprechpartner_2_phone`, `programmvorschlag` (Boolean zu Text), `status`.
 
 ### 2. `PATCH /api/touranfragen`
-- **Zweck**: Aktualisieren des `Status`-Feldes einer spezifischen Touranfrage.
-- **Airtable-Tabelle**: `Touranfragen`.
+- **Zweck**: Aktualisieren des `status`-Feldes einer spezifischen Touranfrage.
+- **Supabase-Tabelle**: `touranfragen`.
 - **Authentifizierung**: Erfordert angemeldeten MdB.
-- **Parameter**: Benötigt `id` (Record ID der Anfrage) und neuen `status`.
-- **Aktion**: Aktualisiert das Feld `Status` für den gegebenen Eintrag.
+- **Parameter**: Benötigt `id` (UUID der Anfrage) und neuen `status`.
+- **Aktion**: Aktualisiert das Feld `status` für den gegebenen Eintrag mit Besitzervalidierung.
 
 ### 3. `POST /api/touranfragen/generate-link`
 - **Zweck**: Generiert einen einmaligen Token und speichert diesen mit der MdB-UserID, um ein öffentliches Formular (`/tour-form/[token]`) für Touranfragen zu ermöglichen.
-- **Airtable-Tabellen**:
-    - `Users`: Zum Abrufen der Airtable Record ID des MdB basierend auf der numerischen `UserID` aus dem Auth-Token.
-    - `Touranfragen_Links`: Zum Speichern des generierten Links/Tokens.
+- **Supabase-Tabellen**:
+    - `users`: Für die Authentifizierungsvalidierung des MdB basierend auf der Supabase UUID aus dem Auth-Token.
+    - `touranfragen_links`: Zum Speichern des generierten Links/Tokens.
 - **Authentifizierung**: Erfordert angemeldeten MdB.
 - **Aktionen**:
-    1. Holt Airtable Record ID des MdB aus `Users`.
+    1. Validiert MdB-Authentifizierung über Supabase UUID aus der Session.
     2. Generiert einen 32-Byte hexadezimalen Token (`crypto.randomBytes`).
-    3. Erstellt einen neuen Eintrag in `Touranfragen_Links` mit:
-        - `UserID` (Link zur Airtable Record ID des MdB in `Users`).
-        - `Token` (der generierte Hex-String).
-        - `Created` (aktuelles Datum YYYY-MM-DD).
-        - `Active` (gesetzt auf `true`).
-    4. Gibt den vollständigen Link (`[Basis-URL]/tour-form/[token]`), den Token und die Record ID des Eintrags in `Touranfragen_Links` zurück.
+    3. Erstellt einen neuen Eintrag in `touranfragen_links` mit:
+        - `user_id` (Supabase UUID des MdB aus `users`).
+        - `token` (der generierte Hex-String).
+        - `created_at` (automatisches Supabase Timestamp).
+        - `active` (gesetzt auf `true`).
+    4. Gibt den vollständigen Link (`[Basis-URL]/tour-form/[token]`), den Token und die UUID des Eintrags in `touranfragen_links` zurück.
 
-## Verwendete Airtable-Tabellen und wichtige Felder:
+## Verwendete Supabase-Tabellen und wichtige Felder:
 
-- **`Touranfragen`**:
-    - `UserID` (Link zur `Users`-Tabelle, kann mehrere Einträge haben)
-    - `Created` (Airtable Erstellungsdatum)
-    - `Kreisverband`, `Landesverband`, `Kandidat Name`
-    - `Zeitraum Von`, `Zeitraum Bis`
-    - `Themen`
-    - `Video` (Checkbox)
-    - `Ansprechpartner 1 Name`, `Ansprechpartner 1 Phone`
-    - `Ansprechpartner 2 Name`, `Ansprechpartner 2 Phone copy`
-    - `Programmvorschlag` (Checkbox)
-    - `Status` (Single Select: 'Neu', 'Eingegangen', 'Terminiert', 'Abgeschlossen')
-- **`Users`**:
-    - `UserID` (Numerische ID aus dem Authentifizierungssystem)
-    - *Airtable Record ID* (implizit für Verknüpfungen genutzt)
-- **`Touranfragen_Links`**:
-    - `UserID` (Link zur `Users`-Tabelle)
-    - `Token` (Text, der generierte einmalige Token)
-    - `Created` (Datum)
-    - `Active` (Checkbox)
+- **`touranfragen`**:
+    - `user_id` (UUID Foreign Key zur `users`-Tabelle)
+    - `created_at` (Supabase Timestamp)
+    - `kreisverband`, `landesverband`, `kandidat_name`
+    - `zeitraum_von`, `zeitraum_bis`
+    - `themen`
+    - `video` (Boolean)
+    - `ansprechpartner_1_name`, `ansprechpartner_1_phone`
+    - `ansprechpartner_2_name`, `ansprechpartner_2_phone`
+    - `programmvorschlag` (Boolean)
+    - `status` (Text mit Enum-Validierung: 'Neu', 'Eingegangen', 'Terminiert', 'Abgeschlossen')
+- **`users`**:
+    - `id` (Supabase UUID - Primärschlüssel)
+    - Weitere Benutzerfelder für Authentifizierung und Profildaten
+- **`touranfragen_links`**:
+    - `user_id` (UUID Foreign Key zur `users`-Tabelle)
+    - `token` (Text, der generierte einmalige Token)
+    - `created_at` (Supabase Timestamp)
+    - `active` (Boolean)
 
 ## Datenfluss für neue Anfragen (vermutet):
-1. MdB generiert Link über `/touranfragen` (`POST /api/touranfragen/generate-link`). Eintrag in `Touranfragen_Links` entsteht.
+1. MdB generiert Link über `/touranfragen` (`POST /api/touranfragen/generate-link`). Eintrag in `touranfragen_links` entsteht.
 2. MdB teilt Link (`.../tour-form/[token]`).
 3. Externe Person füllt Formular auf `/tour-form/[token]` aus.
-4. Das Absenden dieses Formulars erstellt einen neuen Eintrag in der `Touranfragen`-Tabelle, der mit dem MdB (dessen `UserID` im `Touranfragen_Links`-Eintrag gespeichert ist) verknüpft wird.
+4. Das Absenden dieses Formulars erstellt einen neuen Eintrag in der `touranfragen`-Tabelle, der mit dem MdB (dessen `user_id` im `touranfragen_links`-Eintrag gespeichert ist) verknüpft wird.
 5. Die neue Anfrage erscheint dann auf der `/touranfragen`-Seite des MdB.
 
 ## Offene To-Dos / Beobachtungen:
-- Die genaue Funktionsweise und Airtable-Interaktion der `/tour-form/[token]`-Seite und des zugehörigen Submit-API-Endpunkts (`/api/tour-form/submit`) ist hier nicht analysiert, aber wesentlich für den Gesamtprozess.
-- Die Berechtigungsprüfung beim `PATCH`-Aufruf für Statusänderungen ist implizit (Nutzer sieht nur eigene Anfragen), könnte aber serverseitig expliziter gestaltet werden.
+- Die genaue Funktionsweise und Supabase-Interaktion der `/tour-form/[token]`-Seite und des zugehörigen Submit-API-Endpunkts (`/api/tour-form/submit`) ist hier nicht analysiert, aber wesentlich für den Gesamtprozess.
+- Die Berechtigungsprüfung beim `PATCH`-Aufruf für Statusänderungen erfolgt über Row Level Security (RLS) in Supabase und explizite Besitzervalidierung.
 
 ## Integrationen
 
-- **Airtable**: Speicherung aller Touranfragen, deren Status, Teilnehmerdaten und zugehöriger Kommunikation.
+- **Supabase**: Speicherung aller Touranfragen, deren Status, Teilnehmerdaten und zugehöriger Kommunikation in PostgreSQL-Datenbank.
 - **Tour-Formular (`/tour-form/[token]`)**: Empfang der finalen Anmeldedaten von Teilnehmern.
 - **Kalendersystem**: Blockierung von Terminen und Eintragung bestätigter Touren.
 - **E-Mail-System**: Für die Kommunikation mit Anfragestellern.

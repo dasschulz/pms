@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -9,29 +9,28 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Missing lastName parameter' }, { status: 400 });
   }
 
+  console.log('[BPA Public MdB Details] Searching for MdB with lastName:', lastName);
+
   try {
-    // Airtable field names from airtable_schema.md for Users table:
-    // Name: fldn4FHkZ4olSJPaB
-    // UserID (autoNumber): fldkoW4SDfO07oggz
-    // Wahlkreis: fldFJKZ7JTaH2vS10
+    // Search for users where the name contains the lastName (case-insensitive)
+    // Using ilike for case-insensitive pattern matching
+    const { data: records, error } = await supabase
+      .from('users')
+      .select('id, name, wahlkreis')
+      .ilike('name', `%${lastName}%`)
+      .limit(5); // Limit in case of multiple matches, frontend might need to handle this
 
-    // We assume lastName is part of the 'Name' field. 
-    // A more robust solution might involve a dedicated 'LastName' field or more complex searching.
-    const records = await base('Users')
-      .select({
-        // Formula to find records where the 'Name' field contains the lastName.
-        // Using FIND instead of CONTAINS (which doesn't exist in Airtable).
-        // FIND returns the position if found, or an error if not found.
-        // We use FIND(LOWER(lastName), LOWER(Name)) > 0 to check if the lastName exists in the Name field.
-        filterByFormula: `FIND(LOWER("${lastName}"), LOWER({Name})) > 0`,
-        fields: ['UserID', 'Name', 'Wahlkreis'], // Specify fields to retrieve
-        maxRecords: 5, // Limit in case of multiple matches, frontend might need to handle this
-      })
-      .firstPage();
+    if (error) {
+      console.error('[BPA Public MdB Details] Error searching for MdB:', error);
+      return NextResponse.json({ error: 'Failed to fetch MdB details' }, { status: 500 });
+    }
 
-    if (records.length === 0) {
+    if (!records || records.length === 0) {
+      console.log('[BPA Public MdB Details] No MdB found with lastName:', lastName);
       return NextResponse.json({ error: 'MdB not found' }, { status: 404 });
     }
+
+    console.log('[BPA Public MdB Details] Found', records.length, 'MdB(s) matching lastName:', lastName);
 
     // If multiple MdBs are found with a similar last name, this will return the first one.
     // The public form page might need a way to handle disambiguation if this is a common issue,
@@ -40,16 +39,14 @@ export async function GET(req: NextRequest) {
     const mdb = records[0];
 
     return NextResponse.json({
-      // Important: We need the Airtable Record ID for linking in other tables,
-      // and the numeric UserID for other internal uses.
-      airtableRecordId: mdb.id, // This is the Airtable record ID
-      userIdNumeric: mdb.fields.UserID, // This is our numeric UserID
-      name: mdb.fields.Name,
-      wahlkreis: mdb.fields.Wahlkreis,
+      // Important: We use the Supabase UUID for linking in other tables
+      id: mdb.id, // This is the Supabase UUID
+      name: mdb.name,
+      wahlkreis: mdb.wahlkreis,
     });
 
   } catch (error) {
-    console.error('[API bpa-public/mdb-details] Airtable Error:', error);
+    console.error('[API bpa-public/mdb-details] Supabase Error:', error);
     return NextResponse.json({ error: 'Failed to fetch MdB details' }, { status: 500 });
   }
 } 

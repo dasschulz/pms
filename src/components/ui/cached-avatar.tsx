@@ -56,14 +56,13 @@ export function CachedAvatar({
       return
     }
 
-    // Check if we have a cached version that's still valid (6 hours for Airtable URLs)
+    // Check if we have a cached version that's still valid (24 hours)
     if (cacheKey) {
       const cached = localStorage.getItem(cacheKey)
       if (cached) {
         try {
           const { dataUrl, timestamp } = JSON.parse(cached)
-          const isAirtableUrl = src.includes('airtableusercontent.com')
-          const cacheTime = isAirtableUrl ? 6 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000 // 6h for Airtable, 24h for others
+          const cacheTime = 24 * 60 * 60 * 1000 // 24 hours
           const isExpired = Date.now() - timestamp > cacheTime
           
           if (!isExpired && dataUrl) {
@@ -84,47 +83,31 @@ export function CachedAvatar({
     setHasError(false)
     
     const img = new Image()
-    // Don't set crossOrigin for Airtable URLs to avoid CORS issues
-    const isAirtableUrl = src.includes('airtableusercontent.com')
-    if (!isAirtableUrl) {
-      img.crossOrigin = "anonymous"
-    }
+    img.crossOrigin = "anonymous"
     
     img.onload = () => {
       try {
-        // Only try canvas conversion for non-Airtable URLs or if CORS is supported
-        if (!isAirtableUrl) {
-          // Create canvas to convert to data URL
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
+        // Create canvas to convert to data URL
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        
+        if (ctx) {
+          canvas.width = img.width
+          canvas.height = img.height
+          ctx.drawImage(img, 0, 0)
           
-          if (ctx) {
-            canvas.width = img.width
-            canvas.height = img.height
-            ctx.drawImage(img, 0, 0)
-            
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
-            
-            // Cache the image
-            if (cacheKey && dataUrl.length < 1024 * 1024) { // Only cache if < 1MB
-              localStorage.setItem(cacheKey, JSON.stringify({
-                dataUrl,
-                timestamp: Date.now()
-              }))
-            }
-            
-            setImageSrc(dataUrl)
-          } else {
-            setImageSrc(src)
-          }
-        } else {
-          // For Airtable URLs, just use the original URL and cache a reference
-          if (cacheKey) {
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+          
+          // Cache the image
+          if (cacheKey && dataUrl.length < 1024 * 1024) { // Only cache if < 1MB
             localStorage.setItem(cacheKey, JSON.stringify({
-              dataUrl: src,
+              dataUrl,
               timestamp: Date.now()
             }))
           }
+          
+          setImageSrc(dataUrl)
+        } else {
           setImageSrc(src)
         }
         setRetryCount(0) // Reset retry count on success
@@ -144,8 +127,8 @@ export function CachedAvatar({
         localStorage.removeItem(cacheKey)
       }
       
-      // If this is an Airtable URL and we haven't retried too many times, try to get a fresh URL
-      if (isAirtableUrl && retryCount < 2) {
+      // Try to get a fresh URL if we haven't retried too many times
+      if (retryCount < 2) {
         console.log('Attempting to fetch fresh avatar URL...')
         setRetryCount(prev => prev + 1)
         
@@ -154,6 +137,7 @@ export function CachedAvatar({
           console.log('Got fresh avatar URL, retrying...')
           // Create a new image element with the fresh URL
           const freshImg = new Image()
+          freshImg.crossOrigin = "anonymous"
           freshImg.onload = () => {
             setImageSrc(freshUrl)
             setIsLoading(false)
@@ -192,9 +176,8 @@ export function CachedAvatar({
       localStorage.removeItem(cacheKey)
     }
     
-    // Try to fetch fresh avatar if it's an Airtable URL and we haven't retried too many times
-    const isAirtableUrl = src?.includes('airtableusercontent.com')
-    if (isAirtableUrl && retryCount < 2) {
+    // Try to fetch fresh avatar if we haven't retried too many times
+    if (retryCount < 2) {
       setRetryCount(prev => prev + 1)
       const freshUrl = await fetchFreshAvatar()
       if (freshUrl && freshUrl !== src) {

@@ -25,7 +25,7 @@
 4. Turn response into pdf
 5. finish progress bar
 6. Enable download and turn 'Komplettes Dossier erstellen' button background green, switch text to 'Dossier erstellt' and enable download by clicking button.
-7. Update Airtable 'MdBase' base 'Feinddossier' table; enter User-ID in 'User-ID', save the pdf to 'Attachments', the name of currently displayed politician should be saved to 'Gegner', and creation time should be saved to 'Date'.
+7. Update Supabase 'feinddossier' table; enter User-ID in 'user_id', save the pdf to 'attachments', the name of currently displayed politician should be saved to 'gegner', and creation time should be saved to 'created_at'.
 
 # PDF Creation Feature - Komplettes Dossier erstellen
 
@@ -56,13 +56,13 @@ The "Komplettes Dossier erstellen" button functionality has been fully implement
 - Button changes to green "Dossier herunterladen" on success
 - Generates filename with politician name and date
 
-### 5. ✅ Airtable Integration
-- Updates 'Feinddossier' table with:
-  - User-ID (linked to Users table)
-  - Gegner (politician name)
-  - Date (creation date)
-  - Status ('Generated')
-  - Content (preview of first 1000 characters)
+### 5. ✅ Supabase Integration
+- Updates 'feinddossier' table with:
+  - user_id (linked to users table)
+  - gegner (politician name)
+  - created_at (creation timestamp)
+  - status ('Generated')
+  - content (preview of first 1000 characters)
 
 ### 6. ✅ UI States & Error Handling
 - Loading state with progress indicator
@@ -85,13 +85,13 @@ OPENAI_FEINDDOSSIER_ASSISTANT_ID=asst_your_assistant_id_here
 3. Copy the assistant ID (starts with "asst_")
 4. Add it to your environment variables
 
-### Airtable Schema
-Ensure the 'Feinddossier' table exists with these fields:
-- User-ID (Link to Users table)
-- Gegner (Single line text)
-- Date (Date field)
-- Status (Single line text)
-- Content (Long text, optional)
+### Supabase Schema
+Ensure the 'feinddossier' table exists with these fields:
+- user_id (UUID, Foreign Key to users table)
+- gegner (TEXT)
+- created_at (TIMESTAMP)
+- status (TEXT)
+- content (TEXT, optional)
 
 ## Usage Flow
 
@@ -103,7 +103,7 @@ Ensure the 'Feinddossier' table exists with these fields:
 6. Progress completes at 100%
 7. Button changes to "Dossier herunterladen" (green)
 8. User can download PDF or generate new dossier
-9. Record is saved to Airtable for tracking
+9. Record is saved to Supabase for tracking
 
 ## Error Handling
 
@@ -111,7 +111,7 @@ The system handles various error scenarios:
 - Authentication failures
 - OpenAI API errors
 - PDF generation errors
-- Airtable connection issues
+- Supabase connection issues
 - Network timeouts
 
 All errors display user-friendly German messages with appropriate retry options.

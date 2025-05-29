@@ -1,24 +1,27 @@
 # Funktionsweise Transparenz
 
-Auf dieser Seite werden Informationen zur Transparenz der Abgeordnetentätigkeit und der Fraktionsarbeit öffentlich zugänglich gemacht. Dies kann Einkünfte, Lobbykontakte oder andere relevante Daten umfassen.
+Diese Seite dient der Veröffentlichung und Zugänglichmachung von Transparenzinformationen gemäß den Anforderungen des Bundestagsabgeordneten-Gesetzes und anderen Transparenzrichtlinien.
 
 ## Kernfunktionen
 
-- **Darstellung von Daten**: Übersichtliche Präsentation von Transparenzdaten, z.B. Nebeneinkünfte, erhaltene Spenden, Treffen mit Interessenvertretern.
-- **Filter- und Suchfunktionen**: Ermöglicht das gezielte Suchen und Filtern der veröffentlichten Daten.
-- **Download-Optionen**: Bereitstellung der Daten in maschinenlesbaren Formaten (z.B. CSV, JSON).
-- **Erläuterungen und Kontext**: Hintergrundinformationen zu den veröffentlichten Daten und den gesetzlichen Grundlagen.
+- **Transparenz-Dashboard**: Übersichtliche Darstellung aller relevanten Transparenzinformationen.
+- **Nebentätigkeiten**: Veröffentlichung gemeldeter Nebentätigkeiten und deren Einkünfte.
+- **Spenden und Zuwendungen**: Dokumentation erhaltener Spenden oder sonstiger Zuwendungen.
+- **Reisen und Einladungen**: Auflistung von gesponserten Reisen oder Einladungen.
+- **Beteiligungen und Vermögen**: Offenlegung relevanter finanzieller Beteiligungen.
+- **Jährliche Erklärungen**: Verwaltung und Veröffentlichung der jährlich erforderlichen Transparenzerklärungen.
 
 ## Integrationen
 
-- **Datenbanken**: Anbindung an interne oder externe Datenbanken, die die Transparenzdaten enthalten (z.B. offizielle Register des Bundestages, Airtable).
-- **Visualisierungstools**: Mögliche Integration von Diagrammen oder Grafiken zur besseren Veranschaulichung der Daten.
+- **Datenbanken**: Anbindung an relevante Datenquellen (z.B. offizielle Register des Bundestages, Supabase).
+- **Compliance-Tools**: Integration mit Tools zur Überwachung der Transparenzpflichten.
+- **Export-Funktionen**: Bereitstellung der Daten in verschiedenen Formaten für die Öffentlichkeit.
 
 ## Offene To-Dos und Implementierungsideen
 
-- Definition der genauen Datenquellen und des Umfangs der zu veröffentlichenden Informationen.
-- Entwicklung von Schnittstellen zu den relevanten Datenquellen.
-- Gestaltung einer benutzerfreundlichen Oberfläche zur Präsentation und Exploration der Daten.
-- Sicherstellung der Datenschutzkonformität bei der Veröffentlichung.
-- Regelmäßige Aktualisierung der angezeigten Daten.
-- Implementierung eines Benachrichtigungssystems bei neuen Veröffentlichungen. 
+- Definition der anzuzeigenden Transparenzinformationen gemäß aktueller Rechtslage.
+- Aufbau einer strukturierten Datenerfassung und -verwaltung.
+- Implementierung automatischer Erinnerungen für fällige Meldungen.
+- Entwicklung einer benutzerfreundlichen öffentlichen Ansicht.
+- Integration mit offiziellen Bundestag-Systemen (falls möglich).
+- Berücksichtigung von Datenschutz- und Sicherheitsaspekten bei der Veröffentlichung. 

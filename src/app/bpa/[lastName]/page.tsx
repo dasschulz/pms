@@ -13,14 +13,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Send, AlertCircle, MapPin, HelpCircle } from "lucide-react";
 
 interface MdbDetails {
-  id: string; // UserID from Airtable
+  id: string; // Supabase UUID from users table
   name: string; // Full name
   wahlkreis: string;
   // lastName: string; // Already available from URL param if needed directly
 }
 
 interface BpaFahrtOption {
-  id: string; // FahrtID from Airtable
+  id: string; // Supabase UUID from bpa_fahrten table
   name: string; // e.g., "Berlinfahrt Mai 2024", or a generated title
   startDate?: string; // Add optional date fields
   endDate?: string;
@@ -74,13 +74,13 @@ export default function BpaDirectFormPage() {
           }
           const mdbData = await mdbResponse.json();
           setMdbDetails({
-            id: mdbData.airtableRecordId, // Store Airtable Record ID for MdB
+            id: mdbData.id, // Store Supabase UUID for MdB
             name: mdbData.name,
             wahlkreis: mdbData.wahlkreis
           });
 
-          // Step 2: Fetch active BPA trips for this MdB using their Airtable Record ID
-          const tripsResponse = await fetch(`/api/bpa-public/active-trips?airtableUserId=${mdbData.airtableRecordId}`);
+          // Step 2: Fetch active BPA trips for this MdB using their Supabase UUID
+          const tripsResponse = await fetch(`/api/bpa-public/active-trips?userId=${mdbData.id}`);
           if (!tripsResponse.ok) {
             const errorData = await tripsResponse.json().catch(() => ({}));
             throw new Error(errorData.error || 'Fehler beim Laden der Fahrtenliste.');
@@ -166,8 +166,8 @@ export default function BpaDirectFormPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          mdbAirtableUserId: mdbDetails.id, // This is the MdB's Airtable Record ID
-          fahrtAirtableId: finalTripId,     // This is the Airtable Record ID of the selected BPA_Fahrt
+          mdbUserId: mdbDetails.id, // This is the MdB's Supabase UUID
+          fahrtId: finalTripId,     // This is the Supabase UUID of the selected BPA_Fahrt
           formData: formData,
         }),
       });

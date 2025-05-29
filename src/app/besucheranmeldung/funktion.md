@@ -13,7 +13,7 @@ Diese Seite dient der Anmeldung von Besuchergruppen für den Deutschen Bundestag
 ## Integrationen
 
 - **Kalendersystem**: Mögliche Anbindung an ein internes Kalendersystem zur Prüfung der Terminverfügbarkeit.
-- **Airtable**: Speicherung der Anmeldedaten in einer Airtable-Datenbank (z.B. Tabelle `Besuchergruppen`).
+- **Supabase**: Speicherung der Anmeldedaten in einer Supabase-Datenbank (z.B. Tabelle `besuchergruppen`).
 
 ## Offene To-Dos und Implementierungsideen
 

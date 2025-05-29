@@ -1,30 +1,27 @@
 # Funktionsweise Anmelden
 
-Diese Seite dient dem sicheren Anmelden (Login) von Nutzern in die MdB-App.
+Diese Seite ermöglicht es Nutzern, sich in die MdB-App einzuloggen, um Zugang zu personalisierten Funktionen und geschützten Bereichen zu erhalten.
 
 ## Kernfunktionen
 
-- **Eingabefelder**: Formular zur Eingabe von Anmeldeinformationen (typischerweise E-Mail-Adresse und Passwort).
-- **Authentifizierungsmethoden**: Unterstützung verschiedener Anmeldeverfahren:
-    - **Credentials-Login**: Klassische Anmeldung mit Benutzername/E-Mail und Passwort.
-    - **OAuth-Anbieter (optional)**: Anmeldung über Drittanbieter wie Google, Microsoft, etc. (falls konfiguriert).
-- **Passwort vergessen/zurücksetzen**: Link zu einer Funktion, um das Passwort zurückzusetzen, falls der Nutzer es vergessen hat.
-- **Fehlerbehandlung**: Anzeige verständlicher Fehlermeldungen bei falschen Anmeldedaten oder anderen Problemen.
-- **Sicherheitsmaßnahmen**: Schutz vor Brute-Force-Angriffen (z.B. Rate Limiting, Captcha nach mehreren Fehlversuchen).
-- **Session-Erstellung**: Bei erfolgreicher Anmeldung wird eine Nutzersession erstellt und der Nutzer auf die Startseite oder eine geschützte Seite weitergeleitet.
+- **Anmeldeformular**: Eingabefelder für Nutzername/E-Mail und Passwort.
+- **Authentifizierung**: Überprüfung der Anmeldedaten gegen die Nutzerdatenbank.
+- **Session-Management**: Erstellung und Verwaltung von Benutzersitzungen nach erfolgreicher Anmeldung.
+- **Fehlerbehandlung**: Anzeige von Fehlermeldungen bei falschen Anmeldedaten oder anderen Problemen.
+- **Passwort-Reset-Option**: Link oder Funktion zur Zurücksetzung vergessener Passwörter (falls implementiert).
+- **Weiterleitung**: Automatische Weiterleitung nach erfolgreicher Anmeldung zur Startseite oder zu einer zuvor angeforderten Seite.
 
 ## Integrationen
 
-- **Authentifizierungssystem (NextAuth)**: Nutzt die von NextAuth bereitgestellten Funktionen und Provider für die Anmeldung.
-- **API-Endpunkt (`/api/auth/[...nextauth]/route.ts`)**: Hier wird die serverseitige Logik für Authentifizierungsvorgänge, einschließlich Login, gehandhabt.
-- **Datenbank/Airtable**: Überprüfung der Anmeldeinformationen gegen die in der Nutzerdatenbank (z.B. Airtable `Users`-Tabelle) gespeicherten Daten.
-- **Passwort-Hashing**: Sichere Speicherung von Passwörtern mittels Hashing-Algorithmen.
+- **NextAuth.js**: Wahrscheinlich implementiert über `/api/auth/[...nextauth]` für die Authentifizierung.
+- **Supabase**: Überprüfung der Anmeldeinformationen gegen die in der Nutzerdatenbank (z.B. Supabase `users`-Tabelle) gespeicherten Daten.
+- **Session-Storage**: Sicherung der Sitzungsinformationen für nachfolgende Seitenaufrufe.
 
 ## Offene To-Dos und Implementierungsideen
 
-- Implementierung der "Passwort vergessen"-Funktionalität.
-- Einführung von Zwei-Faktor-Authentifizierung (2FA) für erhöhte Sicherheit.
-- Option "Angemeldet bleiben" (Remember me).
-- Anzeige von Sicherheitswarnungen bei verdächtigen Anmeldeversuchen.
-- Anpassung des Designs der Anmeldeseite an das Corporate Design.
-- Klare Verlinkung zur Datenschutzerklärung und ggf. zu Nutzungsbedingungen. 
+- Implementierung der Passwort-Reset-Funktion.
+- Verbesserung der Sicherheitsmaßnahmen (z.B. Rate Limiting, CAPTCHA bei wiederholten Fehlversuchen).
+- Möglichkeit der Zwei-Faktor-Authentifizierung (2FA).
+- Erweiterte Loginoptionen (z.B. über soziale Netzwerke oder Single Sign-On).
+- Benutzerfreundlichere Fehlermeldungen und Hilfetexte.
+- Implementierung einer "Angemeldet bleiben"-Option. 

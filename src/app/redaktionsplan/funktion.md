@@ -14,7 +14,7 @@ Diese Seite dient der Planung, Koordination und Organisation von Content-Veröff
 
 ## Integrationen
 
-- **Airtable**: Speicherung des Redaktionsplans, der Inhalte, Aufgaben und Status.
+- **Supabase**: Speicherung des Redaktionsplans, der Inhalte, Aufgaben und Status.
 - **Social Media Management Tools**: Anbindung an Tools zur direkten Planung und Veröffentlichung von Social Media Posts (z.B. Hootsuite, Buffer, ContentCal).
 - **Content-Module**: Verlinkung zu den Modulen für Sharepics (`/sharepics`), Pressemitteilungen (`/pressemitteilung`), News (`/news`) etc.
 - **Kalendersysteme**: Export von Veröffentlichungsterminen in persönliche oder Team-Kalender.

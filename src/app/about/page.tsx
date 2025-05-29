@@ -17,7 +17,7 @@ import {
 const markdownContent = `
 Linksfraktion Studio Webapp
 **Felix S. Schulz** <mailto:heidi.reichinnek.ma02@bundestag.de>, Büro Reichinnek <br>
-<a href="https://nextjs.org">Next.js</a>/<a href="https://react.dev">React</a>/<a href="https://tailwindcss.com">Tailwind CSS</a>/<a href="https://vercel.com">Vercel</a>/<a href="https://airtable.com">Airtable</a>
+<a href="https://nextjs.org">Next.js</a>/<a href="https://react.dev">React</a>/<a href="https://tailwindcss.com">Tailwind CSS</a>/<a href="https://vercel.com">Vercel</a>/<a href="https://supabase.com">Supabase</a>
 
 Gegner-Recherche
 <a href="https://www.abgeordnetenwatch.de/api">Abgeordnetenwatch API</a>/<a href="https://www.mediawiki.org/wiki/API:Main_page">Wikipedia API</a>/<a href="https://www.anthropic.com">Anthropic</a>

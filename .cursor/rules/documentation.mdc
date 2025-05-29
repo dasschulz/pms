@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When user informs you of new db fields or tables or when you create or update anything, always keep supabase_documentation.md up to date. When editing pages or their functionalities, update funktion.md accordingly. Never respond to user with emojis. Do not implement emojis in .md files.

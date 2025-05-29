@@ -106,7 +106,7 @@ export function VideoPlanningBoard() {
                 Videoplanung Setup erforderlich
               </h3>
               <p className="text-gray-500 dark:text-muted-foreground mb-6">
-                Die TaskManager-Tabelle wurde noch nicht in Airtable erstellt. 
+                Die TaskManager-Tabelle wurde noch nicht erstellt. 
                 Bitte erstelle die Tabelle mit den erforderlichen Feldern, 
                 um die Videoplanung zu nutzen.
               </p>

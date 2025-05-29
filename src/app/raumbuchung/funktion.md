@@ -14,7 +14,7 @@ Diese Seite ermöglicht die Buchung von Räumen innerhalb der Bundestagsgebäude
 ## Integrationen
 
 - **Internes Raumbuchungssystem**: Direkte Anbindung oder Synchronisation mit dem zentralen Raumbuchungssystem des Bundestages.
-- **Airtable**: Speicherung der Buchungsanfragen und deren Status.
+- **Supabase**: Speicherung der Buchungsanfragen und deren Status.
 - **Benachrichtigungssystem**: Automatische E-Mails an den Buchenden und die Raumverwaltung bei Buchungsanfrage, Bestätigung oder Ablehnung.
 
 ## Offene To-Dos und Implementierungsideen

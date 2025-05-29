@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 
 // --- GET all BPA_Fahrten for the logged-in MdB ---
 export async function GET(req: NextRequest) {
@@ -8,61 +8,47 @@ export async function GET(req: NextRequest) {
   if (!token || !token.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const userId = token.id as string;
+  const userId = token.id as string; // This is now the Supabase UUID
 
   try {
-    // Try filtering directly by numeric UserID like touranfragen does
-    let records;
-    try {
-      records = await base('BPA_Fahrten') 
-        .select({
-          filterByFormula: `{UserID} = ${userId}`,
-          sort: [{ field: 'Fahrt_Datum_von', direction: 'desc' }], 
-        })
-        .all();
-    } catch (error) {
-      // Fallback to the Airtable record ID approach if numeric filter doesn't work
-      const userRecords = await base('Users')
-        .select({
-          filterByFormula: `{UserID} = '${userId}'`,
-          maxRecords: 1,
-        })
-        .firstPage();
+    console.log('BPA Fahrten API: Fetching trips for user ID:', userId);
 
-      if (userRecords.length === 0) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
+    // Query BPA trips from Supabase
+    const { data: records, error } = await supabase
+      .from('bpa_fahrten')
+      .select('*')
+      .eq('user_id', userId)
+      .order('fahrt_datum_von', { ascending: false });
 
-      const userAirtableId = userRecords[0].id;
-
-      records = await base('BPA_Fahrten')
-        .select({
-          filterByFormula: `SEARCH("${userAirtableId}", ARRAYJOIN({UserID}))`,
-          sort: [{ field: 'Fahrt_Datum_von', direction: 'desc' }],
-        })
-        .all();
+    if (error) {
+      console.error('BPA Fahrten API: Error fetching trips from Supabase:', error);
+      return NextResponse.json({ error: 'Failed to fetch BPA trips' }, { status: 500 });
     }
 
-    const fahrten = records.map(record => ({
-      id: record.id,
-      fahrtDatumVon: record.fields.Fahrt_Datum_von,
-      fahrtDatumBis: record.fields.Fahrt_Datum_Bis,
-      zielort: record.fields.Zielort,
-      hotelName: record.fields.Hotel_Name,
-      hotelAdresse: record.fields.Hotel_Adresse,
-      kontingentMax: record.fields.Kontingent_Max,
-      aktuelleAnmeldungen: record.fields.Aktuelle_Anmeldungen,
-      bestaetigteAnmeldungen: record.fields.Bestaetigte_Anmeldungen,
-      statusFahrt: record.fields.Status_Fahrt,
-      anmeldefrist: record.fields.Anmeldefrist,
-      beschreibung: record.fields.Beschreibung,
-      zustaiegsorteConfig: record.fields.Zustiegsorte_Config,
-      aktiv: record.fields.Aktiv === true,
-    }));
+    console.log('BPA Fahrten API: Found', records?.length || 0, 'trips');
 
-    return NextResponse.json({ fahrten });
+    // Transform Supabase records to match expected frontend format
+    const trips = records?.map(record => ({
+      id: record.id, // Use Supabase UUID for frontend operations
+      fahrtDatumVon: record.fahrt_datum_von,
+      fahrtDatumBis: record.fahrt_datum_bis,
+      zielort: record.zielort,
+      hotelName: record.hotel_name,
+      hotelAdresse: record.hotel_adresse,
+      kontingentMax: record.kontingent_max,
+      // These calculated fields would need to be computed from bpa_formular table
+      aktuelleAnmeldungen: 0, // TODO: Add count query from bpa_formular
+      bestaetigteAnmeldungen: 0, // TODO: Add count query from bpa_formular
+      statusFahrt: record.status_fahrt,
+      anmeldefrist: record.anmeldefrist,
+      beschreibung: record.beschreibung,
+      zustaiegsorteConfig: record.zustiegsorte_config,
+      aktiv: record.aktiv === true,
+    })) || [];
+
+    return NextResponse.json({ trips });
   } catch (error) {
-    console.error('[API /bpa-fahrten GET] Airtable Error:', error);
+    console.error('[API /bpa-fahrten GET] Supabase Error:', error);
     return NextResponse.json({ error: 'Failed to fetch BPA trips' }, { status: 500 });
   }
 }
@@ -87,22 +73,10 @@ export async function POST(req: NextRequest) {
   if (!token || !token.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const userId = token.id as string;
+  const userId = token.id as string; // This is now the Supabase UUID
 
   try {
-    // Get the user's Airtable record ID for creating the linked record
-    const userRecords = await base('Users')
-      .select({
-        filterByFormula: `{UserID} = '${userId}'`,
-        maxRecords: 1,
-      })
-      .firstPage();
-
-    if (userRecords.length === 0) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    const userAirtableId = userRecords[0].id;
+    console.log('BPA Fahrten API: Creating trip for user ID:', userId);
 
     const body: CreateBpaFahrtBody = await req.json();
 
@@ -111,36 +85,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields (fahrtDatumVon)' }, { status: 400 });
     }
     
-    // Field data using field names
-    const airtableData: { [key: string]: any } = {
-      'UserID': [userAirtableId], // Link to Users table
-      'Fahrt_Datum_von': body.fahrtDatumVon,
-      'Zielort': body.zielort,
-      'Kontingent_Max': body.kontingentMax,
-      'Status_Fahrt': body.statusFahrt || 'Planung',
-      'Aktiv': body.aktiv !== undefined ? body.aktiv : true,
-      ...(body.fahrtDatumBis && { 'Fahrt_Datum_Bis': body.fahrtDatumBis }),
-      ...(body.hotelName && { 'Hotel_Name': body.hotelName }),
-      ...(body.hotelAdresse && { 'Hotel_Adresse': body.hotelAdresse }),
-      ...(body.anmeldefrist && { 'Anmeldefrist': body.anmeldefrist }),
-      ...(body.beschreibung && { 'Beschreibung': body.beschreibung }),
-      ...(body.zustaiegsorteConfig && { 'Zustiegsorte_Config': body.zustaiegsorteConfig }),
+    // Prepare data for Supabase insertion
+    const supabaseData = {
+      user_id: userId,
+      fahrt_datum_von: body.fahrtDatumVon,
+      fahrt_datum_bis: body.fahrtDatumBis || null,
+      zielort: body.zielort || null,
+      hotel_name: body.hotelName || null,
+      hotel_adresse: body.hotelAdresse || null,
+      kontingent_max: body.kontingentMax || null,
+      status_fahrt: body.statusFahrt || 'Planung',
+      anmeldefrist: body.anmeldefrist || null,
+      beschreibung: body.beschreibung || null,
+      zustiegsorte_config: body.zustaiegsorteConfig || null,
+      aktiv: body.aktiv !== undefined ? body.aktiv : true,
     };
 
-    const createdRecord = await base('BPA_Fahrten').create([
-      {
-        fields: airtableData,
-      },
-    ]);
+    console.log('BPA Fahrten API: Inserting trip data:', supabaseData);
+
+    // Create trip in Supabase
+    const { data: createdRecord, error } = await supabase
+      .from('bpa_fahrten')
+      .insert(supabaseData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('BPA Fahrten API: Error creating trip:', error);
+      return NextResponse.json({ error: 'Failed to create BPA trip' }, { status: 500 });
+    }
+
+    console.log('BPA Fahrten API: Trip created successfully:', createdRecord.id);
 
     return NextResponse.json({ 
       success: true, 
       message: 'BPA trip created successfully', 
-      recordId: createdRecord[0].id 
+      recordId: createdRecord.id 
     }, { status: 201 });
 
   } catch (error) {
-    console.error('[API /bpa-fahrten POST] Airtable Error:', error);
+    console.error('[API /bpa-fahrten POST] Supabase Error:', error);
     return NextResponse.json({ error: 'Failed to create BPA trip' }, { status: 500 });
   }
 } 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 import { getToken } from 'next-auth/jwt';
 
 export async function GET(req: NextRequest) {
@@ -9,77 +9,47 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = token.id as string;
+  const userId = token.id as string; // Supabase UUID
 
   try {
-    console.log('[Touranfragen API] userId (numeric):', userId);
+    console.log('[Touranfragen API] Fetching tour requests for user ID:', userId);
 
-    // Try filtering directly by numeric UserID like task-manager does
-    let records;
-    try {
-      records = await base('Touranfragen')
-        .select({
-          filterByFormula: `{UserID} = ${userId}`,
-          sort: [{ field: 'Created', direction: 'desc' }],
-        })
-        .all();
-      
-      console.log('[Touranfragen API] Records found with numeric UserID filter:', records.length);
-    } catch (error) {
-      console.log('[Touranfragen API] Numeric UserID filter failed, trying Airtable record ID approach:', error);
-      
-      // Fallback to the original approach if numeric filter doesn't work
-      const userRecords = await base('Users')
-        .select({
-          filterByFormula: `{UserID} = '${userId}'`,
-          maxRecords: 1,
-        })
-        .firstPage();
+    // Query tour requests from Supabase for the authenticated user
+    const { data: records, error } = await supabase
+      .from('touranfragen')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-      if (userRecords.length === 0) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-
-      const userAirtableId = userRecords[0].id;
-      console.log('[Touranfragen API] userAirtableId fallback:', userAirtableId);
-
-      records = await base('Touranfragen')
-        .select({
-          filterByFormula: `SEARCH("${userAirtableId}", ARRAYJOIN({UserID}))`,
-          sort: [{ field: 'Created', direction: 'desc' }],
-        })
-        .all();
-      
-      console.log('[Touranfragen API] Records found with Airtable ID fallback:', records.length);
+    if (error) {
+      console.error('[Touranfragen API] Error fetching tour requests from Supabase:', error);
+      return NextResponse.json({ error: 'Failed to fetch tour requests' }, { status: 500 });
     }
 
-    records.forEach((record, idx) => {
-      const userIdField = record.get('UserID');
-      const joined = Array.isArray(userIdField) ? userIdField.join(',') : userIdField;
-      console.log(`[Touranfragen API] Record #${idx + 1} id:`, record.id, 'UserID:', userIdField, 'ARRAYJOIN:', joined);
-    });
+    console.log('[Touranfragen API] Found', records?.length || 0, 'tour requests');
 
-    const requests = records.map(record => ({
-      id: record.id,
-      createdAt: record.get('Created') as string,
-      kreisverband: record.get('Kreisverband') as string,
-      landesverband: record.get('Landesverband') as string,
-      kandidatName: record.get('Kandidat Name') as string,
-      zeitraumVon: record.get('Zeitraum Von') as string,
-      zeitraumBis: record.get('Zeitraum Bis') as string,
-      themen: record.get('Themen') as string,
-      video: record.get('Video') ? 'Ja' : 'Nein' as 'Ja' | 'Nein',
-      ansprechpartner1Name: record.get('Ansprechpartner 1 Name') as string,
-      ansprechpartner1Phone: record.get('Ansprechpartner 1 Phone') as string,
-      ansprechpartner2Name: record.get('Ansprechpartner 2 Name') as string,
-      ansprechpartner2Phone: record.get('Ansprechpartner 2 Phone copy') as string,
-      programmvorschlag: record.get('Programmvorschlag') ? 'füge ich an' : 'möchte ich mit dem Büro klären' as 'füge ich an' | 'möchte ich mit dem Büro klären',
-      status: (record.get('Status') as string) || 'Neu' as 'Neu' | 'Eingegangen' | 'Terminiert' | 'Abgeschlossen',
-    }));
+    // Transform Supabase records to match expected frontend format
+    const tourRequests = records?.map(record => ({
+      id: record.id, // Use Supabase UUID
+      createdAt: record.created_at,
+      kreisverband: record.kreisverband,
+      landesverband: record.landesverband,
+      kandidatName: record.kandidat_name,
+      zeitraumVon: record.zeitraum_von,
+      zeitraumBis: record.zeitraum_bis,
+      themen: record.themen,
+      video: record.video ? 'Ja' : 'Nein' as 'Ja' | 'Nein',
+      ansprechpartner1Name: record.ansprechpartner_1_name,
+      ansprechpartner1Phone: record.ansprechpartner_1_phone,
+      ansprechpartner2Name: record.ansprechpartner_2_name,
+      ansprechpartner2Phone: record.ansprechpartner_2_phone,
+      programmvorschlag: record.programmvorschlag || 'möchte ich mit dem Büro klären' as 'füge ich an' | 'möchte ich mit dem Büro klären',
+      status: record.status || 'Neu' as 'Neu' | 'Eingegangen' | 'Terminiert' | 'Abgeschlossen',
+    })) || [];
 
-    return NextResponse.json({ requests });
+    return NextResponse.json({ requests: tourRequests });
   } catch (error) {
-    console.error('Airtable API Error fetching tour requests:', error);
+    console.error('[Touranfragen API] Supabase error fetching tour requests:', error);
     return NextResponse.json({ error: 'Failed to fetch tour requests' }, { status: 500 });
   }
 }
@@ -91,32 +61,51 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userId = token.id as string; // Supabase UUID
+
   try {
     const { id, status } = await req.json();
     
-    console.log('[Touranfragen API] Updating status for record:', id, 'to:', status);
+    console.log('[Touranfragen API] Updating status for record:', id, 'to:', status, 'for user:', userId);
 
-    // Update the record in Airtable
-    const updatedRecord = await base('Touranfragen').update([
-      {
-        id: id,
-        fields: {
-          'Status': status,
-        },
-      },
-    ]);
+    // First verify that the tour request belongs to the authenticated user
+    const { data: existingRecord, error: fetchError } = await supabase
+      .from('touranfragen')
+      .select('id, user_id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !existingRecord) {
+      console.log('[Touranfragen API] Tour request not found or access denied:', id, fetchError?.message);
+      return NextResponse.json({ error: 'Tour request not found or access denied' }, { status: 404 });
+    }
+
+    // Update the status in Supabase
+    const { data: updatedRecord, error: updateError } = await supabase
+      .from('touranfragen')
+      .update({ status })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('id, status')
+      .single();
+
+    if (updateError) {
+      console.error('[Touranfragen API] Error updating tour request status:', updateError);
+      return NextResponse.json({ error: 'Failed to update tour request' }, { status: 500 });
+    }
 
     console.log('[Touranfragen API] Status updated successfully for record:', id);
 
     return NextResponse.json({ 
       success: true, 
       record: {
-        id: updatedRecord[0].id,
-        status: updatedRecord[0].get('Status')
+        id: updatedRecord.id,
+        status: updatedRecord.status
       }
     });
   } catch (error) {
-    console.error('Airtable API Error updating tour request:', error);
+    console.error('[Touranfragen API] Supabase error updating tour request:', error);
     return NextResponse.json({ error: 'Failed to update tour request' }, { status: 500 });
   }
 } 

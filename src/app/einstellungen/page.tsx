@@ -84,7 +84,7 @@ export default function EinstellungenPage() {
     setMounted(true);
   }, []);
 
-  // Load user data from Airtable
+  // Load user data from Supabase
   useEffect(() => {
     const loadUserData = async () => {
       if (!session?.user) return;
@@ -259,7 +259,7 @@ export default function EinstellungenPage() {
       // Clear old cached image before saving new one
       clearCache(userData.profilePictureUrl);
       
-      // Save to Airtable
+      // Save to Supabase
       await saveUserData({ profilePictureUrl });
       
       // Update local state
@@ -277,7 +277,7 @@ export default function EinstellungenPage() {
     setPendingImageFile(null);
   };
 
-  // Save user data to Airtable
+  // Save user data to Supabase
   const saveUserData = async (overrides: Partial<UserData> = {}) => {
     setIsLoading(true);
     try {

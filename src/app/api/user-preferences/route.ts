@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { base } from '@/lib/airtable';
+import { supabase } from '@/lib/supabase';
 
 interface UserPreferences {
   userId: string;
@@ -18,34 +18,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // First, find the user record by email in Users table
-    const userRecords = await base('Users')
-      .select({
-        filterByFormula: `{Email} = "${session.user.email}"`,
-        maxRecords: 1
-      })
-      .firstPage();
-
-    if (userRecords.length === 0) {
-      // User not found, return defaults
-      return NextResponse.json({
-        widgetOrder: ['weather', 'trains', 'latest-speech', 'activity'],
-        activeWidgets: ['weather', 'trains', 'latest-speech', 'activity'],
-        themePreference: 'system'
-      });
+    // Get user ID from session (should be Supabase UUID now)
+    const userId = session.user.id;
+    
+    if (!userId) {
+      console.log('No user ID found in session for:', session.user.email);
+      return NextResponse.json({ error: 'User session invalid' }, { status: 401 });
     }
 
-    const userRecordId = userRecords[0].id;
+    // Validate UUID format to catch old Airtable IDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      console.error('User Preferences: Invalid user ID format (not UUID):', userId);
+      return NextResponse.json({ 
+        error: 'Invalid user ID format', 
+        message: 'Please re-login to refresh your session',
+        userId: userId,
+        expectedFormat: 'UUID'
+      }, { status: 400 });
+    }
 
-    // Now find user preferences by linked user record
-    const prefRecords = await base('User-Preferences')
-      .select({
-        filterByFormula: `FIND("${userRecordId}", ARRAYJOIN({Name})) > 0`,
-        maxRecords: 1
-      })
-      .firstPage();
+    console.log('Fetching preferences for user ID:', userId);
 
-    if (prefRecords.length === 0) {
+    // Find user preferences by user_id
+    const { data: prefRecord, error } = await supabase
+      .from('user_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !prefRecord) {
+      console.log('No preferences found for user, returning defaults:', error?.message);
       // Return default preferences if none found
       return NextResponse.json({
         widgetOrder: ['weather', 'trains', 'latest-speech', 'activity'],
@@ -54,11 +57,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const record = prefRecords[0];
+    console.log('Found preferences record:', prefRecord.id);
+
     return NextResponse.json({
-      widgetOrder: JSON.parse(record.get('Widget Order') as string || '["weather", "trains", "latest-speech", "activity"]'),
-      activeWidgets: JSON.parse(record.get('Active Widgets') as string || '["weather", "trains", "latest-speech", "activity"]'),
-      themePreference: (record.get('Theme Preference') as 'light' | 'dark' | 'system') || 'system'
+      widgetOrder: prefRecord.widget_order || ['weather', 'trains', 'latest-speech', 'activity'],
+      activeWidgets: prefRecord.active_widgets || ['weather', 'trains', 'latest-speech', 'activity'],
+      themePreference: prefRecord.theme_preference || 'system'
     });
 
   } catch (error) {
@@ -77,89 +81,77 @@ export async function POST(request: NextRequest) {
 
     const { widgetOrder, activeWidgets, themePreference } = await request.json();
 
-    console.log('🔄 Saving preferences for user:', session.user.email);
-
-    // First, find the user record by email in Users table
-    const userRecords = await base('Users')
-      .select({
-        filterByFormula: `{Email} = "${session.user.email}"`,
-        maxRecords: 1
-      })
-      .firstPage();
-
-    if (userRecords.length === 0) {
-      console.log('❌ User not found in Users table:', session.user.email);
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    // Get user ID from session (should be Supabase UUID now)
+    const userId = session.user.id;
+    
+    if (!userId) {
+      console.log('No user ID found in session for:', session.user.email);
+      return NextResponse.json({ error: 'User session invalid' }, { status: 401 });
     }
 
-    const userRecordId = userRecords[0].id;
-    console.log('✅ Found user record ID:', userRecordId);
+    // Validate UUID format to catch old Airtable IDs
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(userId)) {
+      console.error('User Preferences: Invalid user ID format (not UUID):', userId);
+      return NextResponse.json({ 
+        error: 'Invalid user ID format', 
+        message: 'Please re-login to refresh your session',
+        userId: userId,
+        expectedFormat: 'UUID'
+      }, { status: 400 });
+    }
 
-    // Check if user preferences already exist - get ALL matching records to handle duplicates
-    const existingRecords = await base('User-Preferences')
-      .select({
-        filterByFormula: `FIND("${userRecordId}", ARRAYJOIN({Name})) > 0`
-      })
-      .firstPage();
+    console.log('🔄 Saving preferences for user:', session.user.email, 'ID:', userId);
 
-    console.log('🔍 Found existing preference records:', existingRecords.length);
+    // Check if user preferences already exist
+    const { data: existingRecord, error: fetchError } = await supabase
+      .from('user_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
 
     const preferenceData = {
-      'Name': [userRecordId], // Link to user record
-      'Widget Order': JSON.stringify(widgetOrder),
-      'Active Widgets': JSON.stringify(activeWidgets),
-      'Theme Preference': themePreference,
-      'Last Update': new Date().toISOString().split('T')[0] // Date format YYYY-MM-DD
+      user_id: userId,
+      widget_order: widgetOrder,
+      active_widgets: activeWidgets,
+      theme_preference: themePreference,
+      last_update: new Date().toISOString()
     };
 
-    if (existingRecords.length > 0) {
-      // If multiple records exist, clean up duplicates
-      if (existingRecords.length > 1) {
-        console.log('⚠️ Found duplicate records, cleaning up...', existingRecords.length);
-        
-        // Keep the first record, delete the rest
-        const recordToKeep = existingRecords[0];
-        const recordsToDelete = existingRecords.slice(1);
-        
-        if (recordsToDelete.length > 0) {
-          console.log('🗑️ Deleting', recordsToDelete.length, 'duplicate records');
-          try {
-            await base('User-Preferences').destroy(recordsToDelete.map(r => r.id));
-            console.log('✅ Deleted duplicate records successfully');
-          } catch (error) {
-            console.error('❌ Error deleting duplicates:', error);
-          }
-        }
-        
-        // Update the remaining record
-        console.log('🔄 Updating remaining preference record:', recordToKeep.id);
-        await base('User-Preferences').update([
-          {
-            id: recordToKeep.id,
-            fields: preferenceData
-          }
-        ]);
-        console.log('✅ Updated existing record successfully');
-      } else {
-        // Single existing record - normal update
-        console.log('🔄 Updating existing preference record:', existingRecords[0].id);
-        await base('User-Preferences').update([
-          {
-            id: existingRecords[0].id,
-            fields: preferenceData
-          }
-        ]);
-        console.log('✅ Updated existing record successfully');
+    if (existingRecord && !fetchError) {
+      // Update existing record
+      console.log('🔄 Updating existing preference record:', existingRecord.id);
+      
+      const { error: updateError } = await supabase
+        .from('user_preferences')
+        .update({
+          widget_order: widgetOrder,
+          active_widgets: activeWidgets,
+          theme_preference: themePreference,
+          last_update: new Date().toISOString()
+        })
+        .eq('id', existingRecord.id);
+
+      if (updateError) {
+        console.error('❌ Error updating preferences:', updateError);
+        return NextResponse.json({ error: 'Failed to update preferences' }, { status: 500 });
       }
+
+      console.log('✅ Updated existing record successfully');
     } else {
-      // No existing record found - create new one
+      // Create new record
       console.log('➕ Creating new preference record (first time for this user)');
-      const newRecords = await base('User-Preferences').create([
-        {
-          fields: preferenceData
-        }
-      ]);
-      console.log('✅ Created new record:', newRecords[0].id);
+      
+      const { error: insertError } = await supabase
+        .from('user_preferences')
+        .insert(preferenceData);
+
+      if (insertError) {
+        console.error('❌ Error creating preferences:', insertError);
+        return NextResponse.json({ error: 'Failed to create preferences' }, { status: 500 });
+      }
+
+      console.log('✅ Created new record successfully');
     }
 
     return NextResponse.json({ success: true });

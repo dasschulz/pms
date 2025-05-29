@@ -1,30 +1,29 @@
 # Funktionsweise Sharepics
 
-Diese Seite ermöglicht die schnelle und einfache Erstellung von Sharepics (Bilder mit Textüberlagerungen) für Social Media und andere digitale Kanäle, angepasst an das Corporate Design der Fraktion.
+Diese Seite dient der Erstellung und Verwaltung von Sharepics - grafischen Inhalten, die speziell für das Teilen auf sozialen Medien entwickelt wurden.
 
 ## Kernfunktionen
 
-- **Vorlagenauswahl**: Auswahl aus verschiedenen vordefinierten Design-Vorlagen (z.B. für Zitate, Ankündigungen, Statements).
-- **Bild-Upload/Auswahl**: Hochladen eigener Bilder oder Auswahl aus einer bereitgestellten Bilderdatenbank.
-- **Texteingabe**: Einfügen und Formatieren von Texten (Überschriften, Zitate, Call-to-Actions).
-- **Logo-Integration**: Automatisches oder manuelles Hinzufügen des Fraktionslogos oder anderer grafischer Elemente.
-- **Anpassungsoptionen**: Möglichkeiten zur Anpassung von Farben, Schriftarten (im Rahmen des CD), Bildausschnitten und Layout-Elementen.
-- **Vorschau**: Live-Vorschau des zu erstellenden Sharepics.
-- **Download**: Herunterladen des fertigen Sharepics in verschiedenen Formaten (JPG, PNG) und Auflösungen.
+- **Design-Tools**: Integrierter Bildeditor oder Anbindung an externe Design-Tools zur Erstellung von Grafiken.
+- **Vorlagen-Management**: Zugriff auf eine Bibliothek von Vorlagen, die an das Corporate Design der Fraktion angepasst sind.
+- **Text-Integration**: Eingabe und Formatierung von Texten, Zitaten oder Statements auf den Grafiken.
+- **Asset-Management**: Verwaltung von Bildern, Logos, Icons und anderen grafischen Elementen.
+- **Formatoptimierung**: Automatische oder manuelle Anpassung an verschiedene Social-Media-Formate (Instagram Post, Story, Facebook, Twitter etc.).
+- **Exportfunktionen**: Download der fertigen Sharepics in verschiedenen Auflösungen und Formaten.
 
 ## Integrationen
 
-- **Airtable**: Mögliche Speicherung von erstellten Sharepics oder Vorlagen.
-- **Bilddatenbanken**: Anbindung an interne oder externe Bilddatenbanken (z.B. Unsplash, Pexels, fraktionseigene Datenbank).
-- **Social Media Management Tools**: Eventuell direkter Export oder Anbindung an Tools zur Veröffentlichung.
-- **Corporate Design Vorgaben**: Hinterlegung der CD-Richtlinien (Farben, Schriften, Logo-Varianten) zur Sicherstellung eines konsistenten Erscheinungsbildes.
+- **Supabase**: Mögliche Speicherung von erstellten Sharepics oder Vorlagen.
+- **Cloud-Speicher**: Ablage der Grafiken und Assets in Cloud-Diensten.
+- **Social Media Management Tools**: Direkte Planung und Veröffentlichung der Sharepics.
+- **Redaktionsplan (`/redaktionsplan`)**: Integration in die Content-Planung.
 
 ## Offene To-Dos und Implementierungsideen
 
-- Entwicklung einer breiten Palette an ansprechenden und flexiblen Vorlagen.
-- Implementierung der Bildbearbeitungsfunktionen (Zuschnitt, Filter etc.).
-- Anbindung an eine umfangreiche, lizenzfreie Bilddatenbank.
-- Optimierung der Benutzeroberfläche für eine intuitive Bedienung.
-- Funktion zur Speicherung und Wiederverwendung eigener Entwürfe.
-- Mehrsprachigkeit der Textelemente.
-- Automatisierte Anpassung an verschiedene Social-Media-Formatvorgaben (z.B. Instagram Story, Facebook Post). 
+- Auswahl und Integration eines geeigneten Design-Tools oder Entwicklung eines eigenen Editors.
+- Aufbau einer umfangreichen Vorlagen-Bibliothek.
+- Implementierung von Funktionen zur Marken- und Designkonsistenz.
+- Anbindung an Social Media Management Tools für nahtlose Veröffentlichung.
+- Funktionen für Teamkollaboration bei der Erstellung.
+- A/B-Testing-Möglichkeiten für verschiedene Designs.
+- Integration von Analytics zur Performance-Messung der Sharepics. 

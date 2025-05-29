@@ -55,7 +55,7 @@ Die Seite `/gegner-recherche` (intern und im Navigationsmenü als "Tscheka" beze
 -   **Zweck**: Erstellt ein PDF-Dossier aus den übergebenen Politikerdaten.
 -   **Bibliotheken**: `pdf-lib`, `fontkit`.
 -   **Authentifizierung**: Erfordert eine aktive Benutzersitzung.
--   **Airtable-Interaktion**: Ruft `Name` und `Organisation` des angemeldeten Benutzers aus der `Users`-Tabelle ab, um diese Information im PDF-Footer zu platzieren ("Erstellt von [Name], [Organisation] am [Datum]").
+-   **Supabase-Interaktion**: Ruft `name` und `organisation` des angemeldeten Benutzers aus der `users`-Tabelle ab, um diese Information im PDF-Footer zu platzieren ("Erstellt von [Name], [Organisation] am [Datum]").
 -   **Logik**:
     1.  Lädt benutzerdefinierte Schriftarten.
     2.  Erstellt ein PDF-Dokument mit `pdf-lib`.
@@ -66,15 +66,15 @@ Die Seite `/gegner-recherche` (intern und im Navigationsmenü als "Tscheka" beze
         *   Fügt eine Zeile mit Erstellerinformationen (Name, Organisation, Datum) im Footer hinzu.
     4.  Serialisiert das PDF und gibt es als Base64-kodierten String mit einem Dateinamen zurück.
 
-## Verwendete Airtable-Tabellen
+## Verwendete Supabase-Tabellen
 
--   **`Users`**: Wird von `/api/dossier/generate` genutzt, um `Name` und `Organisation` des Dossier-Erstellers für den PDF-Footer abzurufen.
+-   **`users`**: Wird von `/api/dossier/generate` genutzt, um `name` und `organisation` des Dossier-Erstellers für den PDF-Footer abzurufen.
 
 ## Integrationen
 
 -   **Abgeordnetenwatch.de API**: Hauptquelle für Politikerdaten, Mandate, Abstimmungen, etc.
 -   **Wikipedia.de API**: Quelle für biografische Texte, politische Positionen und Kontroversen.
--   **Airtable**: Für Benutzerinformationen im PDF-Dossier.
+-   **Supabase**: Für Benutzerinformationen im PDF-Dossier.
 
 ## Besondere Hinweise
 

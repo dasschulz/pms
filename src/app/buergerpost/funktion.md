@@ -14,7 +14,7 @@ Diese Seite dient der Erfassung, Bearbeitung, Beantwortung und Verwaltung von B�
 
 ## Integrationen
 
-- **Airtable**: Speicherung der Bürgeranfragen, Korrespondenz, Textbausteine und Bearbeitungsstatus.
+- **Supabase**: Speicherung der Bürgeranfragen, Korrespondenz, Textbausteine und Bearbeitungsstatus.
 - **E-Mail-System**: Anbindung zur direkten Übernahme von E-Mail-Anfragen und zum Versand von Antworten.
 - **CRM-Systeme**: Mögliche Integration mit einem übergeordneten CRM-System.
 - **Skriptgenerator (`/skriptgenerator`)**: Nutzung zur Erstellung von Antwortentwürfen.

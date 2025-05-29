@@ -14,7 +14,7 @@ Diese Seite dient der Planung, Koordination und Organisation der Videoproduktion
 
 ## Integrationen
 
-- **Airtable**: Speicherung von Videoideen, Produktionsplänen, Aufgaben und Status.
+- **Supabase**: Speicherung von Videoideen, Produktionsplänen, Aufgaben und Status.
 - **Cloud-Speicher**: Anbindung an Cloud-Speicherdienste (z.B. Dropbox, Google Drive) für den Austausch großer Videodateien.
 - **Projektmanagement-Tools**: Mögliche Integration mit Tools wie Trello, Asana oder Jira für detaillierteres Task-Management.
 - **Social Media Management Tools**: Anbindung an Tools zur Planung und Veröffentlichung von Videos auf sozialen Netzwerken.
