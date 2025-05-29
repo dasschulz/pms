@@ -4,8 +4,9 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 async function fetchUserPreferences(userId: string) {
   try {
-    // Use the migrated user-preferences API endpoint
-    const response = await fetch(`${process.env.NEXTAUTH_URL}/api/user-preferences`, {
+    // Use relative URL for server-side API calls to avoid NEXTAUTH_URL dependency
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/user-preferences`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${userId}`, // Pass the user ID for server-side lookup
@@ -14,6 +15,7 @@ async function fetchUserPreferences(userId: string) {
     });
 
     if (!response.ok) {
+      console.error('Failed to fetch preferences, status:', response.status);
       throw new Error('Failed to fetch preferences');
     }
 
@@ -48,12 +50,26 @@ async function fetchUserPreferences(userId: string) {
 export async function DashboardPage() {
   // Get authenticated user from NextAuth
   const session = await getServerSession(authOptions);
-  const userName = session?.user?.name ?? 'Unbekannte/r Nutzer/in';
+  
+  // Add null safety checks
+  if (!session || !session.user) {
+    console.error('No valid session found in DashboardPage');
+    return (
+      <DraggableDashboard 
+        userName="Unbekannte/r Nutzer/in"
+        initialPreferences={undefined}
+      />
+    );
+  }
+  
+  const userName = session.user.name ?? 'Unbekannte/r Nutzer/in';
 
-  // Fetch user preferences if authenticated
+  // Fetch user preferences if authenticated and user ID is valid
   let preferences = undefined;
-  if (session?.user?.id) {
+  if (session.user.id && typeof session.user.id === 'string' && session.user.id.length > 0) {
     preferences = await fetchUserPreferences(session.user.id);
+  } else {
+    console.error('Invalid or missing user ID in session:', session.user.id);
   }
 
   return (
