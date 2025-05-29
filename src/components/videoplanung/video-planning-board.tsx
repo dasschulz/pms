@@ -18,12 +18,12 @@ export function VideoPlanningBoard() {
 
   // Simplified grouping: only two tables
   const groupedTasks = {
-    'Zu drehen': tasks?.filter((task: Task) => task.nextJob !== 'Erledigt') || [],
+    'In Bearbeitung': tasks?.filter((task: Task) => task.nextJob !== 'Erledigt') || [],
     'Erledigt': tasks?.filter((task: Task) => task.nextJob === 'Erledigt') || []
   };
 
   // Define table order
-  const tableOrder = ['Zu drehen', 'Erledigt'] as const;
+  const tableOrder = ['In Bearbeitung', 'Erledigt'] as const;
 
   // Check if there are any tasks at all
   const totalTasks = tasks?.length || 0;

@@ -32,7 +32,10 @@ Diese Seite dient allen angemeldeten Benutzern zur Ansicht der vom Fraktionsvors
     *   Die Darstellung pro Kachel für vergangene Linien bleibt im ursprünglichen Format (eine Karte pro Linie) und nutzt Accordions für Beschreibung, Argumente und Zahl der Woche.
 
 3.  **Skeleton Loading**:
-    *   Während die Daten geladen werden, zeigen Skeleton-Elemente eine Vorschau der Seitenstruktur an, um die wahrgenommene Ladezeit zu verbessern. Für aktuelle Linien wird ein Skeleton angezeigt, das die neue Drei-Karten-Struktur widerspiegelt.
+    *   Während die Daten geladen werden, zeigen Skeleton-Elemente eine Vorschau der kompletten Seitenstruktur an, um die wahrgenommene Ladezeit zu verbessern und ein "Aufflackern" der Inhalte zu verhindern. 
+    *   Für aktuelle Linien wird ein Skeleton angezeigt, das die neue Drei-Karten-Struktur exakt widerspiegelt, einschließlich der MdB-Profilbild-Bereiche.
+    *   Für vergangene Linien werden Skeleton-Karten im Grid-Layout angezeigt.
+    *   Die Skeleton-Anzeige erfolgt durch Early Return, sodass keine andere Inhalte sichtbar werden, bevor die Daten vollständig geladen sind.
 
 4.  **Download aktueller Linien als PDF (TODO)**:
     *   Ein Button ist vorhanden, um potenziell alle aktuellen Kommunikationslinien gesammelt als PDF herunterzuladen. Diese Funktionalität ist aktuell noch nicht implementiert.

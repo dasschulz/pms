@@ -70,6 +70,7 @@ Communication lines and agenda setting management.
 - **Access Control**: Only users with `is_fraktionsvorstand=true` can create entries
 - **MdB Assignment**: "Zuständiges MdB" field uses `/api/users/mdb-list` endpoint to bypass RLS and show only users with role='MdB'
 - **RPC Function**: The `get_communication_lines_with_details` RPC function is used to fetch communication lines along with MdB details and attachments. This function uses `SECURITY DEFINER` to ensure it can retrieve MdB user details (name, email, profile picture, office phone) from the `users` table, bypassing RLS for this specific data retrieval context.
+- **Dashboard Widget**: A dedicated Kommunikationslinien widget on the main dashboard displays the current active communication line with the main topic (Hauptthema), end date, and the number of the week (Zahl der Woche) with description. Users can click "Zu den Argumenten" to navigate to the full communication lines page.
 
 #### `communication_line_attachments`
 PDF attachments for communication lines.
@@ -116,6 +117,33 @@ Opposition research and analysis.
 - **Migration Status**: ✅ Complete
 - **Key Features**: Automated dossier generation, PDF creation
 - **API Endpoints**: `/api/dossier/generate`
+
+#### `referenten`
+Expert and referent contact management for parliamentary work with privacy controls.
+- **Migration Status**: ✅ Complete
+- **Key Features**: Shared expert database, privacy controls, availability tracking, consent management, multi-select fachbereich categorization, location tracking
+- **API Endpoints**: `/api/referentenpool`, `/api/referentenpool/[id]`
+- **Privacy Logic**: Referents are visible to all users if `zustimmung_kontakt_andere_mdb` is true, otherwise only visible to creator
+- **Schema**: 
+  - `id` (UUID, primary key)
+  - `titel` (TEXT, optional title like Dr., Prof.)
+  - `vorname` (TEXT, required first name)
+  - `nachname` (TEXT, required last name) 
+  - `fachbereich` (TEXT[], required expertise areas - supports multiple selections)
+  - `institution` (TEXT, required institutional affiliation)
+  - `ort` (TEXT, optional location/city)
+  - `email` (TEXT, optional contact email)
+  - `telefon` (TEXT, optional phone number)
+  - `verfuegbar_fuer` (TEXT[], required availability types: Anhörung, Veranstaltung, Beratung)
+  - `zustimmung_datenspeicherung` (BOOLEAN, required data storage consent)
+  - `zustimmung_kontakt_andere_mdb` (BOOLEAN, controls visibility to other MdBs - false = private to creator only)
+  - `parteimitglied` (BOOLEAN, indicates if referent is a party member)
+  - `angelegt_von` (UUID, foreign key to users table)
+  - `hinzugefuegt_von` (TEXT, plaintext name of the user who added the referent)
+  - `created_at`, `updated_at` (TIMESTAMPTZ)
+- **RLS Policies**: Privacy-aware view policy (show if public OR owned by user), insert-own, update-all, delete-all
+- **Constraints**: verfuegbar_fuer must contain valid options only
+- **Indexes**: fachbereich (GIN for array), institution, angelegt_von, verfuegbar_fuer (GIN), ort
 
 ### Tour Management
 

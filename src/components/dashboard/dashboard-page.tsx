@@ -18,8 +18,8 @@ async function fetchUserPreferences(userId: string) {
       console.log('Dashboard: No preferences found for user, returning defaults:', error?.message);
       // Return default preferences if none found
       return {
-        widgetOrder: ['weather', 'trains', 'latest-speech', 'activity'],
-        activeWidgets: ['weather', 'trains', 'latest-speech', 'activity'],
+        widgetOrder: ['weather', 'trains', 'latest-speech', 'dreh', 'kommunikationslinien', 'activity'],
+        activeWidgets: ['weather', 'trains', 'latest-speech', 'dreh', 'kommunikationslinien', 'activity'],
         themePreference: 'system' as const
       };
     }
@@ -27,8 +27,8 @@ async function fetchUserPreferences(userId: string) {
     console.log('Dashboard: Found preferences record:', prefRecord.id);
 
     return {
-      widgetOrder: prefRecord.widget_order || ['weather', 'trains', 'latest-speech', 'activity'],
-      activeWidgets: prefRecord.active_widgets || ['weather', 'trains', 'latest-speech', 'activity'],
+      widgetOrder: prefRecord.widget_order || ['weather', 'trains', 'latest-speech', 'dreh', 'kommunikationslinien', 'activity'],
+      activeWidgets: prefRecord.active_widgets || ['weather', 'trains', 'latest-speech', 'dreh', 'kommunikationslinien', 'activity'],
       themePreference: prefRecord.theme_preference || 'system' as const
     };
 
@@ -36,8 +36,8 @@ async function fetchUserPreferences(userId: string) {
     console.error('Dashboard: Error fetching user preferences:', error);
     // Return defaults if query fails
     return {
-      widgetOrder: ['weather', 'trains', 'latest-speech', 'activity'],
-      activeWidgets: ['weather', 'trains', 'latest-speech', 'activity'],
+      widgetOrder: ['weather', 'trains', 'latest-speech', 'dreh', 'kommunikationslinien', 'activity'],
+      activeWidgets: ['weather', 'trains', 'latest-speech', 'dreh', 'kommunikationslinien', 'activity'],
       themePreference: 'system' as const
     };
   }

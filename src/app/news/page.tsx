@@ -303,9 +303,9 @@ export default function NewsPage() {
                     </Button>
                   </DialogTrigger>
                   {item.type === "topic" && (
-                    <Link href="/minor-inquiry/generate" passHref legacyBehavior className="w-full">
-                      <Button asChild variant="secondary" size="sm" className="w-full font-body">
-                        <a><FileSearch2 className="mr-2 h-4 w-4" /> Kleine Anfrage vorschlagen</a>
+                    <Link href="/minor-inquiry/generate" className="w-full">
+                      <Button variant="secondary" size="sm" className="w-full font-body">
+                        <FileSearch2 className="mr-2 h-4 w-4" /> Kleine Anfrage vorschlagen
                       </Button>
                     </Link>
                   )}
@@ -364,7 +364,7 @@ export default function NewsPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto"
-                legacyBehavior>
+              >
                 <Button variant="outline" className="font-body">
                   Auf Website lesen <ExternalLink className="ml-2 h-4 w-4" />
                 </Button>

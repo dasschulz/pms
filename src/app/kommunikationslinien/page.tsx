@@ -118,52 +118,127 @@ export default function KommunikationslinienPage() {
     }
   };
 
+  const getPublicUrl = async (filePath: string): Promise<string | null> => {
+    try {
+        const { data } = supabase.storage.from('communicationattachments').getPublicUrl(filePath);
+        return data?.publicUrl || null;
+    } catch (error) {
+        console.error('Error getting public URL:', error);
+        return null;
+    }
+  };
+
   useEffect(() => {
     fetchCommunicationLines();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]); // Dependency array might need supabase if its instance can change, though unlikely for client component client
 
-    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchTerm(event.target.value);
-        setCurrentPagePast(1); // Reset to first page on new search
-    };
+  // Early return for loading state to prevent layout flash
+  if (isLoading) {
+    return (
+      <PageLayout
+        title="Kommunikationslinien"
+        description="Aktuelle und vergangene Themen und Argumentationshilfen."
+      >
+        <div className="space-y-8">
+          {/* Button Skeleton */}
+          <div className="flex justify-end">
+            <Skeleton className="h-10 w-64" />
+          </div>
 
-    const filteredPastLines = pastLines.filter(line =>
-        (line.hauptthema?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (line.beschreibung?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (line.zahl_der_woche?.toLowerCase().includes(searchTerm.toLowerCase()))
+          {/* Current Communication Lines Skeleton */}
+          <section>
+            <div className="flex items-center mb-4">
+              <Skeleton className="h-8 w-64" />
+            </div>
+            {/* Skeleton for current lines (3-column layout) */}
+            <div className="flex flex-col md:flex-row gap-6">
+              <Card className="w-full md:w-[35%]">
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-4/5" />
+                  <Skeleton className="h-8 w-1/3" />
+                </CardContent>
+              </Card>
+              <Card className="w-full md:w-[35%]">
+                <CardHeader>
+                  <Skeleton className="h-6 w-3/4" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                  <Skeleton className="h-4 w-4/5" />
+                </CardContent>
+              </Card>
+              <Card className="w-full md:w-[30%]">
+                <CardHeader className="p-0 relative h-32 sm:h-40">
+                  <Skeleton className="w-full h-full rounded-t-lg" />
+                </CardHeader>
+                <CardContent className="p-3 text-center space-y-2">
+                  <Skeleton className="h-5 w-1/2 mx-auto" />
+                  <Skeleton className="h-3 w-3/4 mx-auto" />
+                  <Skeleton className="h-3 w-1/2 mx-auto" />
+                  <div className="space-y-1 mt-3">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* Past Communication Lines Skeleton */}
+          <section>
+            <div className="flex items-center mb-4">
+              <Skeleton className="h-8 w-48" />
+            </div>
+            <div className="mb-4">
+              <Skeleton className="h-10 w-full md:w-1/2 lg:w-1/3" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <CardHeader>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                    <Skeleton className="h-8 w-1/3" />
+                    <div className="mt-4 space-y-2">
+                      <Skeleton className="h-16 w-full" />
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Skeleton className="h-8 w-24" />
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </section>
+        </div>
+      </PageLayout>
     );
+  }
 
-    const totalPastPages = Math.ceil(filteredPastLines.length / ITEMS_PER_PAGE);
-    const paginatedPastLines = filteredPastLines.slice((currentPagePast - 1) * ITEMS_PER_PAGE, currentPagePast * ITEMS_PER_PAGE);
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    setCurrentPagePast(1); // Reset to first page on new search
+  };
 
-    const getPublicUrl = async (filePath: string): Promise<string | null> => {
-        try {
-            const { data } = supabase.storage.from('communicationattachments').getPublicUrl(filePath);
-            return data?.publicUrl || null;
-        } catch (error) {
-            console.error('Error getting public URL:', error);
-            return null;
-        }
-    };
+  const filteredPastLines = pastLines.filter(line =>
+    (line.hauptthema?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (line.beschreibung?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (line.zahl_der_woche?.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
-    // Skeleton Loader for Cards
-    const LineSkeleton = () => (
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <Skeleton className="h-6 w-3/4" />
-          <Skeleton className="h-4 w-1/2 mt-1" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <Skeleton className="h-8 w-1/3 mt-2" /> 
-        </CardContent>
-        <CardFooter>
-            <Skeleton className="h-8 w-24" />
-        </CardFooter>
-      </Card>
-    );
+  const totalPastPages = Math.ceil(filteredPastLines.length / ITEMS_PER_PAGE);
+  const paginatedPastLines = filteredPastLines.slice((currentPagePast - 1) * ITEMS_PER_PAGE, currentPagePast * ITEMS_PER_PAGE);
 
   const renderLineCard = (line: CommunicationLine, isCurrent: boolean) => {
     if (isCurrent) {
@@ -400,16 +475,8 @@ export default function KommunikationslinienPage() {
                     </>
                 )}
             </h2>
-            {isLoading && (
-                // Show a single, full-width skeleton for the new current line layout
-                <div className="flex flex-col md:flex-row gap-6">
-                    <Card className="w-full md:w-[35%]"><CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader><CardContent><Skeleton className="h-4 w-full mt-2"/><Skeleton className="h-4 w-5/6 mt-1"/></CardContent></Card>
-                    <Card className="w-full md:w-[35%]"><CardHeader><Skeleton className="h-6 w-3/4" /></CardHeader><CardContent><Skeleton className="h-4 w-full mt-2"/><Skeleton className="h-4 w-5/6 mt-1"/></CardContent></Card>
-                    <Card className="w-full md:w-[30%]"><CardHeader className="p-0 relative h-32 sm:h-40"><Skeleton className="w-full h-full rounded-t-lg"/></CardHeader><CardContent className="p-3 text-center"><Skeleton className="h-5 w-1/2 mx-auto mt-2"/><Skeleton className="h-3 w-3/4 mx-auto mt-1"/><Skeleton className="h-3 w-1/2 mx-auto mt-1"/></CardContent></Card>
-                </div>
-            )}
-            {!isLoading && currentLines.length === 0 && <p className="text-muted-foreground">Keine aktuellen Kommunikationslinien vorhanden.</p>}
-            {!isLoading && currentLines.length > 0 && (
+            {currentLines.length === 0 && <p className="text-muted-foreground">Keine aktuellen Kommunikationslinien vorhanden.</p>}
+            {currentLines.length > 0 && (
               // The new layout for current lines doesn't use the grid directly for multiple cards,
               // but renderLineCard itself now returns a div with the 3-card grid.
               // Assuming only ONE current line is active and displayed in this new format.
@@ -438,14 +505,9 @@ export default function KommunikationslinienPage() {
                 className="pl-10 w-full md:w-1/2 lg:w-1/3"
               />
             </div>
-            {isLoading && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[...Array(ITEMS_PER_PAGE)].map((_, i) => <LineSkeleton key={`past-skel-${i}`} />)}
-                </div>
-            )}
-            {!isLoading && filteredPastLines.length === 0 && searchTerm && <p className="text-muted-foreground">Keine Ergebnisse für "{searchTerm}".</p>}
-            {!isLoading && pastLines.length === 0 && !searchTerm && <p className="text-muted-foreground">Keine vergangenen Kommunikationslinien vorhanden.</p>}
-            {!isLoading && paginatedPastLines.length > 0 && (
+            {filteredPastLines.length === 0 && searchTerm && <p className="text-muted-foreground">Keine Ergebnisse für "{searchTerm}".</p>}
+            {pastLines.length === 0 && !searchTerm && <p className="text-muted-foreground">Keine vergangenen Kommunikationslinien vorhanden.</p>}
+            {paginatedPastLines.length > 0 && (
                 <> 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {paginatedPastLines.map(line => renderLineCard(line, false))}

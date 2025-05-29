@@ -25,6 +25,7 @@ import { WeatherCard } from "./weather-card";
 import { TrainCard } from "./train-card";
 import { LatestSpeechCard } from "./latest-speech-card";
 import { DrehCard } from "./dreh-card";
+import { KommunikationslinienCard } from "./kommunikationslinien-card";
 import { 
   Settings, 
   Grip,
@@ -123,6 +124,14 @@ export function DraggableDashboard({ userName, initialPreferences }: DraggableDa
       id: "dreh",
       name: "Videodreh",
       component: DrehCard,
+      props: {},
+      defaultActive: true,
+      category: "info"
+    },
+    {
+      id: "kommunikationslinien",
+      name: "Kommunikationslinien",
+      component: KommunikationslinienCard,
       props: {},
       defaultActive: true,
       category: "info"

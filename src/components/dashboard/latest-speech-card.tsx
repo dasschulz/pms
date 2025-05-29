@@ -856,7 +856,7 @@ export function LatestSpeechCard({ className }: LatestSpeechCardProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Link href="/meine-reden" legacyBehavior>
+          <Link href="/meine-reden">
             <Button variant="outline" className="w-full">
               <FolderOpen className="w-4 h-4 mr-2" />
               Alle Reden durchsuchen
@@ -942,7 +942,7 @@ export function LatestSpeechCard({ className }: LatestSpeechCardProps) {
 
           {/* Link to all speeches */}
           <div className="pt-2 border-t">
-            <Link href="/meine-reden" legacyBehavior>
+            <Link href="/meine-reden">
               <Button variant="ghost" size="sm" className="w-full">
                 <FolderOpen className="w-4 h-4 mr-2" />
                 Alle Reden ansehen

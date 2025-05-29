@@ -51,6 +51,23 @@ export const navItems: NavItem[] = [
     ],
   },
   {
+    title: 'Kontakte',
+    icon: Users,
+    isChidren: true,
+    children: [
+      {
+        title: 'Referentenpool',
+        href: '/referentenpool',
+        icon: Users,
+      },
+      {
+        title: 'Journalistenpool',
+        href: '/journalistenpool',
+        icon: Newspaper,
+      },
+    ],
+  },
+  {
     title: 'Dokumentensuche',
     href: '/dokumentensuche',
     icon: FileSearch2,
@@ -116,16 +133,6 @@ export const navItems: NavItem[] = [
         title: 'Dienstreisen',
         href: '/dienstreisen',
         icon: Plane,
-      },
-      {
-        title: 'Referentenpool',
-        href: '/referentenpool',
-        icon: Users,
-      },
-      {
-        title: 'Journalistenpool',
-        href: '/journalistenpool',
-        icon: Newspaper,
       },
       {
         title: 'Anfragenplanung',

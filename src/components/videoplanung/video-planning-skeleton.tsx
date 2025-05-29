@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 // Color schemes for different statuses (matching the actual component)
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'Zu drehen':
+    case 'In Bearbeitung':
       return 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-slate-200 border-gray-200 dark:border-slate-700';
     case 'Erledigt':
       return 'bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-200 border-gray-200 dark:border-slate-700';
@@ -29,7 +29,7 @@ interface TaskRowSkeletonProps {
 
 function TaskRowSkeleton({ isSubtask = false }: TaskRowSkeletonProps) {
   return (
-    <TableRow className="bg-white">
+    <TableRow className="bg-white dark:bg-background">
       <TableCell>
         <div className={cn("flex items-center gap-1", isSubtask && "ml-6")}>
           <Skeleton className="h-4 w-4" />
@@ -122,11 +122,11 @@ function StatusTableSkeleton({ status, taskCount = 3, isCollapsed = false }: Sta
 export function VideoPlanningBoardSkeleton() {
   return (
     <div className="space-y-6">
-      {['Zu drehen', 'Erledigt'].map((status) => (
+      {['In Bearbeitung', 'Erledigt'].map((status) => (
         <StatusTableSkeleton
           key={status}
           status={status}
-          taskCount={status === 'Zu drehen' ? 4 : 2} // More tasks in "Zu drehen", fewer in "Erledigt"
+          taskCount={status === 'In Bearbeitung' ? 4 : 2} // More tasks in "In Bearbeitung", fewer in "Erledigt"
           isCollapsed={status === 'Erledigt'}
         />
       ))}

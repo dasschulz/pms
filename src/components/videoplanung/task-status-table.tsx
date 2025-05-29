@@ -362,7 +362,7 @@ export function TaskStatusTable({
       const taskData = {
         name: newTaskName.trim(),
         detailview: '',
-        nextJob: status === 'Zu drehen' ? 'Brainstorming' : status,
+        nextJob: status === 'In Bearbeitung' ? 'Brainstorming' : status,
         priority: 'Normal',
         isSubtask: false
       };
@@ -828,7 +828,7 @@ export function TaskStatusTable({
                   
                   return (
                     <Fragment key={task.id}>
-                      <TableRow className="cursor-pointer bg-white">
+                      <TableRow className="cursor-pointer bg-white dark:bg-background">
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1">
                             <Checkbox
@@ -942,7 +942,7 @@ export function TaskStatusTable({
                       
                       {/* Inline subtask creation row */}
                       {creatingSubtaskFor === task.id && (
-                        <TableRow className="animate-in slide-in-from-top-2 duration-200 bg-white">
+                        <TableRow className="animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-background">
                           <TableCell onClick={(e) => e.stopPropagation()} className="w-12">
                             <div className="flex items-center gap-1 ml-6">
                               <Checkbox
@@ -972,7 +972,7 @@ export function TaskStatusTable({
                                 disabled={!newSubtaskName.trim() || isCreatingSubtask}
                                 className="h-6 w-6 p-0"
                               >
-                                <Check className="h-3 w-3 text-green-600" />
+                                <Check className="h-3 w-3 text-green-600 dark:text-white" />
                               </Button>
                               <Button
                                 size="sm"
@@ -981,7 +981,7 @@ export function TaskStatusTable({
                                 disabled={isCreatingSubtask}
                                 className="h-6 w-6 p-0"
                               >
-                                <X className="h-3 w-3 text-red-600" />
+                                <X className="h-3 w-3 text-red-600 dark:text-white" />
                               </Button>
                             </div>
                           </TableCell>
@@ -1013,7 +1013,7 @@ export function TaskStatusTable({
                       {isExpanded && subtasks.map((subtask) => (
                         <Fragment key={subtask.id}>
                           <TableRow
-                            className="cursor-pointer bg-white"
+                            className="cursor-pointer bg-white dark:bg-background"
                           >
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center gap-1 ml-6">
@@ -1110,7 +1110,7 @@ export function TaskStatusTable({
                           
                           {/* Inline subtask creation row for subtasks */}
                           {creatingSubtaskFor === subtask.id && (
-                            <TableRow className="animate-in slide-in-from-top-2 duration-200 bg-white">
+                            <TableRow className="animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-background">
                               <TableCell onClick={(e) => e.stopPropagation()} className="w-12">
                                 <div className="flex items-center gap-1 ml-6">
                                   <Checkbox
@@ -1140,7 +1140,7 @@ export function TaskStatusTable({
                                     disabled={!newSubtaskName.trim() || isCreatingSubtask}
                                     className="h-6 w-6 p-0"
                                   >
-                                    <Check className="h-3 w-3 text-green-600" />
+                                    <Check className="h-3 w-3 text-green-600 dark:text-white" />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -1149,7 +1149,7 @@ export function TaskStatusTable({
                                     disabled={isCreatingSubtask}
                                     className="h-6 w-6 p-0"
                                   >
-                                    <X className="h-3 w-3 text-red-600" />
+                                    <X className="h-3 w-3 text-red-600 dark:text-white" />
                                   </Button>
                                 </div>
                               </TableCell>
@@ -1185,7 +1185,7 @@ export function TaskStatusTable({
                 {/* New Task Creation Row */}
                 {!isCreatingNewTask ? (
                   <TableRow 
-                    className="cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-200 bg-white"
+                    className="cursor-pointer opacity-60 hover:opacity-100 transition-opacity duration-200 bg-white dark:bg-background"
                     onClick={handleNewTaskActivate}
                   >
                     <TableCell>
@@ -1224,7 +1224,7 @@ export function TaskStatusTable({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  <TableRow className="animate-in slide-in-from-top-2 duration-200 bg-white">
+                  <TableRow className="animate-in slide-in-from-top-2 duration-200 bg-white dark:bg-background">
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
                         <Checkbox disabled />
@@ -1253,7 +1253,7 @@ export function TaskStatusTable({
                             disabled={!newTaskName.trim() || isSavingNewTask}
                             className="h-6 w-6 p-0"
                           >
-                            <Check className="h-3 w-3 text-green-600" />
+                            <Check className="h-3 w-3 text-green-600 dark:text-white" />
                           </Button>
                           <Button
                             size="sm"
@@ -1262,7 +1262,7 @@ export function TaskStatusTable({
                             disabled={isSavingNewTask}
                             className="h-6 w-6 p-0"
                           >
-                            <X className="h-3 w-3 text-red-600" />
+                            <X className="h-3 w-3 text-red-600 dark:text-white" />
                           </Button>
                         </div>
                       </div>
