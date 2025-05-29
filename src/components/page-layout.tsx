@@ -18,9 +18,7 @@ export function PageLayout({ title, description, headerActions, children }: Prop
         </div>
         {headerActions && <div>{headerActions}</div>}
       </div>
-      <div className="bg-card p-6 rounded-lg shadow-lg">
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
