@@ -69,6 +69,7 @@ Communication lines and agenda setting management.
 - **API Endpoints**: `/agendasetting` (page), `/api/users/mdb-list` (MdB selection), storage in `communicationattachments` bucket
 - **Access Control**: Only users with `is_fraktionsvorstand=true` can create entries
 - **MdB Assignment**: "Zuständiges MdB" field uses `/api/users/mdb-list` endpoint to bypass RLS and show only users with role='MdB'
+- **RPC Function**: The `get_communication_lines_with_details` RPC function is used to fetch communication lines along with MdB details and attachments. This function uses `SECURITY DEFINER` to ensure it can retrieve MdB user details (name, email, profile picture, office phone) from the `users` table, bypassing RLS for this specific data retrieval context.
 
 #### `communication_line_attachments`
 PDF attachments for communication lines.
