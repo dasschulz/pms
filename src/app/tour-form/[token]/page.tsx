@@ -7,26 +7,50 @@ interface PageProps {
   };
 }
 
+async function fetchMdBDetails(token: string) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/tour-form/mdb-details?token=${encodeURIComponent(token)}`,
+      { 
+        cache: 'no-store', // Always fetch fresh data for token validation
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Failed to fetch MdB details:', response.status, response.statusText);
+      return null;
+    }
+
+    const userData = await response.json();
+    return userData;
+  } catch (error) {
+    console.error('Error fetching MdB details:', error);
+    return null;
+  }
+}
+
 export default async function TourFormPage({ params }: PageProps) {
-  // The form component will handle token validation internally
-  // since we have the validation logic in our migrated API endpoints
-  // For now, pass minimal userData structure that the component expects
-  
-  const userData = {
-    userId: 'token-based', // Will be resolved by the form component
-    userIdNumber: '',
-    name: '',
-    firstName: '',
-    email: '',
-    profilePictureUrl: undefined,
-    linkRecordId: params.token, // Use token as reference
-  };
+  const { token } = params;
+
+  // Fetch MdB details using the token
+  const userData = await fetchMdBDetails(token);
+
+  // If we can't fetch user data (invalid token, expired token, etc.), show 404
+  if (!userData) {
+    console.log('Tour form page: Invalid token or failed to fetch MdB details for token:', token);
+    notFound();
+  }
+
+  console.log('Tour form page: Successfully loaded MdB details for:', userData.name);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-50 to-white">
       <TourRequestForm 
         userData={userData}
-        token={params.token}
+        token={token}
       />
     </div>
   );

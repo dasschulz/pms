@@ -156,7 +156,7 @@ function SidebarNav() {
     if (isSubItem) {
        return (
          <SidebarMenuSubItem key={item.href || index}>
-           <Link href={item.href || "#"} passHref={false} legacyBehavior>
+           <Link href={item.href || "#"} passHref={false}>
              <SidebarMenuSubButton
                {...commonProps}
                isActive={isActive}
@@ -170,7 +170,7 @@ function SidebarNav() {
 
     return (
       <SidebarMenuItem key={item.href || index}>
-        <Link href={item.href || "#"} passHref={false} legacyBehavior>
+        <Link href={item.href || "#"} passHref={false}>
           <SidebarMenuButton {...commonProps} isActive={isActive && !item.children}>
             {content}
           </SidebarMenuButton>

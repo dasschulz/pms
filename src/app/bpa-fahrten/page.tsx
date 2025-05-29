@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface BpaFahrt {
   id: string;
@@ -38,14 +39,12 @@ interface BpaFahrt {
   anmeldefrist?: Date;
   beschreibung?: string;
   zustaiegsorteConfig?: string;
-  aktiv?: boolean;
 }
 
 const initialFahrtData: Partial<BpaFahrt> = {
   zielort: 'Berlin',
   statusFahrt: 'Planung',
   kontingentMax: 50,
-  aktiv: true,
   beschreibung: '',
   hotelName: '',
   hotelAdresse: '',
@@ -125,6 +124,10 @@ export default function BpaFahrtenPage() {
   const [editingFahrtData, setEditingFahrtData] = useState<Partial<BpaFahrt> | null>(null);
   const [currentEditingFahrtId, setCurrentEditingFahrtId] = useState<string | null>(null);
 
+  // State for Delete Dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [fahrtToDelete, setFahrtToDelete] = useState<BpaFahrt | null>(null);
+
   // Get user's last name for iframe code
   const userLastName = session?.user?.name?.split(' ').pop() || 'mustermann';
 
@@ -140,7 +143,7 @@ export default function BpaFahrtenPage() {
       const data = await response.json();
       
       // Convert string dates to Date objects
-      const processedFahrten = (data.fahrten || []).map((fahrt: any) => ({
+      const processedFahrten = (data.trips || []).map((fahrt: any) => ({
         ...fahrt,
         fahrtDatumVon: fahrt.fahrtDatumVon ? new Date(fahrt.fahrtDatumVon) : undefined,
         fahrtDatumBis: fahrt.fahrtDatumBis ? new Date(fahrt.fahrtDatumBis) : undefined,
@@ -186,13 +189,6 @@ export default function BpaFahrtenPage() {
     setNewFahrtData(prev => ({
         ...prev,
         [name]: value,
-    }));
-  };
-  
- const handleCreateSwitchChange = (name: keyof BpaFahrt, checked: boolean) => {
-    setNewFahrtData(prev => ({
-      ...prev,
-      [name]: checked,
     }));
   };
 
@@ -275,8 +271,35 @@ export default function BpaFahrtenPage() {
     setEditingFahrtData(prev => prev ? { ...prev, [name]: value } : null);
   };
 
-  const handleEditSwitchChange = (name: keyof BpaFahrt, checked: boolean) => {
-    setEditingFahrtData(prev => prev ? { ...prev, [name]: checked } : null);
+  const handleDeleteFahrt = async (fahrt: BpaFahrt) => {
+    try {
+      const response = await fetch(`/api/bpa-fahrten/${fahrt.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Fehler beim Löschen der Fahrt (${response.status})`);
+      }
+
+      toast.success("BPA-Fahrt erfolgreich gelöscht!");
+      setDeleteDialogOpen(false);
+      setFahrtToDelete(null);
+      
+      // Refresh the list
+      setTimeout(() => {
+        fetchFahrten();
+      }, 500);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Löschen der Fahrt';
+      toast.error(errorMessage);
+      console.error('Error deleting trip:', error);
+    }
+  };
+
+  const openDeleteDialog = (fahrt: BpaFahrt) => {
+    setFahrtToDelete(fahrt);
+    setDeleteDialogOpen(true);
   };
 
   const handleUpdateFahrt = async () => {
@@ -328,6 +351,35 @@ export default function BpaFahrtenPage() {
 
   const handleViewDetails = (fahrtId: string) => {
     router.push(`/bpa-fahrten/${fahrtId}`);
+  };
+
+  // Function to handle inline status updates
+  const handleInlineStatusUpdate = async (fahrtId: string, field: 'statusFahrt', value: string) => {
+    try {
+      const response = await fetch(`/api/bpa-fahrten/${fahrtId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Fehler beim Aktualisieren (${response.status})`);
+      }
+
+      // Update the local state immediately for better UX
+      setFahrten(prev => prev.map(fahrt => 
+        fahrt.id === fahrtId 
+          ? { ...fahrt, [field]: value }
+          : fahrt
+      ));
+
+      toast.success(field === 'statusFahrt' ? 'Status aktualisiert!' : 'Status aktualisiert!');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Aktualisieren';
+      toast.error(errorMessage);
+      console.error('Error updating status:', error);
+    }
   };
 
   if (isLoading && fahrten.length === 0 && !error) {
@@ -526,15 +578,6 @@ export default function BpaFahrtenPage() {
                 </div>
                 <Input id="zustaiegsorteConfig" name="zustaiegsorteConfig" value={newFahrtData.zustaiegsorteConfig || ''} onChange={handleCreateInputChange} className="col-span-3" placeholder="z.B. kommasepariert"/>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <div className="text-right flex items-center justify-end">
-                  <Label htmlFor="aktiv">Formular Aktiv</Label>
-                  <InfoPopover content="Bestimmt, ob das Anmeldeformular für Teilnehmer verfügbar ist. Personenbezogene Angaben werden ausschließlich im Zusammenhang mit den BPA-Fahrten genutzt und nach der Fahrt gelöscht." />
-                </div>
-                 <div className="col-span-3 flex items-center">
-                    <Switch id="aktiv" name="aktiv" checked={newFahrtData.aktiv === true} onCheckedChange={(checked) => handleCreateSwitchChange('aktiv', checked)} />
-                 </div>
-              </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>
@@ -578,13 +621,24 @@ export default function BpaFahrtenPage() {
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span className="text-xl font-semibold">{fahrt.zielort}</span>
-                  <div className="flex gap-2">
-                    <Badge variant={fahrt.statusFahrt === 'Anmeldung offen' || fahrt.statusFahrt === 'Fahrt läuft' ? 'default' : fahrt.statusFahrt === 'Storniert' ? 'destructive' : 'outline'}>
-                      {fahrt.statusFahrt}
-                    </Badge>
-                    <Badge variant={fahrt.aktiv ? 'default' : 'outline'}>
-                      {fahrt.aktiv ? 'Aktiv' : 'Inaktiv'}
-                    </Badge>
+                  <div className="flex gap-2 items-center">
+                    {/* Interactive Status Select */}
+                    <Select 
+                      value={fahrt.statusFahrt || 'Planung'} 
+                      onValueChange={(value) => handleInlineStatusUpdate(fahrt.id, 'statusFahrt', value)}
+                    >
+                      <SelectTrigger className="h-6 w-auto min-w-[120px] text-xs border-0 bg-transparent hover:bg-muted/50 transition-colors">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Planung">Planung</SelectItem>
+                        <SelectItem value="Anmeldung offen">Anmeldung offen</SelectItem>
+                        <SelectItem value="Anmeldung geschlossen">Anmeldung geschlossen</SelectItem>
+                        <SelectItem value="Fahrt läuft">Fahrt läuft</SelectItem>
+                        <SelectItem value="Abgeschlossen">Abgeschlossen</SelectItem>
+                        <SelectItem value="Storniert">Storniert</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardTitle>
                 <div className="text-sm text-muted-foreground">
@@ -663,6 +717,15 @@ export default function BpaFahrtenPage() {
                       title="Fahrt bearbeiten"
                     >
                       <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => openDeleteDialog(fahrt)} 
+                      title="Fahrt löschen"
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -859,16 +922,6 @@ export default function BpaFahrtenPage() {
                 </div>
                 <Input id="editZustiegsorteConfig" name="zustaiegsorteConfig" value={editingFahrtData.zustaiegsorteConfig || ''} onChange={handleEditInputChange} className="col-span-3" />
               </div>
-              {/* Aktiv Switch */}
-              <div className="grid grid-cols-4 items-center gap-4">
-                <div className="text-right flex items-center justify-end">
-                  <Label htmlFor="editAktiv">Formular Aktiv</Label>
-                  <InfoPopover content="Bestimmt, ob das Anmeldeformular für Teilnehmer verfügbar ist. Personenbezogene Angaben werden ausschließlich im Zusammenhang mit den BPA-Fahrten genutzt und nach der Fahrt gelöscht." />
-                </div>
-                <div className="col-span-3 flex items-center">
-                  <Switch id="editAktiv" name="aktiv" checked={editingFahrtData.aktiv === true} onCheckedChange={(checked) => handleEditSwitchChange('aktiv', checked)} />
-                </div>
-              </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>
@@ -881,6 +934,36 @@ export default function BpaFahrtenPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>BPA-Fahrt löschen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sind Sie sicher, dass Sie die Fahrt "{fahrtToDelete?.zielort}" löschen möchten? 
+              Diese Aktion kann nicht rückgängig gemacht werden.
+              {fahrtToDelete?.aktuelleAnmeldungen && fahrtToDelete.aktuelleAnmeldungen > 0 && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-sm text-yellow-800">
+                    Achtung: Diese Fahrt hat bereits {fahrtToDelete.aktuelleAnmeldungen} Anmeldung(en). 
+                    Das Löschen ist möglicherweise nicht erlaubt.
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => fahrtToDelete && handleDeleteFahrt(fahrtToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Fahrt löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="mt-8 flex justify-start gap-4">
         <div className="w-1/4">

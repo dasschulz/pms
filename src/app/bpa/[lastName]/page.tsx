@@ -38,6 +38,7 @@ export default function BpaDirectFormPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [formStartTime, setFormStartTime] = useState(Date.now());
 
   const [formData, setFormData] = useState({
     vorname: '',
@@ -53,6 +54,11 @@ export default function BpaDirectFormPage() {
     einzelzimmer: false,
     zustieg: '',
     essenspraeferenz: '',
+    // Honeypot fields (should remain empty)
+    website: '',
+    phone_number: '',
+    company: '',
+    fax: '',
     // Add other fields from BPA_Formular as needed
   });
 
@@ -150,6 +156,14 @@ export default function BpaDirectFormPage() {
       setError("Eine mehrmalige Teilnahme derselben Person innerhalb von 5 Jahren entspricht nicht den Richtlinien des BPA.");
       return;
     }
+    
+    // Basic client-side timing check
+    const timeDiff = Date.now() - formStartTime;
+    if (timeDiff < 3000) {
+      setError("Bitte nehmen Sie sich etwas mehr Zeit beim Ausfüllen des Formulars.");
+      return;
+    }
+    
     const finalTripId = activeTrips.length === 1 && activeTrips[0] ? activeTrips[0].id : selectedTripId;
     if (!finalTripId) {
         setError("Keine gültige Fahrt ausgewählt oder verfügbar. Bitte lade die Seite neu.");
@@ -168,7 +182,8 @@ export default function BpaDirectFormPage() {
         body: JSON.stringify({
           mdbUserId: mdbDetails.id, // This is the MdB's Supabase UUID
           fahrtId: finalTripId,     // This is the Supabase UUID of the selected BPA_Fahrt
-          formData: formData,
+          startTime: formStartTime, // Send form start time for server-side validation
+          formData: formData,       // Include honeypot fields for server validation
         }),
       });
 
@@ -192,7 +207,7 @@ export default function BpaDirectFormPage() {
   if (isSubmitted) {
     return (
       <div 
-        className="container mx-auto px-4 py-16 min-h-screen text-white"
+        className="px-4 py-16 min-h-screen text-white"
         style={{
           backgroundColor: 'hsl(0 100% 50%)',
           backgroundImage: `
@@ -203,7 +218,7 @@ export default function BpaDirectFormPage() {
           `
         }}
       >
-        <div className="max-w-2xl mx-auto text-center">
+        <div className="container mx-auto max-w-2xl text-center">
           <Card className="bg-background/5 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-white/10">
             <CardContent className="pt-6">
               <div className="mb-4">
@@ -228,7 +243,7 @@ export default function BpaDirectFormPage() {
   if (loading && !mdbDetails) { // Show initial loading for MdB details
     return (
       <div 
-        className="container mx-auto py-10 text-center min-h-screen text-white"
+        className="py-10 min-h-screen text-white"
         style={{
           backgroundColor: 'hsl(0 100% 50%)',
           backgroundImage: `
@@ -239,7 +254,7 @@ export default function BpaDirectFormPage() {
           `
         }}
       >
-        <div className="pt-20">
+        <div className="container mx-auto text-center pt-20">
           <h1 className="text-4xl font-bold">Lade Informationen für {decodeURIComponent(lastName)}...</h1>
         </div>
       </div>
@@ -249,7 +264,7 @@ export default function BpaDirectFormPage() {
   if (error && !mdbDetails) {
     return (
       <div 
-        className="container mx-auto py-10 text-center min-h-screen text-white"
+        className="py-10 min-h-screen text-white"
         style={{
           backgroundColor: 'hsl(0 100% 50%)',
           backgroundImage: `
@@ -260,15 +275,17 @@ export default function BpaDirectFormPage() {
           `
         }}
       >
-        <Card className="bg-background/5 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-white/10 max-w-2xl mx-auto mt-20">
-          <CardContent className="pt-6">
-            <div className="text-center text-red-400">
-              <AlertCircle className="w-16 h-16 mx-auto mb-4" />
-              <h1 className="text-2xl font-bold mb-2">Fehler aufgetreten</h1>
-              <p>{error}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="container mx-auto text-center">
+          <Card className="bg-background/5 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-white/10 max-w-2xl mx-auto mt-20">
+            <CardContent className="pt-6">
+              <div className="text-center text-red-400">
+                <AlertCircle className="w-16 h-16 mx-auto mb-4" />
+                <h1 className="text-2xl font-bold mb-2">Fehler aufgetreten</h1>
+                <p>{error}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
@@ -276,7 +293,7 @@ export default function BpaDirectFormPage() {
   if (!mdbDetails) {
     return (
       <div 
-        className="container mx-auto py-10 text-center min-h-screen text-white"
+        className="py-10 min-h-screen text-white"
         style={{
           backgroundColor: 'hsl(0 100% 50%)',
           backgroundImage: `
@@ -287,22 +304,24 @@ export default function BpaDirectFormPage() {
           `
         }}
       >
-        <Card className="bg-background/5 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-white/10 max-w-2xl mx-auto mt-20">
-          <CardContent className="pt-6">
-            <div className="text-center text-white">
-              <MapPin className="w-16 h-16 mx-auto mb-4" />
-              <h1 className="text-2xl font-bold mb-2">Nicht gefunden</h1>
-              <p>Keine Informationen für den Abgeordneten "{decodeURIComponent(lastName)}" gefunden.</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="container mx-auto text-center">
+          <Card className="bg-background/5 backdrop-blur-3xl border border-white/20 shadow-2xl shadow-white/10 max-w-2xl mx-auto mt-20">
+            <CardContent className="pt-6">
+              <div className="text-center text-white">
+                <MapPin className="w-16 h-16 mx-auto mb-4" />
+                <h1 className="text-2xl font-bold mb-2">Nicht gefunden</h1>
+                <p>Keine Informationen für den Abgeordneten "{decodeURIComponent(lastName)}" gefunden.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
     <div 
-      className="container mx-auto px-4 py-8 min-h-screen text-white"
+      className="px-4 py-8 min-h-screen text-white"
       style={{
         backgroundColor: 'hsl(0 100% 50%)',
         backgroundImage: `
@@ -313,7 +332,7 @@ export default function BpaDirectFormPage() {
         `
       }}
     >
-      <div className="max-w-4xl mx-auto">
+      <div className="container mx-auto max-w-4xl">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-left text-6xl md:text-8xl font-black font-work-sans mb-2 text-white leading-none">
@@ -608,6 +627,46 @@ export default function BpaDirectFormPage() {
                       <InfoPopover content="Eine mehrmalige Teilnahme derselben Person innerhalb von 5 Jahren entspricht nicht den Richtlinien des BPA." />
                     </div>
                   </div>
+                </div>
+
+                {/* Honeypot fields - hidden from users but visible to bots */}
+                <div style={{ position: 'absolute', left: '-9999px', opacity: 0, pointerEvents: 'none' }} aria-hidden="true">
+                  <Input 
+                    type="text" 
+                    name="website" 
+                    value={formData.website} 
+                    onChange={handleChange} 
+                    tabIndex={-1}
+                    autoComplete="off"
+                    placeholder="Leave this field empty"
+                  />
+                  <Input 
+                    type="text" 
+                    name="phone_number" 
+                    value={formData.phone_number} 
+                    onChange={handleChange} 
+                    tabIndex={-1}
+                    autoComplete="off"
+                    placeholder="Leave this field empty"
+                  />
+                  <Input 
+                    type="text" 
+                    name="company" 
+                    value={formData.company} 
+                    onChange={handleChange} 
+                    tabIndex={-1}
+                    autoComplete="off"
+                    placeholder="Leave this field empty"
+                  />
+                  <Input 
+                    type="text" 
+                    name="fax" 
+                    value={formData.fax} 
+                    onChange={handleChange} 
+                    tabIndex={-1}
+                    autoComplete="off"
+                    placeholder="Leave this field empty"
+                  />
                 </div>
 
                 <div className="pt-4">

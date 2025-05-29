@@ -14,9 +14,18 @@ export function ConditionalLayout({ children }: PropsWithChildren) {
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
   
+  // Helper function to check if the current path is a public route
+  const isPublicRoute = (path: string) => {
+    return path === "/anmelden" || 
+           path === "/abmelden" || 
+           path.startsWith("/bpa/") || 
+           path.startsWith("/bpa-form/") ||
+           path.startsWith("/tour-form/");
+  };
+  
   useEffect(() => {
     // Effect logic remains, but its call is unconditional at the top level
-    if (status === "unauthenticated" && pathname !== "/anmelden" && pathname !== "/abmelden") {
+    if (status === "unauthenticated" && !isPublicRoute(pathname)) {
       setIsRedirecting(true);
       router.push("/anmelden");
     } else if (status === "authenticated") {
@@ -25,12 +34,12 @@ export function ConditionalLayout({ children }: PropsWithChildren) {
   }, [status, pathname, router]); // Removed session from deps as status and pathname cover the redirect logic sufficiently
   
   // Conditional rendering logic now follows all hook calls
-  if (pathname === "/anmelden" || pathname === "/abmelden") {
+  if (isPublicRoute(pathname)) {
     return <>{children}</>;
   }
   
   // Show loading spinner while checking authentication initially or if redirecting
-  if (status === "loading" || (status === "unauthenticated" && pathname !== "/anmelden" && pathname !== "/abmelden") || isRedirecting) {
+  if (status === "loading" || (status === "unauthenticated" && !isPublicRoute(pathname)) || isRedirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />

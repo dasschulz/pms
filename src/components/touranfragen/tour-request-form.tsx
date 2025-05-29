@@ -85,7 +85,7 @@ export function TourRequestForm({ userData, token }: TourRequestFormProps) {
 
   if (isSubmitted) {
     return (
-      <div className="container mx-auto px-4 py-16">
+      <div className="px-4 py-16">
         <div className="max-w-2xl mx-auto text-center">
           <Card>
             <CardContent className="pt-6">
@@ -110,7 +110,7 @@ export function TourRequestForm({ userData, token }: TourRequestFormProps) {
 
   return (
     <div 
-      className="container mx-auto px-4 py-8 min-h-screen text-white"
+      className="px-4 py-8 min-h-screen text-white"
       style={{
         backgroundColor: 'hsl(0 100% 50%)',
         backgroundImage: `
@@ -250,11 +250,11 @@ export function TourRequestForm({ userData, token }: TourRequestFormProps) {
                   className="flex flex-row space-x-6"
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Ja" id="video-ja" />
+                    <RadioGroupItem value="Ja" id="video-ja" className="border-white text-white data-[state=checked]:bg-white data-[state=checked]:text-red-600" />
                     <Label htmlFor="video-ja" className="text-white">Ja</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Nein" id="video-nein" />
+                    <RadioGroupItem value="Nein" id="video-nein" className="border-white text-white data-[state=checked]:bg-white data-[state=checked]:text-red-600" />
                     <Label htmlFor="video-nein" className="text-white">Nein</Label>
                   </div>
                 </RadioGroup>
@@ -330,11 +330,11 @@ export function TourRequestForm({ userData, token }: TourRequestFormProps) {
                   className="flex flex-row space-x-6"
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="füge ich an" id="programm-anhang" />
+                    <RadioGroupItem value="füge ich an" id="programm-anhang" className="border-white text-white data-[state=checked]:bg-white data-[state=checked]:text-red-600" />
                     <Label htmlFor="programm-anhang" className="text-white">füge ich an</Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="möchte ich mit dem Büro klären" id="programm-buero" />
+                    <RadioGroupItem value="möchte ich mit dem Büro klären" id="programm-buero" className="border-white text-white data-[state=checked]:bg-white data-[state=checked]:text-red-600" />
                     <Label htmlFor="programm-buero" className="text-white">möchte ich mit dem Büro {userData.name.split(' ').pop()} klären</Label>
                   </div>
                 </RadioGroup>

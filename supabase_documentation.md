@@ -108,9 +108,14 @@ Tour requests and visit scheduling.
 
 #### `touranfragen_links`
 Secure token management for tour forms.
-- **Migration Status**: ✅ Complete
+- **Migration Status**: ⚠️ Requires Manual Migration (missing expires_at column)
 - **Key Features**: Token generation, expiration handling, link management
 - **API Endpoints**: `/api/touranfragen/generate-link`
+- **Migration Required**: 
+  ```sql
+  ALTER TABLE touranfragen_links ADD COLUMN expires_at timestamptz;
+  ```
+- **Note**: expires_at functionality is temporarily disabled until column is added
 
 ### Task Management
 

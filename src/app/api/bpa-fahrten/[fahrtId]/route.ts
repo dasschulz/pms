@@ -13,7 +13,6 @@ interface UpdateBpaFahrtBody {
   anmeldefrist?: string;
   beschreibung?: string;
   zustaiegsorteConfig?: string;
-  aktiv?: boolean;
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ fahrtId: string }> }) {
@@ -58,7 +57,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ fahr
       anmeldefrist: fahrtRecord.anmeldefrist,
       beschreibung: fahrtRecord.beschreibung,
       zustaiegsorteConfig: fahrtRecord.zustiegsorte_config,
-      aktiv: fahrtRecord.aktiv === true,
     };
 
     return NextResponse.json({ fahrt: fahrt });
@@ -107,7 +105,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ fahr
     if (body.anmeldefrist !== undefined) updateFields.anmeldefrist = body.anmeldefrist;
     if (body.beschreibung !== undefined) updateFields.beschreibung = body.beschreibung;
     if (body.zustaiegsorteConfig !== undefined) updateFields.zustiegsorte_config = body.zustaiegsorteConfig;
-    if (body.aktiv !== undefined) updateFields.aktiv = body.aktiv;
 
     if (Object.keys(updateFields).length === 0) {
       return NextResponse.json({ error: 'No fields to update provided' }, { status: 400 });
@@ -138,5 +135,72 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ fahr
   } catch (error) {
     console.error(`[API /bpa-fahrten/${params} PUT] Supabase Error:`, error);
     return NextResponse.json({ error: 'Failed to update BPA trip' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ fahrtId: string }> }) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  if (!token || !token.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const userId = token.id as string; // This is now the Supabase UUID
+
+  try {
+    const { fahrtId } = await params;
+    console.log('BPA Fahrt Delete API: Deleting trip:', fahrtId, 'for user:', userId);
+
+    // First verify that the trip exists and belongs to the user
+    const { data: existingTrip, error: fetchError } = await supabase
+      .from('bpa_fahrten')
+      .select('*')
+      .eq('id', fahrtId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !existingTrip) {
+      console.log('BPA Fahrt Delete API: Trip not found or access denied:', fahrtId, fetchError?.message);
+      return NextResponse.json({ error: 'BPA trip not found or access denied' }, { status: 404 });
+    }
+
+    // Check if there are any applications for this trip
+    const { data: applications, error: applicationsError } = await supabase
+      .from('bpa_formular')
+      .select('id')
+      .eq('fahrt_id', fahrtId);
+
+    if (applicationsError) {
+      console.error('BPA Fahrt Delete API: Error checking applications:', applicationsError);
+      return NextResponse.json({ error: 'Failed to check trip applications' }, { status: 500 });
+    }
+
+    if (applications && applications.length > 0) {
+      return NextResponse.json({ 
+        error: 'Diese Fahrt kann nicht gelöscht werden, da bereits Anmeldungen vorliegen. Setzen Sie den Status stattdessen auf "Storniert".' 
+      }, { status: 400 });
+    }
+
+    // Delete the trip from Supabase
+    const { error: deleteError } = await supabase
+      .from('bpa_fahrten')
+      .delete()
+      .eq('id', fahrtId)
+      .eq('user_id', userId);
+
+    if (deleteError) {
+      console.error('BPA Fahrt Delete API: Error deleting trip:', deleteError);
+      return NextResponse.json({ error: 'Failed to delete BPA trip' }, { status: 500 });
+    }
+
+    console.log('BPA Fahrt Delete API: Trip deleted successfully:', fahrtId);
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'BPA trip deleted successfully', 
+      recordId: fahrtId 
+    });
+
+  } catch (error) {
+    console.error(`[API /bpa-fahrten/${params} DELETE] Supabase Error:`, error);
+    return NextResponse.json({ error: 'Failed to delete BPA trip' }, { status: 500 });
   }
 } 

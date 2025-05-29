@@ -1,9 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, performSpamCheck } from '@/lib/spam-protection';
+
+// Create a service role client that bypasses RLS for this public API
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!, // This bypasses RLS
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export async function POST(req: NextRequest) {
   try {
     console.log('Tour Form Submit: Starting tour request submission');
+    
+    // Rate limiting check
+    const rateLimitResult = await checkRateLimit(req);
+    if (!rateLimitResult.allowed) {
+      console.log('Tour Form Submit: Rate limit exceeded');
+      return NextResponse.json({ 
+        error: 'Zu viele Anfragen. Bitte versuchen Sie es später erneut.' 
+      }, { status: 429 });
+    }
     
     const requestData = await req.json();
     const {
@@ -25,12 +47,44 @@ export async function POST(req: NextRequest) {
       ansprechpartner2Name,
       ansprechpartner2Phone,
       programmvorschlag,
+      startTime,
+      // Honeypot fields
+      website,
+      phone_number,
+      company,
+      fax
     } = requestData;
+
+    // Spam protection check
+    const spamResult = performSpamCheck({
+      kreisverband,
+      landesverband,
+      kandidatName,
+      themen,
+      ansprechpartner1Name,
+      ansprechpartner2Name,
+      website,
+      phone_number,
+      company,
+      fax
+    }, startTime);
+    
+    if (spamResult.isSpam) {
+      console.log('Tour Form Submit: Spam detected:', spamResult.reason);
+      return NextResponse.json({ 
+        error: 'Die Übermittlung konnte nicht verarbeitet werden. Bitte überprüfen Sie Ihre Eingaben.' 
+      }, { status: 400 });
+    }
+
+    // Log suspicious but not blocked submissions
+    if (spamResult.score > 40) {
+      console.warn('Tour Form Submit: Suspicious submission (score: ' + spamResult.score + '):', spamResult.reason);
+    }
 
     console.log('Tour Form Submit: Verifying token:', token);
 
-    // Verify the token is valid and active
-    const { data: linkRecords, error: linkError } = await supabase
+    // Verify the token is valid and active using admin client to bypass RLS
+    const { data: linkRecords, error: linkError } = await supabaseAdmin
       .from('touranfragen_links')
       .select('*')
       .eq('token', token)
@@ -80,10 +134,11 @@ export async function POST(req: NextRequest) {
       programmvorschlag: programmvorschlag === 'füge ich an' ? 'füge ich an' : 'möchte ich mit dem Büro klären',
       status: 'Neu',
       token_used: token,
+      spam_score: spamResult.score,
     };
 
-    // Create the tour request record in Supabase
-    const { data: tourRequestRecord, error: createError } = await supabase
+    // Create the tour request record in Supabase using admin client to bypass RLS
+    const { data: tourRequestRecord, error: createError } = await supabaseAdmin
       .from('touranfragen')
       .insert(tourRequestData)
       .select()
@@ -96,9 +151,9 @@ export async function POST(req: NextRequest) {
 
     console.log('Tour Form Submit: Tour request created:', tourRequestRecord.id);
 
-    // Hard delete the used token/link after successful submission
+    // Hard delete the used token/link after successful submission using admin client
     try {
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await supabaseAdmin
         .from('touranfragen_links')
         .delete()
         .eq('id', linkRecord.id);

@@ -43,7 +43,6 @@ export async function GET(req: NextRequest) {
       anmeldefrist: record.anmeldefrist,
       beschreibung: record.beschreibung,
       zustaiegsorteConfig: record.zustiegsorte_config,
-      aktiv: record.aktiv === true,
     })) || [];
 
     return NextResponse.json({ trips });
@@ -65,7 +64,6 @@ interface CreateBpaFahrtBody {
   anmeldefrist?: string;
   beschreibung?: string;
   zustaiegsorteConfig?: string;
-  aktiv?: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -98,7 +96,6 @@ export async function POST(req: NextRequest) {
       anmeldefrist: body.anmeldefrist || null,
       beschreibung: body.beschreibung || null,
       zustiegsorte_config: body.zustaiegsorteConfig || null,
-      aktiv: body.aktiv !== undefined ? body.aktiv : true,
     };
 
     console.log('BPA Fahrten API: Inserting trip data:', supabaseData);

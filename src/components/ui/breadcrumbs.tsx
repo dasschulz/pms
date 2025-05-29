@@ -123,7 +123,7 @@ export const Breadcrumbs: React.FC = () => {
               href={item.href}
               className={`block transition hover:text-gray-700 dark:hover:text-gray-200 ${item.href === '#' ? 'pointer-events-none text-gray-400 dark:text-gray-500' : ''}`}
               aria-label={typeof item.label === 'string' ? item.label : (item.href === '/' ? 'Home' : 'Category')}
-              legacyBehavior>
+            >
               {item.label}
             </Link>
             {index < itemsToDisplay.length - 1 && (

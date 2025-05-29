@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { getToken } from 'next-auth/jwt';
 import crypto from 'crypto';
 
@@ -15,8 +15,8 @@ export async function POST(req: NextRequest) {
   console.log('Touranfragen Generate Link: Creating form link for user:', userId);
 
   try {
-    // Verify the user exists in Supabase
-    const { data: userRecord, error: userError } = await supabase
+    // Verify the user exists in Supabase using admin client to bypass RLS
+    const { data: userRecord, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, name')
       .eq('id', userId)
@@ -32,15 +32,16 @@ export async function POST(req: NextRequest) {
     // Generate unique token for the form link
     const linkToken = crypto.randomBytes(32).toString('hex');
     
-    // Create the form link entry in Supabase
+    // Create the form link entry in Supabase using admin client
+    // TODO: Add expires_at column to touranfragen_links table in database
     const linkData = {
       user_id: userId,
       token: linkToken,
       active: true,
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+      // expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now - DISABLED until column is added
     };
 
-    const { data: linkRecord, error: createError } = await supabase
+    const { data: linkRecord, error: createError } = await supabaseAdmin
       .from('touranfragen_links')
       .insert(linkData)
       .select()

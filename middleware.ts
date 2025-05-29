@@ -69,10 +69,13 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/bpa-public') ||
+    pathname.startsWith('/api/tour-form') ||
     pathname === '/favicon.ico' ||
     pathname.startsWith('/anmelden') ||
     pathname.startsWith('/abmelden') ||
-    pathname.startsWith('/tour-form')
+    pathname.startsWith('/tour-form') ||
+    pathname.startsWith('/bpa/') ||
+    pathname.startsWith('/bpa-form/')
   ) {
     return response;
   }

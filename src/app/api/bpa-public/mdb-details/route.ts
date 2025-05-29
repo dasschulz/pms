@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Create a service role client that bypasses RLS for this specific public use case
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!, // This bypasses RLS
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -13,12 +25,15 @@ export async function GET(req: NextRequest) {
 
   try {
     // Search for users where the name contains the lastName (case-insensitive)
-    // Using ilike for case-insensitive pattern matching
-    const { data: records, error } = await supabase
+    // Only select PUBLIC, non-sensitive information needed for BPA forms
+    const { data: records, error } = await supabaseAdmin
       .from('users')
-      .select('id, name, wahlkreis')
+      .select('id, name, wahlkreis') // Only public info - no email, phone, address, etc.
       .ilike('name', `%${lastName}%`)
-      .limit(5); // Limit in case of multiple matches, frontend might need to handle this
+      .limit(5);
+
+    console.log('[BPA Public MdB Details] Search query: name ILIKE %' + lastName + '%');
+    console.log('[BPA Public MdB Details] Found', records?.length || 0, 'MdB(s) matching lastName:', lastName);
 
     if (error) {
       console.error('[BPA Public MdB Details] Error searching for MdB:', error);
@@ -27,26 +42,22 @@ export async function GET(req: NextRequest) {
 
     if (!records || records.length === 0) {
       console.log('[BPA Public MdB Details] No MdB found with lastName:', lastName);
-      return NextResponse.json({ error: 'MdB not found' }, { status: 404 });
+      return NextResponse.json({ 
+        error: 'MdB not found'
+      }, { status: 404 });
     }
 
-    console.log('[BPA Public MdB Details] Found', records.length, 'MdB(s) matching lastName:', lastName);
-
-    // If multiple MdBs are found with a similar last name, this will return the first one.
-    // The public form page might need a way to handle disambiguation if this is a common issue,
-    // or the MdB could be instructed to use a more unique identifier if clashes occur.
-    // For now, we return the first match.
+    // If multiple MdBs are found with a similar last name, return the first one
     const mdb = records[0];
 
     return NextResponse.json({
-      // Important: We use the Supabase UUID for linking in other tables
-      id: mdb.id, // This is the Supabase UUID
+      id: mdb.id, // Supabase UUID for linking
       name: mdb.name,
       wahlkreis: mdb.wahlkreis,
     });
 
   } catch (error) {
-    console.error('[API bpa-public/mdb-details] Supabase Error:', error);
+    console.error('[API bpa-public/mdb-details] Error:', error);
     return NextResponse.json({ error: 'Failed to fetch MdB details' }, { status: 500 });
   }
 } 

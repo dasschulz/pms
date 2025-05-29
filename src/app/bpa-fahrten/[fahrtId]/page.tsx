@@ -25,7 +25,6 @@ interface BpaFahrt {
   anmeldefrist?: string;
   beschreibung?: string;
   zustaiegsorteConfig?: string;
-  aktiv?: boolean;
   // Other fields from the Supabase schema as needed for display
 }
 
@@ -204,10 +203,7 @@ export default function BpaFahrtDetailPage() {
           <CardTitle className="text-2xl">Details zur BPA-Fahrt: {fahrtDetails.zielort}</CardTitle>
           <CardDescription>
             {formatDate(fahrtDetails.fahrtDatumVon)} - {formatDate(fahrtDetails.fahrtDatumBis)}
-            <Badge variant={fahrtDetails.aktiv ? 'default' : 'outline'} className="ml-2">
-              {fahrtDetails.aktiv ? 'Formular Aktiv' : 'Formular Inaktiv'}
-            </Badge>
-             <Badge variant={fahrtDetails.statusFahrt === 'Anmeldung offen' || fahrtDetails.statusFahrt === 'Fahrt läuft' ? 'default' : fahrtDetails.statusFahrt === 'Storniert' ? 'destructive' : 'outline'} className="ml-2">
+            <Badge variant={fahrtDetails.statusFahrt === 'Anmeldung offen' || fahrtDetails.statusFahrt === 'Fahrt läuft' ? 'default' : fahrtDetails.statusFahrt === 'Storniert' ? 'destructive' : 'outline'} className="ml-2">
                 {fahrtDetails.statusFahrt}
             </Badge>
           </CardDescription>
