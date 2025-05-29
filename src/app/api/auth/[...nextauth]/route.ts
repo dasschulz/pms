@@ -9,6 +9,21 @@ function isValidUUID(uuid: string): boolean {
   return uuidRegex.test(uuid);
 }
 
+// Validate environment variables
+const requiredEnvVars = {
+  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+};
+
+// Check for missing environment variables
+const missingEnvVars = Object.entries(requiredEnvVars)
+  .filter(([key, value]) => !value)
+  .map(([key]) => key);
+
+if (missingEnvVars.length > 0) {
+  console.error('🔐 NextAuth: Missing required environment variables:', missingEnvVars);
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -75,6 +90,12 @@ export const authOptions: NextAuthOptions = {
         tokenEmail: token?.email
       });
 
+      // Ensure token object exists
+      if (!token) {
+        console.error('🔐 NextAuth JWT callback: Token is null or undefined');
+        return {};
+      }
+
       // Check for problematic user IDs in existing token
       if (token?.id && !isValidUUID(token.id)) {
         console.error('🔐 NextAuth JWT callback: INVALID UUID IN EXISTING TOKEN:', token.id);
@@ -87,7 +108,7 @@ export const authOptions: NextAuthOptions = {
         console.log('🔐 NextAuth JWT callback: User object from authorize:', JSON.stringify(user, null, 2));
         
         // Validate user ID from authorize callback
-        if (!isValidUUID(user.id)) {
+        if (!user.id || !isValidUUID(user.id)) {
           console.error('🔐 NextAuth JWT callback: INVALID UUID FROM AUTHORIZE:', user.id);
           return { ...token, error: "InvalidUserIdFromAuthorize" };
         }
@@ -112,17 +133,17 @@ export const authOptions: NextAuthOptions = {
 
           console.log('🔐 NextAuth JWT callback: Found Supabase user with ID:', supabaseUser.id);
 
-          // Set token properties using Supabase data
+          // Set token properties using Supabase data with null checks
           token.id = supabaseUser.id; // Supabase UUID
           token.supabaseId = supabaseUser.id; // Keep Supabase UUID for clarity
           
-          token.name = supabaseUser.name;
-          token.email = supabaseUser.email;
-          token.image = supabaseUser.profile_picture_url;
-          token.wahlkreis = supabaseUser.wahlkreis;
-          token.landesverband = supabaseUser.landesverband;
-          token.role = supabaseUser.role;
-          token.isFraktionsvorstand = supabaseUser.is_fraktionsvorstand;
+          token.name = supabaseUser.name || '';
+          token.email = supabaseUser.email || '';
+          token.image = supabaseUser.profile_picture_url || null;
+          token.wahlkreis = supabaseUser.wahlkreis || '';
+          token.landesverband = supabaseUser.landesverband || '';
+          token.role = supabaseUser.role || '';
+          token.isFraktionsvorstand = supabaseUser.is_fraktionsvorstand || false;
 
           console.log('🔐 NextAuth JWT callback: Updated token with ID:', token.id);
 
@@ -139,6 +160,17 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }: { session: any; token: any }) {
       console.log('🔐 NextAuth session callback: Called with token ID:', token?.id, 'token email:', token?.email);
       
+      // Ensure session and session.user exist
+      if (!session) {
+        console.error('🔐 NextAuth session callback: Session is null or undefined');
+        return null;
+      }
+      
+      if (!session.user) {
+        console.error('🔐 NextAuth session callback: Session.user is null or undefined');
+        session.user = {};
+      }
+      
       // Check for token errors
       if (token?.error) {
         console.error('🔐 NextAuth session callback: Token has error:', token.error);
@@ -154,15 +186,15 @@ export const authOptions: NextAuthOptions = {
       }
       
       if (token) {
-        session.user.id = token.id as string; // Supabase UUID
-        session.user.supabaseId = token.supabaseId as string;
-        session.user.name = token.name as string;
-        session.user.email = token.email as string;
-        session.user.image = token.image as string | null;
-        session.user.wahlkreis = token.wahlkreis as string;
-        session.user.landesverband = token.landesverband as string;
-        session.user.role = token.role as string;
-        session.user.isFraktionsvorstand = token.isFraktionsvorstand as boolean;
+        session.user.id = token.id || '';
+        session.user.supabaseId = token.supabaseId || '';
+        session.user.name = token.name || '';
+        session.user.email = token.email || '';
+        session.user.image = token.image || null;
+        session.user.wahlkreis = token.wahlkreis || '';
+        session.user.landesverband = token.landesverband || '';
+        session.user.role = token.role || '';
+        session.user.isFraktionsvorstand = token.isFraktionsvorstand || false;
         
         console.log('🔐 NextAuth session callback: Final session user ID:', session.user.id);
       }
@@ -173,7 +205,8 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/anmelden',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development',
+  debug: process.env.NODE_ENV === 'development',
 };
 
 const handler = NextAuth(authOptions);
