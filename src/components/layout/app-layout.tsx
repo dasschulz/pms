@@ -42,27 +42,33 @@ function SidebarNav() {
   const { data: session } = useSession();
   const [openAccordionValue, setOpenAccordionValue] = React.useState<string | undefined>(undefined);
 
-  const displayNavItems = getNavItemsForUser(session?.user?.isFraktionsvorstand);
+  const displayNavItems = React.useMemo(() => {
+    return getNavItemsForUser(session?.user?.isFraktionsvorstand);
+  }, [session?.user?.isFraktionsvorstand]);
 
   React.useEffect(() => {
     if (sidebarState === "expanded") {
-      let newActiveParentTitle: string | undefined = undefined;
+      let activeParentTitleBasedOnPath: string | undefined = undefined;
       displayNavItems.forEach(item => {
         if (item.isChidren && item.children && item.children.some(child => child.href === pathname)) {
-          newActiveParentTitle = item.title;
+          activeParentTitleBasedOnPath = item.title;
         }
       });
 
-      if (newActiveParentTitle !== undefined && newActiveParentTitle !== openAccordionValue) {
-        setOpenAccordionValue(newActiveParentTitle);
+      // If a parent is active based on path AND (nothing is open OR the active path indicates a DIFFERENT parent than currently open)
+      if (activeParentTitleBasedOnPath !== undefined) {
+        if (openAccordionValue === undefined || (openAccordionValue !== undefined && activeParentTitleBasedOnPath !== openAccordionValue)) {
+          setOpenAccordionValue(activeParentTitleBasedOnPath);
+        }
       }
-      // If newActiveParentTitle is undefined, or same as current, do nothing here to preserve manual state.
+      // If no parent is active based on the path, but something is open, this effect should not close it.
+      // Manual closure is handled by handleAccordionChange.
     }
-    // Consider if openAccordionValue should be reset when sidebarState becomes "collapsed"
+    // When sidebar collapses, we might want to clear the open accordion
     // else if (sidebarState === "collapsed" && openAccordionValue !== undefined) { 
     //   setOpenAccordionValue(undefined); 
     // }
-  }, [pathname, sidebarState, displayNavItems, openAccordionValue]);
+  }, [pathname, sidebarState, displayNavItems]); // Removed openAccordionValue from dependencies
 
   const handleAccordionChange = React.useCallback((value: string) => {
     setOpenAccordionValue(prevValue => (prevValue === value ? undefined : value));
