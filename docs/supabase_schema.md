@@ -4,7 +4,7 @@ This document describes the complete schema of the MdB-App Supabase database, in
 
 ## Overview
 
-The database contains **19 tables** designed to support a comprehensive Member of Parliament (MdB) management application.
+The database contains **21 tables** designed to support a comprehensive Member of Parliament (MdB) management application.
 
 ---
 
@@ -470,6 +470,42 @@ Electoral district office management.
 
 ---
 
+### communication_lines
+Stores the main content of each communication line, set by IsFraktionsvorstand users.
+
+| Column Name                 | Data Type          | Constraints                                          | Description                                                                          |
+|-----------------------------|--------------------|------------------------------------------------------|--------------------------------------------------------------------------------------|
+| `id`                        | `uuid`             | PRIMARY KEY, DEFAULT gen_random_uuid()               | Primary key, automatically generated.                                                |
+| `created_at`                | `timestamptz`      | DEFAULT now() NOT NULL                               | Timestamp of creation.                                                               |
+| `user_id`                   | `uuid`             | FOREIGN KEY → users(id) ON DELETE SET NULL           | Foreign key to the users table (public.users), tracks who created the entry.         |
+| `hauptthema`                | `text`             |                                                      | Single line text for the main topic.                                                 |
+| `beschreibung`              | `text`             |                                                      | Multiline text for the description, supports Markdown for images and embeds.         |
+| `argument_1`                | `text`             |                                                      | Multiline text for argument 1, supports Markdown.                                    |
+| `argument_2`                | `text`             |                                                      | Multiline text for argument 2, supports Markdown.                                    |
+| `argument_3`                | `text`             |                                                      | Multiline text for argument 3, supports Markdown.                                    |
+| `zahl_der_woche`            | `text`             |                                                      | Single line text for the number of the week.                                         |
+| `zahl_der_woche_beschreibung` | `text`             |                                                      | Multiline text for the description of the number of the week, supports Markdown.     |
+| `zustaendiges_mdb_user_id`  | `uuid`             | FOREIGN KEY → users(id) ON DELETE SET NULL           | Foreign key to the users table (public.users), tracks the responsible MdB.        |
+| `further_reading`           | `text[]`           |                                                      | Array of text, storing URLs for further reading.                                     |
+| `start_date`                | `date`             |                                                      | Date from which the communication line is active.                                    |
+| `end_date`                  | `date`             |                                                      | Date until which the communication line is considered current.                       |
+
+---
+
+### communication_line_attachments
+Manages PDF attachments for communication lines.
+
+| Column Name             | Data Type     | Constraints                                                             | Description                                                                                 |
+|-------------------------|---------------|-------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| `id`                    | `uuid`        | PRIMARY KEY, DEFAULT gen_random_uuid()                                  | Primary key, automatically generated.                                                       |
+| `communication_line_id` | `uuid`        | NOT NULL, FOREIGN KEY → communication_lines(id) ON DELETE CASCADE       | Foreign key to the communication_lines table; attachment is deleted if the line is deleted. |
+| `file_name`             | `text`        | NOT NULL                                                                | Name of the uploaded file.                                                                  |
+| `storage_path`          | `text`        | NOT NULL                                                                | Path to the file in Supabase Storage (Bucket: communicationattachments).                  |
+| `uploaded_at`           | `timestamptz` | DEFAULT now() NOT NULL                                                  | Timestamp of upload.                                                                        |
+| `user_id`               | `uuid`        | FOREIGN KEY → users(id) ON DELETE SET NULL                              | Foreign key to the users table (public.users), tracks who uploaded the file.             |
+
+---
+
 ## Relationships
 
 ### Primary Foreign Key Relationships
@@ -495,6 +531,16 @@ Electoral district office management.
 7. **users** → **[various tables]** (One-to-Many)
    - Most content tables reference `users.id` as the author/creator
 
+8. **users** → **communication_lines** (One-to-Many)
+   - `communication_lines.user_id` → `users.id` (Creator)
+   - `communication_lines.zustaendiges_mdb_user_id` → `users.id` (Responsible MdB)
+
+9. **communication_lines** → **communication_line_attachments** (One-to-Many)
+   - `communication_line_attachments.communication_line_id` → `communication_lines.id`
+
+10. **users** → **communication_line_attachments** (One-to-Many)
+    - `communication_line_attachments.user_id` → `users.id` (Uploader)
+
 ---
 
 ## Storage Buckets
@@ -503,6 +549,13 @@ Electoral district office management.
 - **Purpose**: Store file attachments, documents, and media files
 - **Public**: Yes (with proper access controls)
 - **Usage**: Profile pictures, legislative documents, press materials
+
+### communicationattachments
+- **Purpose**: Store PDF attachments for communication lines.
+- **Public**: Access controlled via RLS policies on the bucket.
+  - Authenticated users can read.
+  - Users with `is_fraktionsvorstand = true` can upload, update, delete.
+- **Usage**: PDF files attached to entries in the `communication_lines` table.
 
 ---
 

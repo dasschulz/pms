@@ -109,6 +109,7 @@ export default {
   },
   plugins: [
     require("tailwindcss-animate"),
+    require('@tailwindcss/typography'),
     function({ addUtilities }: any) {
       const newUtilities = {
         '.transform-3d': {

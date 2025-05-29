@@ -3,4 +3,4 @@ description:
 globs: 
 alwaysApply: true
 ---
-When creating a new page.tsx, in the directory /page.tsx lives in, create a funktion.md file that outlines all functionality in German. This should also describe what api is being called, what operations are being performed and what users are expected to do. Please always keep in mind we are using a dark mode and a light mode. In one sentence in the file, outline the **Mehrwert** this brings to the office of the Member of the Bundestag.
+When creating a new page.tsx, in the directory /page.tsx lives in, create a funktion.md file that outlines all functionality in German. This should also describe what api is being called, what operations are being performed and what users are expected to do. Please always keep in mind we are using a dark mode and a light mode. In one sentence in the file, outline the **Mehrwert** this brings to the office of the Member of the Bundestag. Implement skeleton loading for every page created.

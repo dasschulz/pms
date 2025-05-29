@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin, Clapperboard, ClipboardList, Building2, Mountain, Code, Plane, Users, CalendarCheck, Phone, Shield, UserPlus } from 'lucide-react';
+import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin, Clapperboard, ClipboardList, Building2, Mountain, Code, Plane, Users, CalendarCheck, Phone, Shield, UserPlus, MessageSquare, Target } from 'lucide-react';
 
 export interface NavItem {
   title: string;
@@ -82,7 +82,13 @@ export const navItems: NavItem[] = [
     title: 'Kommunikation',
     icon: FileText,
     isChidren: true,
-    children: [],
+    children: [
+      {
+        title: 'Kommunikationslinien',
+        href: '/kommunikationslinien',
+        icon: MessageSquare,
+      },
+    ],
   },
   {
     title: 'Social Media',
@@ -214,13 +220,18 @@ export const navItems: NavItem[] = [
 export const getFraktionsvorstandNavItems = (): NavItem[] => [
   {
     title: 'Fraktionsvorstand',
-    icon: Phone,
+    icon: Shield,
     isChidren: true,
     children: [
       {
         title: 'Fraktionsruf',
         href: '/fraktionsruf',
         icon: Phone,
+      },
+      {
+        title: 'Agendasetting',
+        href: '/agendasetting',
+        icon: Target,
       },
     ],
   },
