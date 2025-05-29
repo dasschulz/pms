@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Play, Music, FileText, Pause, Volume2, VolumeX, Maximize, Minimize, Download, MessageSquareText, Mic2, FolderOpen, CalendarDays } from "lucide-react";
+import { useLatestSpeech } from "@/hooks/use-speeches";
+import { useUserName } from "@/hooks/use-session";
 
 // Full-featured MediaModal component (copied from meine-reden with all functionality)
 function MediaModal({ 
@@ -753,11 +755,16 @@ interface LatestSpeechCardProps {
 }
 
 export function LatestSpeechCard({ className }: LatestSpeechCardProps) {
-  const { data: session } = useSession();
-  const userName = session?.user.name;
-  const [latestSpeech, setLatestSpeech] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const userName = useUserName();
+  
+  // Use the shared hook instead of managing state manually
+  const { 
+    latestSpeech, 
+    isLoading: loading, 
+    error: queryError 
+  } = useLatestSpeech(userName || '', !!userName);
+  
+  const error = queryError?.message || null;
 
   // Modal state
   const [selectedMedia, setSelectedMedia] = useState<{
@@ -776,33 +783,6 @@ export function LatestSpeechCard({ className }: LatestSpeechCardProps) {
     transcript: '',
     title: '',
   });
-
-  const fetchLatestSpeech = async () => {
-    if (!userName) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const res = await fetch(`/api/reden?name=${encodeURIComponent(userName)}&page=1`);
-      const json = await res.json();
-      
-      if (res.ok && json.speeches && json.speeches.length > 0) {
-        setLatestSpeech(json.speeches[0]); // Get the first (newest) speech
-      } else {
-        setError('Keine Reden gefunden');
-      }
-    } catch (err) {
-      console.error("Fetch error:", err);
-      setError('Fehler beim Laden der Rede');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchLatestSpeech();
-  }, [userName]);
 
   const openMediaModal = (speech: any, mediaType: 'video' | 'audio', startFeedbackGeneration = false) => {
     const mediaUrl = mediaType === 'video' ? speech.videoFileURI : speech.audioFileURI;

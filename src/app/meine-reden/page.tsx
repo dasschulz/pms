@@ -9,6 +9,8 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose, DialogDescription } from "@/components/ui/dialog";
 import { Play, Music, FileText, Pause, Volume2, VolumeX, Maximize, Minimize, Download, MessageSquareText, Mic2, FolderOpen } from "lucide-react";
+import { useSpeeches } from "@/hooks/use-speeches";
+import { useUserName } from "@/hooks/use-session";
 
 // Component for enhanced media modal with transcript
 function MediaModal({ 
@@ -1094,11 +1096,18 @@ function MediaModal({
 }
 
 export default function MySpeechesPage() {
-  const { data: session } = useSession();
-  const userName = session?.user.name;
-  const [speeches, setSpeeches] = useState<any[]>([]);
-  const [meta, setMeta] = useState({ total: 0, perPage: 6, page: 1, maxPages: 1 });
-  const [loading, setLoading] = useState(false);
+  const userName = useUserName();
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Use shared hook instead of manual state management
+  const { 
+    data: speechData, 
+    isLoading: loading, 
+    error 
+  } = useSpeeches(userName || '', currentPage, !!userName);
+  
+  const speeches = speechData?.speeches || [];
+  const meta = speechData?.meta || { total: 0, perPage: 6, page: 1, maxPages: 1 };
   
   // Enhanced modal states with all advanced features
   const [selectedMedia, setSelectedMedia] = useState<{
@@ -1118,32 +1127,9 @@ export default function MySpeechesPage() {
     title: '',
   });
 
-  const fetchSpeeches = async (page: number) => {
-    if (!userName) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/reden?name=${encodeURIComponent(userName)}&page=${page}`);
-      const json = await res.json();
-      if (res.ok) {
-        setSpeeches(json.speeches);
-        setMeta(json.meta);
-      } else {
-        console.error("Error fetching speeches:", json.error || json);
-      }
-    } catch (err) {
-      console.error("Fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSpeeches(meta.page);
-  }, [userName, meta.page]);
-
   const handlePage = (newPage: number) => {
     if (newPage >= 1 && newPage <= meta.maxPages) {
-      setMeta((m) => ({ ...m, page: newPage }));
+      setCurrentPage(newPage);
     }
   };
 

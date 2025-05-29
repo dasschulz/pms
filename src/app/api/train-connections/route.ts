@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getAuthenticatedSupabase } from '@/lib/supabase';
 import { getToken } from 'next-auth/jwt';
 import { createClient } from 'db-vendo-client';
 import { profile as dbnavProfile } from 'db-vendo-client/p/dbnav/index.js';
@@ -133,8 +133,11 @@ export async function GET(req: NextRequest) {
   const forceRefresh = searchParams.get('refresh') === 'true';
 
   try {
-    // Get the user's Heimatbahnhof from Supabase
+    // Get the user's Heimatbahnhof from Supabase using authenticated client
     console.log('Train Connections: Looking up user heimatbahnhof for:', userId);
+    
+    // Use authenticated Supabase client with proper RLS
+    const supabase = await getAuthenticatedSupabase();
     
     const { data: userRecord, error: userError } = await supabase
       .from('users')

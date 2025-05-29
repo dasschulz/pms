@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NextAuthOptions } from "next-auth";
 
 // Helper function to validate UUID format
@@ -38,8 +38,8 @@ export const authOptions: NextAuthOptions = {
         
         console.log('🔐 NextAuth authorize: Attempting login for:', email);
         
-        // Find user by email and active status
-        const { data: userRecord, error } = await supabase
+        // Find user by email and active status using ADMIN client to bypass RLS
+        const { data: userRecord, error } = await supabaseAdmin
           .from('users')
           .select('*')
           .eq('email', email)
@@ -114,7 +114,8 @@ export const authOptions: NextAuthOptions = {
         }
         
         try {
-          const { data: supabaseUser, error } = await supabase
+          // Use admin client here too
+          const { data: supabaseUser, error } = await supabaseAdmin
             .from('users')
             .select('*')
             .eq('email', user.email)
@@ -162,27 +163,33 @@ export const authOptions: NextAuthOptions = {
       
       // Ensure session and session.user exist
       if (!session) {
-        console.error('🔐 NextAuth session callback: Session is null or undefined');
-        return null;
+        console.error('🔐 NextAuth session callback: Session is null or undefined, creating empty session');
+        session = { user: {}, expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() };
       }
       
       if (!session.user) {
-        console.error('🔐 NextAuth session callback: Session.user is null or undefined');
+        console.error('🔐 NextAuth session callback: Session.user is null or undefined, creating empty user');
         session.user = {};
       }
       
-      // Check for token errors
+      // Check for token errors - instead of returning null, clear the session
       if (token?.error) {
         console.error('🔐 NextAuth session callback: Token has error:', token.error);
-        // Force sign out by returning null session
-        return null;
+        // Return empty session instead of null to prevent client errors
+        return {
+          user: {},
+          expires: new Date(0).toISOString() // Expired session
+        };
       }
       
-      // Validate token ID before setting session
+      // Validate token ID before setting session - instead of returning null, clear the session
       if (token?.id && !isValidUUID(token.id)) {
         console.error('🔐 NextAuth session callback: INVALID UUID IN TOKEN:', token.id);
-        // Force sign out by returning null session
-        return null;
+        // Return empty session instead of null to prevent client errors
+        return {
+          user: {},
+          expires: new Date(0).toISOString() // Expired session
+        };
       }
       
       if (token) {
@@ -206,7 +213,7 @@ export const authOptions: NextAuthOptions = {
     signIn: '/anmelden',
   },
   secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development',
-  debug: process.env.NODE_ENV === 'development',
+  debug: false,
 };
 
 const handler = NextAuth(authOptions);

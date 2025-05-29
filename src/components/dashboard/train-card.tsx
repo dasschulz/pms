@@ -2,9 +2,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Train, Clock, MapPin, AlertCircle, RefreshCw, Wifi, WifiOff, Home, Building2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { useTrainConnections } from "@/hooks/use-train-connections";
 
 interface JourneyLeg {
   origin: {
@@ -71,79 +72,24 @@ interface TrainCardProps {
 }
 
 export function TrainCard({ className }: TrainCardProps) {
-  const [connections, setConnections] = useState<TrainConnections | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [retryCount, setRetryCount] = useState(0);
   const [expandedJourneys, setExpandedJourneys] = useState<Set<string>>(new Set());
-  const [hasHeimatbahnhof, setHasHeimatbahnhof] = useState<boolean | null>(null);
+  const [forceRefresh, setForceRefresh] = useState(false);
   const router = useRouter();
 
-  const fetchConnections = async (forceRefresh: boolean = false) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const url = forceRefresh ? '/api/train-connections?refresh=true' : '/api/train-connections';
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      console.log('Train API Response:', { status: response.status, data }); // Debug log
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          // Check if it's a missing Heimatbahnhof configuration
-          if (data.error === 'No Heimatbahnhof configured') {
-            setHasHeimatbahnhof(false);
-            return; // Don't throw error, just set state
-          }
-          throw new Error(data.message || 'Station nicht gefunden');
-        } else if (response.status === 503) {
-          // Service unavailable - show fallback data if available
-          if (data.fallback) {
-            setConnections(data.fallback);
-            setLastRefresh(new Date());
-          }
-          throw new Error(data.message || 'Service momentan nicht verfügbar');
-        }
-        throw new Error(`HTTP ${response.status}: ${data.message || data.error || 'Fehler beim Laden der Verbindungen'}`);
-      }
-      
-      setConnections(data);
-      setHasHeimatbahnhof(true);
-      setLastRefresh(new Date());
-      setRetryCount(0); // Reset retry count on success
-    } catch (error) {
-      console.error('Error fetching train connections:', error);
-      setError(error instanceof Error ? error.message : 'Unbekannter Fehler');
-      setRetryCount(prev => prev + 1);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Use the shared train connections hook
+  const { 
+    data: connections, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useTrainConnections(forceRefresh);
 
-  useEffect(() => {
-    fetchConnections();
-    
-    // Only set up refresh intervals if user has configured Heimatbahnhof
-    const interval = setInterval(() => {
-      if (hasHeimatbahnhof === true) {
-        // Much more conservative refresh intervals to respect 15-minute backend cache
-        // Base interval: 16 minutes (slightly longer than cache TTL to avoid unnecessary calls)
-        const baseInterval = 16 * 60 * 1000; // 16 minutes
-        
-        // If there are failures, back off more aggressively
-        const backoffMultiplier = Math.min(retryCount, 3); // Max 3x multiplier
-        const refreshInterval = baseInterval * (1 + backoffMultiplier); // 16min, 32min, 48min, 64min max
-        
-        console.log(`🔄 Next train data refresh in ${refreshInterval / 1000 / 60} minutes`);
-        
-        fetchConnections();
-      }
-    }, hasHeimatbahnhof === true ? 16 * 60 * 1000 * (1 + Math.min(retryCount, 3)) : 60000); // Check every minute if no station set
-    
-    return () => clearInterval(interval);
-  }, [retryCount, hasHeimatbahnhof]);
+  // Handle manual refresh
+  const handleRefresh = async () => {
+    setForceRefresh(true);
+    await refetch();
+    setForceRefresh(false);
+  };
 
   const formatTime = (isoString: string) => {
     return new Date(isoString).toLocaleTimeString('de-DE', {
@@ -493,8 +439,7 @@ export function TrainCard({ className }: TrainCardProps) {
     );
   }
 
-  // Show configuration prompt if no Heimatbahnhof is set
-  if (hasHeimatbahnhof === false) {
+  if (error?.message === 'NO_HEIMATBAHNHOF') {
     return (
       <Card className={`shadow-lg ${className}`}>
         <CardHeader>
@@ -535,25 +480,20 @@ export function TrainCard({ className }: TrainCardProps) {
           </CardTitle>
           <CardDescription className="text-destructive">
             <AlertCircle className="w-4 h-4 inline mr-1" />
-            {error}
+            {error.message}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => fetchConnections(true)}
+            onClick={handleRefresh}
             className="w-full"
             disabled={isLoading}
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Erneut versuchen
           </Button>
-          {retryCount > 0 && (
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Nächster automatischer Versuch in {Math.round(16 * (1 + retryCount))} Minuten
-            </p>
-          )}
         </CardContent>
       </Card>
     );
@@ -579,7 +519,7 @@ export function TrainCard({ className }: TrainCardProps) {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={() => fetchConnections(true)}
+            onClick={handleRefresh}
             disabled={isLoading}
             title="Manuell aktualisieren (überschreibt Cache)"
           >
@@ -595,7 +535,7 @@ export function TrainCard({ className }: TrainCardProps) {
         {error && connections.status === 'offline' && (
           <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center space-x-1">
             <AlertCircle className="w-3 h-3" />
-            <span>{error}</span>
+            <span>{error.message}</span>
           </div>
         )}
       </CardHeader>
@@ -632,7 +572,7 @@ export function TrainCard({ className }: TrainCardProps) {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => fetchConnections(true)}
+              onClick={handleRefresh}
               className="mt-2"
               disabled={isLoading}
             >
@@ -643,7 +583,7 @@ export function TrainCard({ className }: TrainCardProps) {
         )}
 
         <div className="text-xs text-gray-400 dark:text-muted-foreground text-center pt-2 border-t flex items-center justify-center space-x-2">
-          <span>Zuletzt aktualisiert: {lastRefresh.toLocaleTimeString('de-DE')}</span>
+          <span>Zuletzt aktualisiert: {new Date(connections.lastUpdated).toLocaleTimeString('de-DE')}</span>
           {connections.status === 'offline' && (
             <Badge variant="outline" className="text-xs">
               Offline-Modus

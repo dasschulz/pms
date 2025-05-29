@@ -7,6 +7,19 @@ async function fetchTasks(): Promise<Task[]> {
     throw new Error('Failed to fetch tasks');
   }
   const data = await response.json();
+  
+  // Ensure we always return an array, even if the API response is malformed
+  if (!data || typeof data !== 'object') {
+    console.warn('Tasks API returned invalid data:', data);
+    return [];
+  }
+  
+  // Check if tasks property exists and is an array
+  if (!data.tasks || !Array.isArray(data.tasks)) {
+    console.warn('Tasks API returned data without valid tasks array:', data);
+    return [];
+  }
+  
   return data.tasks;
 }
 
@@ -73,10 +86,10 @@ export function useTasks() {
   } = useQuery({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
-    // Ensure fresh data for tasks
-    staleTime: 1000 * 10, // 10 seconds - shorter for tasks to ensure table updates
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
+    // Override global settings for tasks since they change more frequently
+    staleTime: 30 * 1000, // 30 seconds - tasks change more frequently
+    refetchOnWindowFocus: true, // Refetch tasks when window gets focus
+    refetchOnMount: true, // Always refetch when component mounts
   });
 
   const createTaskMutation = useMutation({

@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       createdAt: record.created_at,
     })) || [];
 
-    return NextResponse.json(tasks);
+    return NextResponse.json({ tasks });
   } catch (error) {
     console.error('TaskManager API: Error:', error);
     return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });

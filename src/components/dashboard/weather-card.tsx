@@ -2,15 +2,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sun, Cloud, Zap, CloudRain, CloudSnow, HelpCircle } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useUserDetails } from "@/hooks/use-user-details";
 
 interface WeatherCardProps {
   city: string;
   electoralDistrict?: string;
-}
-
-interface UserDetails {
-  wahlkreis?: string;
-  plz?: string;
 }
 
 // Simplified weather data structure
@@ -23,31 +19,9 @@ interface WeatherData {
 export function WeatherCard({ city, electoralDistrict }: WeatherCardProps) {
   const [berlinWeather, setBerlinWeather] = useState<WeatherData | null>(null);
   const [districtWeather, setDistrictWeather] = useState<WeatherData | null>(null);
-  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
-  const [isLoadingUserDetails, setIsLoadingUserDetails] = useState(true);
-  const [errorUserDetails, setErrorUserDetails] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Fetch user details (Wahlkreis and PLZ)
-    const fetchUserDetails = async () => {
-      setIsLoadingUserDetails(true);
-      setErrorUserDetails(null);
-      try {
-        const response = await fetch('/api/user-details');
-        if (!response.ok) {
-          throw new Error(`Failed to fetch user details: ${response.statusText}`);
-        }
-        const data: UserDetails = await response.json();
-        setUserDetails(data);
-      } catch (error) {
-        console.error("Error fetching user details:", error);
-        setErrorUserDetails(error instanceof Error ? error.message : 'Unknown error fetching user details');
-      }
-      setIsLoadingUserDetails(false);
-    };
-
-    fetchUserDetails();
-  }, []);
+  
+  // Use the shared user details hook instead of making our own API call
+  const { data: userDetails, isLoading: isLoadingUserDetails, error: errorUserDetails } = useUserDetails();
 
   useEffect(() => {
     const berlinPostalCode = "10117"; // Specific postal code for Berlin (Bundestag)
@@ -122,7 +96,7 @@ export function WeatherCard({ city, electoralDistrict }: WeatherCardProps) {
         {/* Display Berlin weather with new name and data based on 10117 */}
         {renderWeatherInfo(`${city} (Bundestag)`, berlinWeather)}
         {isLoadingUserDetails && renderWeatherInfo("Wahlkreis", null, true)}
-        {!isLoadingUserDetails && errorUserDetails && renderWeatherInfo(userDetails?.wahlkreis || "Wahlkreis", null, false, errorUserDetails)}
+        {!isLoadingUserDetails && errorUserDetails && renderWeatherInfo(userDetails?.wahlkreis || "Wahlkreis", null, false, errorUserDetails.message)}
         {!isLoadingUserDetails && !errorUserDetails && userDetails?.wahlkreis && 
           renderWeatherInfo(userDetails.wahlkreis, districtWeather, false, !districtWeather && !userDetails.plz ? "PLZ nicht gefunden" : null)}
         {!isLoadingUserDetails && !errorUserDetails && !userDetails?.wahlkreis && 

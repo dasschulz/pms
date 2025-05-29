@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getAuthenticatedSupabase } from '@/lib/supabase';
 import { getToken } from 'next-auth/jwt';
 
 export async function GET(req: NextRequest) {
@@ -26,6 +26,9 @@ export async function GET(req: NextRequest) {
   console.log('GET: Fetching user data for userId:', userId);
 
   try {
+    // Use authenticated Supabase client with proper RLS
+    const supabase = await getAuthenticatedSupabase();
+    
     const { data: userRecord, error } = await supabase
       .from('users')
       .select('wahlkreis, plz, profile_picture_url, name, email, landesverband, heimatbahnhof')
@@ -139,7 +142,9 @@ export async function POST(req: NextRequest) {
 
     console.log('POST: About to fetch user record from Supabase...');
     
-    // First, find the user record
+    // Use authenticated Supabase client with proper RLS
+    const supabase = await getAuthenticatedSupabase();
+    
     const { data: userRecord, error: fetchError } = await supabase
       .from('users')
       .select('*')

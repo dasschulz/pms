@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 // Get environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -18,6 +20,44 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Create client for server-side operations that need admin privileges
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+/**
+ * Creates a Supabase client with user context for RLS policies
+ * This sets the user ID in headers for custom RLS policies
+ */
+export const createAuthenticatedSupabaseClient = async () => {
+  const session = await getServerSession(authOptions);
+  
+  if (!session?.user?.id) {
+    throw new Error('No authenticated session found');
+  }
+
+  // Create a client with custom headers for RLS
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        // Custom header for RLS policies to identify the user
+        'X-User-ID': session.user.id,
+        'X-User-Email': session.user.email || '',
+      },
+    },
+  });
+
+  return client;
+};
+
+/**
+ * Utility function to get an authenticated client for API routes
+ * Use this in your API routes instead of the regular supabase client
+ */
+export const getAuthenticatedSupabase = async () => {
+  try {
+    return await createAuthenticatedSupabaseClient();
+  } catch (error) {
+    console.error('Failed to create authenticated Supabase client:', error);
+    throw error;
+  }
+};
 
 // Database types - these will be generated from the schema
 export type Database = {

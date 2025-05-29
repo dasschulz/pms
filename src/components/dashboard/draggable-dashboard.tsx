@@ -1,6 +1,24 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  MeasuringStrategy,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { WeatherCard } from "./weather-card";
@@ -39,6 +57,39 @@ interface DraggableDashboardProps {
     activeWidgets: string[];
     themePreference: 'light' | 'dark' | 'system';
   };
+}
+
+// SortableItem component to wrap each widget
+function SortableItem({ id, children }: { id: string; children: React.ReactNode }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    // zIndex: isDragging ? 100 : 'auto', // Ensure dragging item is on top
+    // touchAction: 'none', // Prevent scrolling on touch devices when dragging
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} className="relative group">
+      {children}
+      <div 
+        {...listeners} 
+        className="absolute top-2 right-2 p-1 bg-gray-200 dark:bg-gray-700 rounded cursor-grab opacity-0 group-hover:opacity-100 transition-opacity"
+        aria-label="Drag to reorder"
+      >
+        <Grip className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+      </div>
+    </div>
+  );
 }
 
 export function DraggableDashboard({ userName, initialPreferences }: DraggableDashboardProps) {
@@ -80,7 +131,7 @@ export function DraggableDashboard({ userName, initialPreferences }: DraggableDa
       id: "activity",
       name: "Letzte Aktivitäten",
       component: () => (
-        <Card className="shadow-lg">
+        <Card className="shadow-lg h-full"> {/* Ensure cards take full height for consistent drag appearance */}
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Activity className="w-5 h-5" />
@@ -112,6 +163,7 @@ export function DraggableDashboard({ userName, initialPreferences }: DraggableDa
       : availableWidgets.map(w => w.id)
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
   // Auto-add new widgets that aren't in existing preferences
   useEffect(() => {
@@ -224,60 +276,95 @@ export function DraggableDashboard({ userName, initialPreferences }: DraggableDa
     .map(id => availableWidgets.find(w => w.id === id))
     .filter(Boolean) as WidgetConfig[];
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), // Allow click for buttons inside sortable items
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function handleDragStart(event: any) {
+    const { active } = event;
+    setActiveDragId(active.id);
+  }
+
+  function handleDragEnd(event: any) {
+    setActiveDragId(null);
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setWidgetOrder((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        // debouncedSavePreferences(activeWidgets, newOrder); // Save is handled by useEffect on widgetOrder change
+        return newOrder;
+      });
+    }
+  }
+
+  const activeDragWidget = activeDragId ? availableWidgets.find(w => w.id === activeDragId) : null;
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Willkommen zurück, {userName}!</h1>
-        
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Widgets
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Dashboard Widgets</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {availableWidgets.map((widget) => (
-              <DropdownMenuItem
-                key={widget.id}
-                onClick={() => toggleWidget(widget.id)}
-                className="flex items-center justify-between cursor-pointer"
-              >
-                <span>{widget.name}</span>
-                {activeWidgets.includes(widget.id) ? (
-                  <Check className="h-4 w-4 text-green-600" />
-                ) : (
-                  <X className="h-4 w-4 text-gray-400" />
-                )}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
-        {orderedActiveWidgets.map((widget) => {
-          const Component = widget.component;
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveDragId(null)}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }} // Helps with dynamic content like accordions
+    >
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">Willkommen zurück, {userName}!</h1>
           
-          return (
-            <div key={widget.id} className="break-inside-avoid mb-6">
-              <Component {...widget.props} />
-            </div>
-          );
-        })}
-      </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isLoading}>
+                <Settings className="h-4 w-4 mr-2" />
+                Widgets {isLoading && " (Speichert...)"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Dashboard Widgets</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableWidgets.map((widget) => (
+                <DropdownMenuItem
+                  key={widget.id}
+                  onClick={() => toggleWidget(widget.id)}
+                  className="flex items-center justify-between cursor-pointer"
+                >
+                  <span>{widget.name}</span>
+                  {activeWidgets.includes(widget.id) ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <X className="h-4 w-4 text-gray-400" />
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-      {orderedActiveWidgets.length === 0 && (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">
-              Keine Widgets aktiv. Verwende den "Widgets" Button, um Widgets zu aktivieren.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        <SortableContext items={widgetOrder} strategy={verticalListSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {orderedActiveWidgets.map((widget) => {
+              const WidgetComponent = widget.component;
+              return (
+                <SortableItem key={widget.id} id={widget.id}>
+                  <div className="h-full"> {/* Wrapper to ensure SortableItem takes full space */}
+                    <WidgetComponent {...widget.props} />
+                  </div>
+                </SortableItem>
+              );
+            })}
+          </div>
+        </SortableContext>
+        <DragOverlay>
+          {activeDragId && activeDragWidget ? (
+            <div className="cursor-grabbing">
+              {React.createElement(activeDragWidget.component, activeDragWidget.props)}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </div>
+    </DndContext>
   );
 } 

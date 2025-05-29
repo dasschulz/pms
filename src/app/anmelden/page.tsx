@@ -154,10 +154,10 @@ export default function AnmeldenPage() {
       {/* overlay */}
       <div className="absolute inset-0 z-10 h-full w-full bg-background/80 dark:bg-background/40" />
       
-      {/* ThreeDMarquee Container - properly constrained */}
-      <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
+      {/* ThreeDMarquee Container - full page coverage with overflow */}
+      <div className="absolute inset-0 z-0 flex items-center justify-center">
         <ThreeDMarquee
-          className="pointer-events-none !h-full !w-full !rounded-none"
+          className="pointer-events-none !h-[120%] !w-[120%] !rounded-none"
           images={images}
         />
       </div>

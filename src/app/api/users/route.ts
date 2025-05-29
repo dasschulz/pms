@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const { data: records, error } = await supabase
+    // Use admin client since RLS policies don't allow users to read all other users
+    // This endpoint provides the user directory functionality
+    const { data: records, error } = await supabaseAdmin
       .from('users')
       .select('id, name, email, wahlkreis, profile_picture_url')
       .order('name', { ascending: true });

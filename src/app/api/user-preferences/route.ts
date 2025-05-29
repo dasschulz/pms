@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 interface UserPreferences {
   userId: string;
@@ -40,8 +40,8 @@ export async function GET(request: NextRequest) {
 
     console.log('Fetching preferences for user ID:', userId);
 
-    // Find user preferences by user_id
-    const { data: prefRecord, error } = await supabase
+    // Temporarily use admin client until RLS policies are properly configured
+    const { data: prefRecord, error } = await supabaseAdmin
       .from('user_preferences')
       .select('*')
       .eq('user_id', userId)
@@ -103,8 +103,10 @@ export async function POST(request: NextRequest) {
 
     console.log('🔄 Saving preferences for user:', session.user.email, 'ID:', userId);
 
+    // Temporarily use admin client until RLS policies are properly configured
+
     // Check if user preferences already exist
-    const { data: existingRecord, error: fetchError } = await supabase
+    const { data: existingRecord, error: fetchError } = await supabaseAdmin
       .from('user_preferences')
       .select('*')
       .eq('user_id', userId)
@@ -122,7 +124,7 @@ export async function POST(request: NextRequest) {
       // Update existing record
       console.log('🔄 Updating existing preference record:', existingRecord.id);
       
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from('user_preferences')
         .update({
           widget_order: widgetOrder,
@@ -142,7 +144,7 @@ export async function POST(request: NextRequest) {
       // Create new record
       console.log('➕ Creating new preference record (first time for this user)');
       
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseAdmin
         .from('user_preferences')
         .insert(preferenceData);
 

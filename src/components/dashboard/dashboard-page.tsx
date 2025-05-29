@@ -1,47 +1,43 @@
 import { DraggableDashboard } from "./draggable-dashboard";
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { supabaseAdmin } from '@/lib/supabase';
 
 async function fetchUserPreferences(userId: string) {
   try {
-    // Use relative URL for server-side API calls to avoid NEXTAUTH_URL dependency
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/user-preferences`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${userId}`, // Pass the user ID for server-side lookup
-        'Content-Type': 'application/json',
-      },
-    });
+    console.log('Dashboard: Fetching preferences for user ID:', userId);
 
-    if (!response.ok) {
-      console.error('Failed to fetch preferences, status:', response.status);
-      throw new Error('Failed to fetch preferences');
-    }
+    // Use direct Supabase query instead of API fetch (avoids auth issues)
+    const { data: prefRecord, error } = await supabaseAdmin
+      .from('user_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
 
-    const data = await response.json();
-    
-    if (data.success && data.preferences) {
+    if (error || !prefRecord) {
+      console.log('Dashboard: No preferences found for user, returning defaults:', error?.message);
+      // Return default preferences if none found
       return {
-        widgetOrder: data.preferences.widget_order || ['weather', 'trains', 'activity'],
-        activeWidgets: data.preferences.active_widgets || ['weather', 'trains', 'activity'],
-        themePreference: data.preferences.theme_preference || 'system'
+        widgetOrder: ['weather', 'trains', 'latest-speech', 'activity'],
+        activeWidgets: ['weather', 'trains', 'latest-speech', 'activity'],
+        themePreference: 'system' as const
       };
     }
 
-    // Return defaults if no preferences found
+    console.log('Dashboard: Found preferences record:', prefRecord.id);
+
     return {
-      widgetOrder: ['weather', 'trains', 'activity'],
-      activeWidgets: ['weather', 'trains', 'activity'],
-      themePreference: 'system' as const
+      widgetOrder: prefRecord.widget_order || ['weather', 'trains', 'latest-speech', 'activity'],
+      activeWidgets: prefRecord.active_widgets || ['weather', 'trains', 'latest-speech', 'activity'],
+      themePreference: prefRecord.theme_preference || 'system' as const
     };
 
   } catch (error) {
-    console.error('Error fetching user preferences:', error);
-    // Return defaults if API fails
+    console.error('Dashboard: Error fetching user preferences:', error);
+    // Return defaults if query fails
     return {
-      widgetOrder: ['weather', 'trains', 'activity'],
-      activeWidgets: ['weather', 'trains', 'activity'],
+      widgetOrder: ['weather', 'trains', 'latest-speech', 'activity'],
+      activeWidgets: ['weather', 'trains', 'latest-speech', 'activity'],
       themePreference: 'system' as const
     };
   }
