@@ -15,7 +15,7 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -79,7 +79,7 @@ function SortableItem({ id, children }: { id: string; children: React.ReactNode 
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="relative group">
+    <div ref={setNodeRef} style={style} {...attributes} className="relative group break-inside-avoid-column mb-6">
       {children}
       <div 
         {...listeners} 
@@ -343,15 +343,13 @@ export function DraggableDashboard({ userName, initialPreferences }: DraggableDa
           </DropdownMenu>
         </div>
 
-        <SortableContext items={widgetOrder} strategy={verticalListSortingStrategy}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <SortableContext items={widgetOrder} strategy={rectSortingStrategy}>
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
             {orderedActiveWidgets.map((widget) => {
               const WidgetComponent = widget.component;
               return (
                 <SortableItem key={widget.id} id={widget.id}>
-                  <div className="h-full"> {/* Wrapper to ensure SortableItem takes full space */}
-                    <WidgetComponent {...widget.props} />
-                  </div>
+                  <WidgetComponent {...widget.props} />
                 </SortableItem>
               );
             })}
