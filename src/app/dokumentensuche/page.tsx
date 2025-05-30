@@ -1,13 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { redirect } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { PageLayout } from '@/components/page-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, FileText, Calendar, Building2, Users, Scale } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2, Search, FileText, Calendar, Building2, Users, Scale, ExternalLink } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface DIPDocument {
@@ -45,6 +49,7 @@ interface SearchFilters {
 }
 
 export default function DokumentensuchePage() {
+  const { data: session, status } = useSession();
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<DIPDocument[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,6 +62,22 @@ export default function DokumentensuchePage() {
   });
   const [totalResults, setTotalResults] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
+
+  if (status === 'loading') {
+    return (
+      <PageLayout title="Dokumentensuche">
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (!session) {
+    redirect('/anmelden');
+  }
 
   const documentTypes = [
     { value: 'drucksache', label: 'Drucksachen' },
@@ -142,30 +163,23 @@ export default function DokumentensuchePage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center space-x-3">
-        <FileText className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Dokumentensuche</h1>
-          <p className="text-muted-foreground">
-            Durchsuche das Informationssystem für Parlamentsmaterialien (DIP)
-          </p>
-        </div>
-      </div>
-
+    <PageLayout
+      title="Dokumentensuche"
+      description="Durchsuche das Informationssystem für Parlamentsmaterialien (DIP) nach Drucksachen, Plenarprotokollen, Aktivitäten und Vorgängen."
+    >
       {/* Search Form */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
+          <CardTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
-            <span>Suche</span>
+            Suche
           </CardTitle>
           <CardDescription>
             Suche nach Drucksachen, Plenarprotokollen, Aktivitäten und Vorgängen
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex space-x-2">
+          <div className="flex gap-2">
             <div className="flex-1">
               <Label htmlFor="search">Suchbegriff</Label>
               <Input
@@ -198,10 +212,8 @@ export default function DokumentensuchePage() {
             <TabsContent value="basic" className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>Dokumenttyp</Label>
-                  <Select value={filters.documentType} onValueChange={(value) => 
-                    setFilters(prev => ({ ...prev, documentType: value }))
-                  }>
+                  <Label htmlFor="documentType">Dokumenttyp</Label>
+                  <Select value={filters.documentType} onValueChange={(value) => setFilters(prev => ({ ...prev, documentType: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Alle Dokumenttypen" />
                     </SelectTrigger>
@@ -215,12 +227,10 @@ export default function DokumentensuchePage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
-                  <Label>Wahlperiode</Label>
-                  <Select value={filters.wahlperiode} onValueChange={(value) => 
-                    setFilters(prev => ({ ...prev, wahlperiode: value }))
-                  }>
+                  <Label htmlFor="wahlperiode">Wahlperiode</Label>
+                  <Select value={filters.wahlperiode} onValueChange={(value) => setFilters(prev => ({ ...prev, wahlperiode: value }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Alle Wahlperioden" />
                     </SelectTrigger>
@@ -263,7 +273,7 @@ export default function DokumentensuchePage() {
                   <Label htmlFor="urheber">Urheber</Label>
                   <Input
                     id="urheber"
-                    placeholder="z.B. Bundesregierung"
+                    placeholder="z.B. Fraktion DIE LINKE"
                     value={filters.urheber}
                     onChange={(e) => setFilters(prev => ({ ...prev, urheber: e.target.value }))}
                   />
@@ -274,135 +284,157 @@ export default function DokumentensuchePage() {
         </CardContent>
       </Card>
 
-      {/* Results */}
-      {totalResults > 0 && (
+      {/* Search Results */}
+      {(results.length > 0 || loading) && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Suchergebnisse ({totalResults.toLocaleString('de-DE')})</span>
-              <Badge variant="secondary">
-                Seite {currentPage} von {Math.ceil(totalResults / 20)}
-              </Badge>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Suchergebnisse
+              {totalResults > 0 && (
+                <span className="text-muted-foreground">({totalResults} Treffer gefunden)</span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {results.map((doc) => (
-                <Card key={doc.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1 line-clamp-2">
+            {loading ? (
+              <div className="space-y-4">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <div key={i} className="p-4 border rounded-lg space-y-2">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-full" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-6 w-20" />
+                      <Skeleton className="h-6 w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : results.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                  Keine Dokumente gefunden
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Versuche andere Suchbegriffe oder ändere deine Filter.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {results.map((doc) => (
+                  <div key={doc.id} className="p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="font-semibold text-lg leading-tight mb-1">
                           {doc.title}
                         </h3>
                         {doc.subtitle && (
-                          <p className="text-muted-foreground mb-2 line-clamp-1">
+                          <p className="text-muted-foreground text-sm">
                             {doc.subtitle}
                           </p>
                         )}
                       </div>
-                      <Badge variant="outline" className="ml-4">
-                        {doc.documentType}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mt-2">
-                      {doc.date && (
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>{formatDate(doc.date)}</span>
-                        </div>
-                      )}
-                      
-                      {doc.wahlperiode && (
-                        <div className="flex items-center space-x-1">
-                          <Building2 className="h-4 w-4" />
-                          <span>{doc.wahlperiode}. WP</span>
-                        </div>
-                      )}
-                      
-                      {doc.nummer && (
-                        <div className="flex items-center space-x-1">
-                          <FileText className="h-4 w-4" />
-                          <span>Nr. {doc.nummer}</span>
-                        </div>
-                      )}
 
-                      {doc.fundstelle?.dokumentnummer &&
-                        <div className="flex items-center space-x-1">
-                          <FileText className="h-4 w-4" />
-                          <span>Drs.-Nr.: {doc.fundstelle.dokumentnummer}</span>
-                        </div>
-                      }
-                      
-                      {doc.urheber && doc.urheber.length > 0 && (
-                        <div className="flex items-center space-x-1">
-                          <Users className="h-4 w-4" />
-                          <span>{doc.urheber[0].titel}</span>
-                          {doc.urheber.length > 1 && (
-                            <span>+{doc.urheber.length - 1}</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {doc.fundstelle && (
-                      <div className="mt-3 flex items-center gap-x-4">
-                        {doc.fundstelle.pdf_url && (
-                          <Button 
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="default">
+                          {doc.documentType}
+                        </Badge>
+                        {doc.drucksachetyp && doc.drucksachetyp !== doc.documentType && (
+                          <Badge variant="secondary">
+                            {doc.drucksachetyp}
+                          </Badge>
+                        )}
+                        {doc.wahlperiode && (
+                          <Badge variant="outline">
+                            {doc.wahlperiode}. WP
+                          </Badge>
+                        )}
+                        {doc.nummer && (
+                          <Badge variant="outline">
+                            Nr. {doc.nummer}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        {doc.date && (
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span>Datum: {formatDate(doc.date)}</span>
+                          </div>
+                        )}
+                        {doc.herausgeber && (
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span>Herausgeber: {doc.herausgeber}</span>
+                          </div>
+                        )}
+                        {doc.urheber && doc.urheber.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span>Urheber: {doc.urheber.map(u => u.titel).join(', ')}</span>
+                          </div>
+                        )}
+                        {doc.bearbeitet && (
+                          <div className="flex items-center gap-2">
+                            <Scale className="h-4 w-4 text-muted-foreground" />
+                            <span>Bearbeitet: {formatDate(doc.bearbeitet)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {doc.fundstelle?.pdf_url && (
+                        <div className="flex justify-end">
+                          <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => { doc.fundstelle?.pdf_url && window.open(doc.fundstelle.pdf_url, '_blank')}}
+                            onClick={() => window.open(doc.fundstelle!.pdf_url!, '_blank')}
+                            className="flex items-center gap-2"
                           >
-                            <FileText className="mr-2 h-4 w-4" />
+                            <ExternalLink className="h-4 w-4" />
                             PDF öffnen
                           </Button>
-                        )}
-                        {doc.fundstelle.seite && 
-                          <span className="text-xs text-muted-foreground">Seite: {doc.fundstelle.seite}</span>
-                        }
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            
-            {/* Pagination */}
-            {Math.ceil(totalResults / 20) > 1 && (
-              <div className="flex justify-center space-x-2 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  Vorherige
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                  disabled={currentPage >= Math.ceil(totalResults / 20)}
-                >
-                  Nächste
-                </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Pagination */}
+                {totalResults > 20 && (
+                  <div className="flex justify-center gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setCurrentPage(Math.max(1, currentPage - 1));
+                        handleSearch();
+                      }}
+                      disabled={currentPage === 1 || loading}
+                    >
+                      Vorherige
+                    </Button>
+                    <span className="flex items-center px-4 py-2 text-sm">
+                      Seite {currentPage} von {Math.ceil(totalResults / 20)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setCurrentPage(currentPage + 1);
+                        handleSearch();
+                      }}
+                      disabled={currentPage >= Math.ceil(totalResults / 20) || loading}
+                    >
+                      Nächste
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
       )}
-
-      {/* No results */}
-      {!loading && results.length === 0 && searchQuery && (
-        <Card>
-          <CardContent className="text-center py-8">
-            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Keine Ergebnisse gefunden</h3>
-            <p className="text-muted-foreground">
-              Versuche es mit anderen Suchbegriffen oder passe die Filter an.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    </PageLayout>
   );
 } 
