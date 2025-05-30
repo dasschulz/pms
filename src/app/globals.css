@@ -46,7 +46,7 @@
     --destructive-foreground: 0 0% 100%;
 
     --border: 0 0% 90%;
-    --input: 0 60% 97%;
+    --input: 0 0% 80%;
     --ring: 0 100% 50%; /* Use accent color for focus ring in light mode */
 
     /* Selection colors */

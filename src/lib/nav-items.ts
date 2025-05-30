@@ -48,6 +48,11 @@ export const navItems: NavItem[] = [
         href: '/touranfragen',
         icon: MapPin,
       },
+      {
+        title: 'Wahlkreisbüros',
+        href: '/wahlkreisbueros',
+        icon: Building2,
+      },
     ],
   },
   {
@@ -213,11 +218,6 @@ export const navItems: NavItem[] = [
         title: 'Sharepics',
         href: '/sharepics',
         icon: Image,
-      },
-      {
-        title: 'Wahlkreisbüros',
-        href: '/wahlkreisbueros',
-        icon: Building2,
       },
     ],
   },

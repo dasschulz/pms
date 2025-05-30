@@ -1,143 +1,568 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, Phone, Mail, Clock, Users, Calendar, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageLayout } from "@/components/page-layout";
+import { Plus, Building2, MapPin, ExternalLink, Trash2, Edit, Clock, User, Phone, Mail, Users, HelpCircle, Calendar } from "lucide-react";
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import type { Wahlkreisbuero, WahlkreisbueroMitarbeiter, WahlkreisbueroOeffnungszeiten } from '@/types/wahlkreisbuero';
+import WahlkreisbueroForm from '@/components/wahlkreisbueros/WahlkreisbueroForm';
+import MitarbeiterManager from '@/components/wahlkreisbueros/MitarbeiterManager';
+import OeffnungszeitenManager from '@/components/wahlkreisbueros/OeffnungszeitenManager';
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
-export default function WahlkreisbuerosPage() {
+interface WahlkreisbueroWithDetails extends Omit<Wahlkreisbuero, 'mitarbeiter' | 'oeffnungszeiten'> {
+  mitarbeiter: WahlkreisbueroMitarbeiter[];
+  oeffnungszeiten: WahlkreisbueroOeffnungszeiten[];
+}
+
+const wochentagNamen = [
+  'Montag',
+  'Dienstag', 
+  'Mittwoch',
+  'Donnerstag',
+  'Freitag',
+  'Samstag',
+  'Sonntag'
+];
+
+function WahlkreisbueroCardSkeleton() {
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <Building2 className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Wahlkreisbüros</h1>
-          <p className="text-muted-foreground">Übersicht und Verwaltung der Wahlkreisbüros</p>
+    <Card className="overflow-hidden">
+      {/* Photo Skeleton */}
+      <Skeleton className="h-48 w-full" />
+      
+      <CardHeader className="pb-4">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <div className="px-3">
+              {/* Title */}
+              <Skeleton className="h-6 w-3/4 mb-3" />
+              
+              {/* Address Section */}
+              <div className="mb-4">
+                <Skeleton className="h-4 w-16 mb-1" />
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+
+              {/* Contact Information Grid */}
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Skeleton className="h-4 w-12 mb-1" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <div>
+                  <Skeleton className="h-4 w-10 mb-1" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </div>
+
+              {/* Badges */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-6 w-28 rounded-full" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Action Buttons */}
+          <div className="flex gap-2 ml-4">
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-8" />
+          </div>
         </div>
-      </div>
+      </CardHeader>
 
-      {/* Coming Soon Banner */}
-      <Card className="border-dashed border-2 border-primary/20 bg-primary/5">
-        <CardContent className="pt-6">
-          <div className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-              <Building2 className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-semibold mb-2">In Entwicklung</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Diese Seite wird bald verfügbar sein. Hier wirst du deine Wahlkreisbüros verwalten, 
-                Sprechstunden planen und Kontaktinformationen pflegen können.
-              </p>
-            </div>
-            <Button variant="outline" disabled>
-              <Calendar className="mr-2 h-4 w-4" />
-              Bald verfügbar
+      <CardContent className="pt-0 space-y-6">
+        {/* Staff Section */}
+        <div>
+          <hr className="mb-4" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="p-3">
+                <Skeleton className="h-4 w-24 mb-1" />
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-3 w-28 mb-1" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Opening Hours Section */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Skeleton className="h-5 w-5" />
+            <Skeleton className="h-5 w-28" />
+          </div>
+          <div className="grid md:grid-cols-2 gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between border rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-4 w-4" />
+                  <div>
+                    <Skeleton className="h-4 w-16 mb-1" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function WahlkreisbueroPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [wahlkreisbueros, setWahlkreisbueros] = useState<WahlkreisbueroWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [bueroToDelete, setBueroToDelete] = useState<WahlkreisbueroWithDetails | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (status === "unauthenticated") {
+      router.push('/anmelden');
+      return;
+    }
+    loadWahlkreisbueros();
+  }, [status, router]);
+
+  const loadWahlkreisbueros = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/wahlkreisbueros');
+      const result = await response.json();
+      
+      if (response.ok && result.data) {
+        // Fetch additional details for each wahlkreisbuero
+        const wahlkreisbuerosWithDetails = await Promise.all(
+          result.data.map(async (buero: Wahlkreisbuero) => {
+            try {
+              // Fetch full staff details
+              const staffResponse = await fetch(`/api/wahlkreisbueros/${buero.id}/mitarbeiter`);
+              const staffData = staffResponse.ok ? await staffResponse.json() : { data: [] };
+              
+              // Fetch opening hours
+              const hoursResponse = await fetch(`/api/wahlkreisbueros/${buero.id}/oeffnungszeiten`);
+              const hoursData = hoursResponse.ok ? await hoursResponse.json() : { data: [] };
+              
+              return {
+                ...buero,
+                mitarbeiter: Array.isArray(staffData.data) ? staffData.data : [],
+                oeffnungszeiten: Array.isArray(hoursData.data) ? hoursData.data : []
+              };
+            } catch (error) {
+              console.warn('Error fetching details for buero:', buero.id, error);
+              return {
+                ...buero,
+                mitarbeiter: [],
+                oeffnungszeiten: []
+              };
+            }
+          })
+        );
+        
+        setWahlkreisbueros(wahlkreisbuerosWithDetails);
+      } else {
+        console.error('Error loading wahlkreisbueros:', result.error);
+        toast.error('Fehler beim Laden der Wahlkreisbüros');
+      }
+    } catch (error) {
+      console.error('Error loading wahlkreisbueros:', error);
+      toast.error('Fehler beim Laden der Wahlkreisbüros');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFormSuccess = () => {
+    loadWahlkreisbueros();
+    setShowForm(false);
+    setEditModalOpen(null);
+  };
+
+  const handleDeleteClick = (buero: WahlkreisbueroWithDetails) => {
+    setBueroToDelete(buero);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!bueroToDelete) return;
+
+    try {
+      const response = await fetch(`/api/wahlkreisbueros/${bueroToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        toast.success('Wahlkreisbüro gelöscht!');
+        loadWahlkreisbueros();
+      } else {
+        const result = await response.json();
+        throw new Error(result.error || 'Fehler beim Löschen');
+      }
+    } catch (error) {
+      console.error('Error deleting wahlkreisbuero:', error);
+      toast.error('Fehler beim Löschen des Wahlkreisbüros');
+    } finally {
+      setDeleteDialogOpen(false);
+      setBueroToDelete(null);
+    }
+  };
+
+  const formatTime = (time: string | undefined) => {
+    if (!time) return '--:--';
+    return time.substring(0, 5); // Remove seconds from HH:MM:SS
+  };
+
+  const isOwner = (buero: WahlkreisbueroWithDetails) => session?.user?.id === buero.user_id;
+
+  if (status === "loading" || loading) {
+    return (
+      <PageLayout 
+        title="Wahlkreisbüros"
+        description="Verwalte deine Wahlkreisbüros, Mitarbeitenden, Öffnungszeiten, Sprechstunden und Sozialberatungsangebote. Inhalte werden im Wahlkreisbürofinder der Fraktion öffentlich angezeigt."
+      >
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <WahlkreisbueroCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  return (
+    <PageLayout 
+      title="Wahlkreisbüros"
+      description="Verwalte deine Wahlkreisbüros, Mitarbeitenden, Öffnungszeiten, Sprechstunden und Sozialberatungsangebote. Inhalte werden im Wahlkreisbürofinder der Fraktion öffentlich angezeigt."
+      headerActions={
+        <Dialog open={showForm} onOpenChange={setShowForm}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Büro hinzufügen
             </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto backdrop-blur-md bg-background/95 border-muted">
+            <DialogHeader>
+              <DialogTitle>Neues Wahlkreisbüro erstellen</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <WahlkreisbueroForm
+                onSuccess={handleFormSuccess}
+                onCancel={() => setShowForm(false)}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      }
+    >
+      <div className="space-y-6">
+        {wahlkreisbueros.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Keine Wahlkreisbüros vorhanden</h3>
+              <p className="text-muted-foreground mb-4">
+                Erstelle dein erstes Wahlkreisbüro, um loszulegen.
+              </p>
+              <Dialog open={showForm} onOpenChange={setShowForm}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Erstes Büro erstellen
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto backdrop-blur-md bg-background/95 border-muted">
+                  <DialogHeader>
+                    <DialogTitle>Neues Wahlkreisbüro erstellen</DialogTitle>
+                  </DialogHeader>
+                  <div className="mt-4">
+                    <WahlkreisbueroForm
+                      onSuccess={handleFormSuccess}
+                      onCancel={() => setShowForm(false)}
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {wahlkreisbueros.map((buero) => (
+              <Card key={buero.id} className="overflow-hidden">
+                {/* Office Photo */}
+                {buero.photo_url && (
+                  <div className="relative h-48 w-full">
+                    <img 
+                      src={buero.photo_url} 
+                      alt={buero.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                
+                <CardHeader className={buero.photo_url ? "pb-4" : ""}>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="px-3">
+                        <CardTitle className="text-xl mb-3">{buero.name}</CardTitle>
+                        
+                        {/* Address */}
+                        <div className="mb-4">
+                          <p className="font-medium">Adresse</p>
+                          <p className="text-muted-foreground">
+                            {buero.strasse} {buero.hausnummer}
+                            <br />
+                            {buero.plz} {buero.ort}
+                          </p>
+                        </div>
+
+                        {/* Contact Information */}
+                        <div className="grid md:grid-cols-2 gap-4 mb-4">
+                          {buero.telefon && (
+                            <div>
+                              <p className="font-medium">Telefon</p>
+                              <p className="text-muted-foreground">{buero.telefon}</p>
+                            </div>
+                          )}
+
+                          {buero.email && (
+                            <div>
+                              <p className="font-medium">E-Mail</p>
+                              <p className="text-muted-foreground">{buero.email}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Badges */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {buero.barrierefreiheit && (
+                            <Badge variant="outline">
+                              <HelpCircle className="mr-1 h-3 w-3" />
+                              Barrierefrei
+                            </Badge>
+                          )}
+                          {buero.oeffnungszeiten.length > 0 && (
+                            <Badge variant="secondary">
+                              <Clock className="mr-1 h-3 w-3" />
+                              {buero.oeffnungszeiten.length} Öffnungszeiten
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 ml-4">
+                      {isOwner(buero) && (
+                        <Dialog 
+                          open={editModalOpen === buero.id} 
+                          onOpenChange={(open) => setEditModalOpen(open ? buero.id : null)}
+                        >
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline" className="gap-2">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto backdrop-blur-md bg-background/95 border-muted">
+                            <DialogHeader>
+                              <DialogTitle className="flex items-center gap-2">
+                                <Building2 className="h-5 w-5" />
+                                {buero.name} bearbeiten
+                              </DialogTitle>
+                            </DialogHeader>
+
+                            <Tabs defaultValue="basic" className="w-full">
+                              <TabsList className="grid w-full grid-cols-3">
+                                <TabsTrigger value="basic" className="gap-2">
+                                  <Building2 className="h-4 w-4" />
+                                  Grunddaten
+                                </TabsTrigger>
+                                <TabsTrigger value="staff" className="gap-2">
+                                  <Users className="h-4 w-4" />
+                                  Personal
+                                </TabsTrigger>
+                                <TabsTrigger value="hours" className="gap-2">
+                                  <Clock className="h-4 w-4" />
+                                  Öffnungszeiten
+                                </TabsTrigger>
+                              </TabsList>
+
+                              <TabsContent value="basic" className="mt-6 h-[500px] overflow-y-auto">
+                                <Card>
+                                  <CardContent className="pt-6">
+                                    <WahlkreisbueroForm
+                                      wahlkreisbuero={{
+                                        id: buero.id,
+                                        user_id: buero.user_id,
+                                        name: buero.name,
+                                        photo_url: buero.photo_url,
+                                        strasse: buero.strasse,
+                                        hausnummer: buero.hausnummer,
+                                        plz: buero.plz,
+                                        ort: buero.ort,
+                                        telefon: buero.telefon,
+                                        email: buero.email,
+                                        barrierefreiheit: buero.barrierefreiheit,
+                                        latitude: buero.latitude,
+                                        longitude: buero.longitude,
+                                        created_at: buero.created_at,
+                                        updated_at: buero.updated_at
+                                      }}
+                                      onSuccess={handleFormSuccess}
+                                      onCancel={() => setEditModalOpen(null)}
+                                      compact={true}
+                                    />
+                                  </CardContent>
+                                </Card>
+                              </TabsContent>
+
+                              <TabsContent value="staff" className="mt-6 h-[500px] overflow-y-auto">
+                                <MitarbeiterManager 
+                                  wahlkreisbueroId={buero.id} 
+                                  wahlkreisbueroName={buero.name}
+                                  compact={true}
+                                />
+                              </TabsContent>
+
+                              <TabsContent value="hours" className="mt-6 h-[500px] overflow-y-auto">
+                                <OeffnungszeitenManager 
+                                  wahlkreisbueroId={buero.id} 
+                                  wahlkreisbueroName={buero.name}
+                                  compact={true}
+                                />
+                              </TabsContent>
+                            </Tabs>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => handleDeleteClick(buero)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="pt-0 space-y-6">
+                  {/* Staff Section */}
+                  {buero.mitarbeiter.length > 0 && (
+                    <div>
+                      <hr className="mb-4" />
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {buero.mitarbeiter.map((mitarbeiter) => (
+                          <div key={mitarbeiter.id} className="p-3">
+                            <div className="font-medium whitespace-nowrap">{mitarbeiter.name}</div>
+                            <div className="text-muted-foreground mb-2">
+                              {mitarbeiter.funktion}
+                            </div>
+                            {(mitarbeiter.telefon || mitarbeiter.email) && (
+                              <div className="text-muted-foreground">
+                                {mitarbeiter.telefon && (
+                                  <div className="whitespace-nowrap">
+                                    {mitarbeiter.telefon}
+                                  </div>
+                                )}
+                                {mitarbeiter.email && (
+                                  <div className="whitespace-nowrap">
+                                    {mitarbeiter.email}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Opening Hours Section */}
+                  {buero.oeffnungszeiten.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Clock className="h-5 w-5 text-muted-foreground" />
+                        <h3 className="font-semibold">Öffnungszeiten</h3>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        {buero.oeffnungszeiten
+                          .sort((a, b) => a.wochentag - b.wochentag)
+                          .map((oeffnungszeit) => (
+                          <div key={oeffnungszeit.id} className="flex items-center justify-between border rounded-lg p-3">
+                            <div className="flex items-center gap-3">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <div className="font-medium">{wochentagNamen[oeffnungszeit.wochentag - 1]}</div>
+                                {oeffnungszeit.geschlossen ? (
+                                  <Badge variant="destructive" className="text-xs">
+                                    Geschlossen
+                                  </Badge>
+                                ) : (
+                                  <div className="text-sm text-muted-foreground">
+                                    {formatTime(oeffnungszeit.von_zeit)} - {formatTime(oeffnungszeit.bis_zeit)} Uhr
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Empty State Messages */}
+                  {buero.mitarbeiter.length === 0 && buero.oeffnungszeiten.length === 0 && (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Noch keine Mitarbeiter oder Öffnungszeiten hinzugefügt</p>
+                      {isOwner(buero) && (
+                        <p className="text-xs mt-1">Klicke auf "Bearbeiten" um Details hinzuzufügen</p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Preview of planned features */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              Standorte verwalten
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Übersicht aller Wahlkreisbüro-Standorte mit Adressen, Öffnungszeiten und Kontaktdaten.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Sprechstunden planen
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Terminplanung und -verwaltung für Bürgersprechstunden in den Wahlkreisbüros.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Team verwalten
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Übersicht der Mitarbeiter*innen in den Wahlkreisbüros und deren Verantwortlichkeiten.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              Kontakt & Erreichbarkeit
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Zentrale Verwaltung aller Kontaktinformationen und Erreichbarkeitszeiten.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Bürgeranfragen
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Integration von Bürgeranfragen und deren Weiterleitung an die zuständigen Büros.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ExternalLink className="h-5 w-5" />
-              Öffentliche Darstellung
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Automatische Generierung von Wahlkreisbüro-Informationen für die Website.
-            </p>
-          </CardContent>
-        </Card>
+        )}
       </div>
 
-      {/* Development Info */}
-      <Card className="bg-muted/50">
-        <CardContent className="pt-6">
-          <div className="text-center space-y-2">
-            <h3 className="text-lg font-semibold">Entwicklungsstand</h3>
-            <p className="text-sm text-muted-foreground">
-              Diese Funktionalität ist Teil der nächsten Entwicklungsphase der DIE LINKE Suite. 
-              Bei Fragen oder Anregungen zu den geplanten Features wende dich an das Entwicklungsteam.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Wahlkreisbüro löschen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bist du sicher, dass du das Wahlkreisbüro "{bueroToDelete?.name}" löschen möchtest?
+              Diese Aktion kann nicht rückgängig gemacht werden und löscht auch alle zugehörigen Mitarbeiter und Öffnungszeiten.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </PageLayout>
   );
 } 

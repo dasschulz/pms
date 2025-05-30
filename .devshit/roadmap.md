@@ -33,11 +33,15 @@
 
 ## Kontaktdatenbanken
 
-    # Referentenpool
 
-    # Journalistendatenbank
+    # Organigramme
 
-    # Karl-Liebknecht-Haus
+        Diese Seite sollte zwei Buttons haben, die jeweils eine full width card rendern:
+        1. Partei (Karl-Liebknecht-Haus)
+        2. Fraktion
+
+        Jede dieser Cards sollte ein kleines ZoomIn/ZoomOut feature besitzen.
+
 
     # Verbände & Lobbykontakte
 

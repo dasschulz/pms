@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { Navbar } from "./navbar";
 import { ChevronDown } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 
 // Custom Party Icon SVG - Wird für Sidebar Header und Header-Platzhalter verwendet
 // const PartyIcon = () => (
@@ -78,11 +79,7 @@ function SidebarNav() {
     const isActive = item.href === pathname || (item.children && item.children.some(child => child.href === pathname));
     
     if (item.isHeader) {
-      return (
-        <div key={index} className={cn("flex items-center justify-center px-2 py-2 h-16 border-b", sidebarState === "collapsed" ? "" : "")}>
-          <Image src="/images/logo.svg" alt="Logo" width={sidebarState === 'collapsed' ? 32 : 100} height={32} className="transition-all duration-300 ease-in-out" />
-        </div>
-      );
+      return null;
     }
 
     if (item.isChidren && item.children) {
@@ -96,7 +93,7 @@ function SidebarNav() {
             <SidebarMenuButton
               variant="default"
               className={cn(
-                "w-full justify-start h-9 mb-1",
+                "w-full justify-start h-7 mb-0.5 text-sm",
                 sidebarState === "collapsed" ? "px-0 justify-center" : "px-2"
               )}
               tooltip={sidebarState === "collapsed" ? item.title : undefined}
@@ -108,10 +105,10 @@ function SidebarNav() {
               aria-expanded={isCurrentlyOpen}
             >
               <div className={cn("flex items-center gap-2 w-full", sidebarState === "collapsed" ? "justify-center" : "")}>
-                <item.icon className={cn("h-5 w-5 shrink-0", sidebarState === "collapsed" ? "mx-auto" : "")} />
-                {sidebarState === "expanded" && <span className="truncate flex-1">{item.title}</span>}
+                <item.icon className={cn("h-4 w-4 shrink-0", sidebarState === "collapsed" ? "mx-auto" : "")} />
+                {sidebarState === "expanded" && <span className="truncate flex-1 text-sm">{item.title}</span>}
                 {sidebarState === "expanded" && item.children && (
-                  <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isCurrentlyOpen ? "rotate-180" : "")} />
+                  <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", isCurrentlyOpen ? "rotate-180" : "")} />
                 )}
               </div>
             </SidebarMenuButton>
@@ -120,9 +117,9 @@ function SidebarNav() {
           {sidebarState === "expanded" && (
             <Accordion type="single" collapsible className="w-full px-0" value={openAccordionValue}>
               <AccordionItem value={item.title} className="border-none overflow-hidden">
-                <AccordionContent className="pt-1 pb-0 pl-2">
+                <AccordionContent className="pt-0.5 pb-0 pl-2">
                   {openAccordionValue === item.title && (
-                    <SidebarMenu className="border-l border-sidebar-border ml-[10px] pl-2">
+                    <SidebarMenu className="border-l border-sidebar-border ml-[10px] pl-2 gap-0.5">
                       {item.children.map((child, childIndex) => renderNavItem(child, childIndex, true))}
                     </SidebarMenu>
                   )}
@@ -138,18 +135,18 @@ function SidebarNav() {
     const commonProps = {
       variant: "default" as const,
       className: cn(
-        "w-full justify-start h-9",
+        "w-full justify-start h-7 text-sm",
         isActive && !isSubItem && "bg-sidebar-accent text-sidebar-accent-foreground",
         sidebarState === "collapsed" ? "px-0 justify-center" : "px-2",
-        isSubItem ? "h-8 text-sm ml-2" : "" 
+        isSubItem ? "h-6 text-sm ml-2" : "" 
       ),
       tooltip: sidebarState === "collapsed" ? item.title : undefined,
     };
 
     const content = (
       <div className={cn("flex items-center gap-2 w-full", sidebarState === "collapsed" ? "justify-center" : "")}>
-        <item.icon className={cn("h-5 w-5 shrink-0", sidebarState === "collapsed" ? "mx-auto" : (isSubItem ? "ml-1" : "")) } />
-        {sidebarState === "expanded" && <span className="truncate">{item.title}</span>}
+        <item.icon className={cn("h-4 w-4 shrink-0", sidebarState === "collapsed" ? "mx-auto" : (isSubItem ? "ml-1" : "")) } />
+        {sidebarState === "expanded" && <span className="truncate text-sm">{item.title}</span>}
       </div>
     );
 
@@ -182,19 +179,19 @@ function SidebarNav() {
   return (
     <div className="flex flex-col flex-grow h-full">
       <ScrollArea className="flex-grow">
-        <SidebarMenu className="px-2 pt-2">
+        <SidebarMenu className="px-2 pt-12 gap-0.5">
           {displayNavItems.map((item, index) => renderNavItem(item, index))}
         </SidebarMenu>
 
         {bottomNavItems.length > 0 && (
-          <SidebarMenu className="px-2 mt-2">
+          <SidebarMenu className="px-2 mt-1 gap-0.5">
             {bottomNavItems.map((item, index) => renderNavItem(item, index))}
           </SidebarMenu>
         )}
       </ScrollArea>
       
-      <div className="mt-auto px-2 pb-2">
-        <SidebarMenu>
+      <div className="mt-auto px-2 pb-1">
+        <SidebarMenu className="gap-0.5">
           {renderNavItem(signOutNavItem, navItems.length + bottomNavItems.length)}
         </SidebarMenu>
       </div>

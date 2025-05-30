@@ -55,12 +55,3 @@ Diese Seite dient Mitgliedern des Fraktionsvorstands dazu, neue Kommunikationsli
     *   Speichern der Formulardaten in `communication_lines`.
     *   Hochladen von Dateien in den `communicationattachments` Bucket.
     *   Speichern der Anhang-Metadaten in `communication_line_attachments`.
-
-## Erwartete Benutzerinteraktion:
-
-*   Der Benutzer füllt das Formular in der neu strukturierten Anordnung aus.
-*   "Anhänge" und "Start-/End-Datum" sollten nun klar auf derselben horizontalen Ebene erscheinen.
-
-## Mehrwert für das Büro eines MdB:
-
-Die überarbeitete Struktur zielt darauf ab, eine endgültig korrekte und intuitive horizontale Ausrichtung der zusammengehörigen Elemente ("Anhänge" und "Daten") zu erreichen und gleichzeitig eine klare Gliederung der verschiedenen Eingabebereiche beizubehalten. Dies stellt sicher, dass alle Abgeordneten Zugriff auf konsistente und aktuelle Informationen für ihre Öffentlichkeitsarbeit und politische Kommunikation haben. 

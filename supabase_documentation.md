@@ -30,6 +30,7 @@ The Airtable to Supabase migration has been successfully completed with 100% fun
 - **BPA Management System**: 100% Complete
 - **Parliamentary Tools**: 100% Complete
 - **Communication Management**: 100% Complete
+- **Wahlkreisbüro Management**: 100% Complete
 - **Utility & Debug Tools**: 100% Complete
 - **Frontend Migration**: 100% Complete
 - **Legacy Cleanup**: 100% Complete
@@ -78,6 +79,125 @@ PDF attachments for communication lines.
 - **Key Features**: File storage tracking, user ownership, cascade deletion
 - **Storage**: Supabase Storage bucket `communicationattachments`
 
+#### `organigramme`
+Organizational chart management for party and faction structures.
+- **Migration Status**: ✅ Complete
+- **Key Features**: Interactive organizational charts, hierarchical node editing, real-time persistence, collapsible views, Abteilung (department) grouping.
+- **API Endpoints**: `/api/organigramme` (GET/PUT for both 'partei' and 'fraktion' types)
+- **Schema**:
+  - `id` (UUID, primary key)
+  - `type` (TEXT, 'partei' or 'fraktion' - unique constraint)
+  - `data` (JSONB, complete organizational tree structure)
+  - `created_by` (UUID, foreign key to users table)
+  - `updated_by` (UUID, foreign key to users table)
+  - `created_at`, `updated_at` (TIMESTAMPTZ)
+- **Node Structure (within `data` JSONB field)**: Each node object can contain:
+  - `id` (TEXT, unique within its chart)
+  - `name` (TEXT, person's name or Abteilung title)
+  - `position` (TEXT, job title or Abteilung subtitle, optional for Abteilungen)
+  - `email` (TEXT, optional)
+  - `phone` (TEXT, optional, stores phone extension only, e.g., "51321")
+  - `roomNumber` (TEXT, optional, e.g., "JGH I 840" or "R123")
+  - `isAbteilungHeader` (BOOLEAN, optional, defaults to false. If true, node is rendered as a larger container for its children)
+  - `children` (ARRAY of OrgNode objects, optional)
+- **Features**: Zoom/pan, drag & drop, node editing (name, position, email, phone ext, room, Abteilung type), auto-save, collapsible cards.
+- **RLS Policies**: Public read access, authenticated users can insert/update, creators can delete
+- **UI Components**: Interactive organizational chart with edit dialogs, skeleton loading, responsive design
+
+### Wahlkreisbüro Management
+
+#### Complete Schema Implementation
+Comprehensive constituency office management system with full feature set from todo.md requirements.
+
+#### Storage Buckets
+- **wahlkreisbuero-photos**: Office photos (5MB limit, JPEG/PNG/WebP)
+
+#### Core Tables
+
+##### `wahlkreisbueros` (Main Table) ✅
+Main table for constituency office management with address and geocoding.
+- **Status**: Operational with admin client bypass
+- **Schema**:
+  - `id` (UUID, primary key)
+  - `user_id` (UUID, foreign key to users)
+  - `name` (VARCHAR, office name)
+  - `photo_url` (TEXT, office photo URL)
+  - `strasse` (VARCHAR, street name)
+  - `hausnummer` (VARCHAR, house number)
+  - `plz` (VARCHAR, postal code)
+  - `ort` (VARCHAR, city name)
+  - `latitude` (DECIMAL, for Germany map)
+  - `longitude` (DECIMAL, for Germany map)
+  - `created_at`, `updated_at` (timestamps)
+
+##### `wahlkreisbuero_mitarbeiter` (Staff Management) 🆕
+Staff members assigned to each office.
+- **Schema**:
+  - `id` (UUID, primary key)
+  - `wahlkreisbuero_id` (UUID, foreign key)
+  - `name` (VARCHAR, staff name)
+  - `funktion` (VARCHAR, role, default 'Mitarbeiter')
+  - `telefon` (VARCHAR, phone number)
+  - `email` (VARCHAR, email address)
+  - `created_at`, `updated_at` (timestamps)
+
+##### `wahlkreisbuero_oeffnungszeiten` (Opening Hours) 🆕
+Weekly opening hours for each office.
+- **Schema**:
+  - `id` (UUID, primary key)
+  - `wahlkreisbuero_id` (UUID, foreign key)
+  - `wochentag` (INTEGER, 1=Monday to 7=Sunday)
+  - `von_zeit` (TIME, opening time)
+  - `bis_zeit` (TIME, closing time)
+  - `geschlossen` (BOOLEAN, closed flag)
+  - `created_at`, `updated_at` (timestamps)
+- **Constraints**: UNIQUE(wahlkreisbuero_id, wochentag)
+
+##### `wahlkreisbuero_sprechstunden` (MdB Consultation Hours) 🆕
+When MdB members are available for citizen meetings.
+- **Schema**:
+  - `id` (UUID, primary key)
+  - `wahlkreisbuero_id` (UUID, foreign key)
+  - `mdb_name` (VARCHAR, MdB name)
+  - `wochentag` (INTEGER, 1=Monday to 7=Sunday)
+  - `von_zeit` (TIME, start time)
+  - `bis_zeit` (TIME, end time)
+  - `beschreibung` (TEXT, additional info)
+  - `created_at`, `updated_at` (timestamps)
+
+##### `wahlkreisbuero_beratungen` (Consultation Services) 🆕
+"Die Linke hilft" consultation services offered at offices.
+- **Schema**:
+  - `id` (UUID, primary key)
+  - `wahlkreisbuero_id` (UUID, foreign key)
+  - `typ` (ENUM: 'schuldenberatung', 'buergergeldberatung', 'mietrechtsberatung', 'arbeitsrechtsberatung')
+  - `anbieter` (VARCHAR, service provider)
+  - `wochentag` (INTEGER, 1=Monday to 7=Sunday)
+  - `von_zeit` (TIME, start time)
+  - `bis_zeit` (TIME, end time)
+  - `beschreibung` (TEXT, additional info)
+  - `created_at`, `updated_at` (timestamps)
+
+#### Functions
+- **geocode_address(strasse, hausnummer, plz, ort)**: Placeholder for converting addresses to coordinates
+
+#### API Endpoints
+- `GET/POST /api/wahlkreisbueros` - CRUD operations for offices
+- `GET/PUT/DELETE /api/wahlkreisbueros/[id]` - Individual office management
+- **Future**: `/api/wahlkreisbueros/[id]/mitarbeiter` - Staff management
+- **Future**: `/api/wahlkreisbueros/[id]/oeffnungszeiten` - Hours management
+- **Future**: `/api/wahlkreisbueros/[id]/sprechstunden` - Consultation hours
+- **Future**: `/api/wahlkreisbueros/[id]/beratungen` - Service management
+
+#### Security
+- **RLS**: All tables protected with Row Level Security
+- **Policies**: Users can only manage their own offices and related data
+- **Public Access**: All data readable for public directory features
+
+#### Indexes
+- Performance indexes on all foreign keys and coordinate fields
+- Optimized for Germany map queries: `(latitude, longitude)`
+
 ### BPA Management System
 
 #### `bpa_fahrten`
@@ -117,6 +237,40 @@ Opposition research and analysis.
 - **Migration Status**: ✅ Complete
 - **Key Features**: Automated dossier generation, PDF creation
 - **API Endpoints**: `/api/dossier/generate`
+
+#### `journalisten`
+Journalist database for press relations and media management.
+- **Migration Status**: ✅ Complete
+- **Key Features**: Comprehensive journalist contact management, 4-category rating system, comment system, dynamic ressorts/themes, conditional fields
+- **API Endpoints**: `/api/journalistenpool`, `/api/journalistenpool/[id]`, `/api/journalistenpool/ressorts`, `/api/journalistenpool/themen`
+- **Schema**:
+  - `id` (UUID, primary key)
+  - `titel` (TEXT, optional title like Dr., Prof.)
+  - `vorname` (TEXT, required first name)
+  - `nachname` (TEXT, required last name)
+  - `haus` (TEXT, media house/organization)
+  - `funktion` (TEXT, role/function at organization)
+  - `email` (TEXT, contact email)
+  - `telefon` (TEXT, phone number)
+  - `medium` (TEXT, required: Presse, Radio, Fernsehen, Podcast, Video, Social Media)
+  - `ressort` (TEXT, required department - extensible via journalist_ressorts table)
+  - `zustaendig_fuer` (TEXT, required: Bundespolitik, Landespolitik, Lokalpolitik)
+  - `land` (TEXT, conditional: required if zustaendig_fuer = 'Landespolitik')
+  - `region` (TEXT, conditional: required if zustaendig_fuer = 'Lokalpolitik')
+  - `schwerpunkt` (TEXT, required: Partei, Thema)
+  - `themen` (TEXT[], topics array - extensible via journalist_themen table)
+  - `zustimmung_datenspeicherung` (BOOLEAN, required data storage consent)
+  - `angelegt_von` (UUID, foreign key to users table)
+  - `hinzugefuegt_von` (TEXT, plaintext name of user who added)
+  - `created_at`, `updated_at` (TIMESTAMPTZ)
+- **Related Tables**: 
+  - `journalist_ratings` (4-category rating system: 1-5 scale for Zuverlässigkeit, Gewogenheit ggü Linke, Nimmt Texte an, Freundlichkeit)
+  - `journalist_comments` (user comments, max 600 characters)
+  - `journalist_ressorts` (dynamic/extensible departments)
+  - `journalist_themen` (dynamic/extensible themes)
+- **View**: `journalist_cards` aggregates ratings and provides region display logic
+- **RLS Policies**: Full CRUD with user ownership validation for journalists, own ratings/comments only
+- **UI Features**: Star rating display (white in dark mode, red in light mode), gender-inclusive language, card-based responsive layout
 
 #### `referenten`
 Expert and referent contact management for parliamentary work with privacy controls.

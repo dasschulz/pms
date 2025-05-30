@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { PageLayout } from "@/components/page-layout";
 
 interface BpaFahrt {
   id: string;
@@ -384,20 +385,213 @@ export default function BpaFahrtenPage() {
 
   if (isLoading && fahrten.length === 0 && !error) {
     return (
-      <div className="container mx-auto p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold">BPA-Fahrten</h1>
-          <Skeleton className="h-10 w-40" />
-        </div>
+      <PageLayout 
+        title="BPA-Fahrten"
+        description="Verwalte deine BPA-Informationsfahrten mit Anmeldungsmanagement, Statusverfolgung und öffentlichen Anmeldeformularen für interessierte Bürger aus deinem Wahlkreis."
+        headerActions={
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreateDialog}>
+                <PlusCircle className="mr-2 h-5 w-5" /> Neue Fahrt anlegen
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>Neue BPA-Fahrt anlegen</DialogTitle>
+                <DialogDescription>
+                  Fülle die Details für die neue BPA-Fahrt aus. Mit * markierte Felder sind Pflichtfelder.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right flex items-center justify-end">
+                    <Label>Datum Von*</Label>
+                    <InfoPopover content="Startdatum der BPA-Fahrt. In Sitzungswochen ist der Besuch einer Plenardebatte, in der sitzungsfreien Zeit ein Vortrag im Plenarsaal über die Aufgaben und Funktionen des Parlaments sowie ein Museums- oder Ministerienbesuch vorgesehen." />
+                  </div>
+                  <div className="col-span-3">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !newFahrtData.fahrtDatumVon && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {newFahrtData.fahrtDatumVon ? (
+                            format(newFahrtData.fahrtDatumVon, "PPP", { locale: de })
+                          ) : (
+                            <span>Datum auswählen</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={newFahrtData.fahrtDatumVon || undefined}
+                          onSelect={(date) => setNewFahrtData(prev => ({ ...prev, fahrtDatumVon: date || undefined }))}
+                          locale={de}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right flex items-center justify-end">
+                    <Label>Datum Bis</Label>
+                    <InfoPopover content="Enddatum der BPA-Fahrt. Falls mehrtägig, wird ein kostenloses Mittagessen im Besucherrestaurant des Bundestags angeboten." />
+                  </div>
+                  <div className="col-span-3">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !newFahrtData.fahrtDatumBis && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {newFahrtData.fahrtDatumBis ? (
+                            format(newFahrtData.fahrtDatumBis, "PPP", { locale: de })
+                          ) : (
+                            <span>Datum auswählen</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={newFahrtData.fahrtDatumBis || undefined}
+                          onSelect={(date) => setNewFahrtData(prev => ({ ...prev, fahrtDatumBis: date || undefined }))}
+                          locale={de}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right flex items-center justify-end">
+                    <Label htmlFor="zielort">Zielort*</Label>
+                    <InfoPopover content="Zielort der BPA-Fahrt. Teilnehmer erhalten einen Fahrtkostenzuschuss. Wenn terminlich möglich, wird ein Treffen mit dem Abgeordneten organisiert." />
+                  </div>
+                  <Input id="zielort" name="zielort" value={newFahrtData.zielort || ''} onChange={handleCreateInputChange} required className="col-span-3" />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right flex items-center justify-end">
+                    <Label htmlFor="hotelName">Hotel Name</Label>
+                    <InfoPopover content="Name des Hotels für die Unterkunft der Teilnehmer. Das Hotel erhält nur Vor- und Nachnamen für die Reservierung." />
+                  </div>
+                  <Input id="hotelName" name="hotelName" value={newFahrtData.hotelName || ''} onChange={handleCreateInputChange} className="col-span-3" />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right flex items-center justify-end">
+                    <Label htmlFor="hotelAdresse">Hotel Adresse</Label>
+                    <InfoPopover content="Vollständige Adresse des Hotels für die Navigation und Kommunikation mit den Teilnehmern." />
+                  </div>
+                  <Textarea id="hotelAdresse" name="hotelAdresse" value={newFahrtData.hotelAdresse || ''} onChange={handleCreateInputChange} className="col-span-3" placeholder="Vollständige Adresse des Hotels..."/>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right flex items-center justify-end">
+                    <Label htmlFor="kontingentMax">Kontingent*</Label>
+                    <InfoPopover content="Maximale Anzahl der Teilnehmer für diese Fahrt. Teilnehmer müssen in der Regel das 18. Lebensjahr vollendet haben und es muss sich um 'politisch Interessierte' aus dem Wahlkreis handeln." />
+                  </div>
+                  <Input type="number" id="kontingentMax" name="kontingentMax" value={newFahrtData.kontingentMax === undefined ? '' : newFahrtData.kontingentMax} onChange={handleCreateInputChange} required className="col-span-3" placeholder="z.B. 50"/>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right flex items-center justify-end">
+                    <Label htmlFor="statusFahrt">Status*</Label>
+                    <InfoPopover content="Aktueller Status der Fahrt. Bestimmt, ob Anmeldungen möglich sind und wie die Fahrt für Teilnehmer angezeigt wird." />
+                  </div>
+                  <Select name="statusFahrt" value={newFahrtData.statusFahrt || 'Planung'} onValueChange={(value) => handleCreateSelectChange('statusFahrt', value)} >
+                      <SelectTrigger className="col-span-3">
+                          <SelectValue placeholder="Status auswählen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="Planung">Planung</SelectItem>
+                          <SelectItem value="Anmeldung offen">Anmeldung offen</SelectItem>
+                          <SelectItem value="Anmeldung geschlossen">Anmeldung geschlossen</SelectItem>
+                          <SelectItem value="Fahrt läuft">Fahrt läuft</SelectItem>
+                          <SelectItem value="Abgeschlossen">Abgeschlossen</SelectItem>
+                          <SelectItem value="Storniert">Storniert</SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right flex items-center justify-end">
+                    <Label>Anmeldefrist</Label>
+                    <InfoPopover content="Letzter Tag für Anmeldungen. Eine mehrmalige Teilnahme derselben Person innerhalb von 5 Jahren entspricht nicht den Richtlinien des BPA." />
+                  </div>
+                  <div className="col-span-3">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !newFahrtData.anmeldefrist && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {newFahrtData.anmeldefrist ? (
+                            format(newFahrtData.anmeldefrist, "PPP", { locale: de })
+                          ) : (
+                            <span>Datum auswählen</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={newFahrtData.anmeldefrist || undefined}
+                          onSelect={(date) => setNewFahrtData(prev => ({ ...prev, anmeldefrist: date || undefined }))}
+                          locale={de}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right flex items-center justify-end">
+                    <Label htmlFor="beschreibung">Beschreibung</Label>
+                    <InfoPopover content="Zusätzliche Informationen zur Fahrt. Teilnehmer können deutsche Staatsangehörige und ausländische Teilnehmer aus den EU-Staaten sein." />
+                  </div>
+                  <Textarea id="beschreibung" name="beschreibung" value={newFahrtData.beschreibung || ''} onChange={handleCreateInputChange} rows={3} className="col-span-3" placeholder="Optionale Beschreibung der Fahrt..."/>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <div className="text-right flex items-center justify-end">
+                    <Label htmlFor="zustaiegsorteConfig">Zustiegsorte</Label>
+                    <InfoPopover content="Kommagetrennte Liste der Zustiegsorte für die Anreise. Hilft Teilnehmern bei der Planung der Anreise zum Treffpunkt." />
+                  </div>
+                  <Input id="zustaiegsorteConfig" name="zustaiegsorteConfig" value={newFahrtData.zustaiegsorteConfig || ''} onChange={handleCreateInputChange} className="col-span-3" placeholder="z.B. kommasepariert"/>
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                   <Button variant="outline" disabled={isSubmitting}>Abbrechen</Button>
+                </DialogClose>
+                <Button onClick={handleCreateFahrt} disabled={isSubmitting}>
+                  {isSubmitting ? 'Wird erstellt...' : 'Fahrt erstellen'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        }
+      >
         <BpaFahrtenCardsSkeleton />
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">BPA-Fahrten</h1>
+    <PageLayout 
+      title="BPA-Fahrten"
+      description="Verwalte deine BPA-Informationsfahrten mit Anmeldungsmanagement, Statusverfolgung und öffentlichen Anmeldeformularen für interessierte Bürger aus deinem Wahlkreis."
+      headerActions={
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={openCreateDialog}>
@@ -589,8 +783,8 @@ export default function BpaFahrtenPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-
+      }
+    >
       {error && !isCreateDialogOpen && !isEditDialogOpen && (
         <Alert variant="destructive" className="mb-4">
           <AlertTriangle className="h-4 w-4" />
@@ -1070,6 +1264,6 @@ export default function BpaFahrtenPage() {
           </Card>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 } 
