@@ -78,8 +78,6 @@ export async function PUT(
       hausnummer: formData.hausnummer,
       plz: formData.plz,
       ort: formData.ort,
-      telefon: formData.telefon || null,
-      email: formData.email || null,
       barrierefreiheit: formData.barrierefreiheit || false,
       photo_url: (formData as any).photo_url || null,
     };

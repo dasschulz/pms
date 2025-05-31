@@ -8,6 +8,7 @@ interface UserPreferences {
   widgetOrder: string[];
   activeWidgets: string[];
   themePreference: 'light' | 'dark' | 'system';
+  videoplanungViewMode?: 'list' | 'kanban';
 }
 
 export async function GET(request: NextRequest) {
@@ -41,11 +42,14 @@ export async function GET(request: NextRequest) {
     console.log('Fetching preferences for user ID:', userId);
 
     // Temporarily use admin client until RLS policies are properly configured
-    const { data: prefRecord, error } = await supabaseAdmin
+    const { data: prefRecords, error } = await supabaseAdmin
       .from('user_preferences')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .order('last_update', { ascending: false })
+      .limit(1);
+
+    const prefRecord = prefRecords?.[0];
 
     if (error || !prefRecord) {
       console.log('No preferences found for user, returning defaults:', error?.message);
@@ -53,7 +57,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         widgetOrder: ['weather', 'trains', 'latest-speech', 'activity'],
         activeWidgets: ['weather', 'trains', 'latest-speech', 'activity'],
-        themePreference: 'system'
+        themePreference: 'system',
+        videoplanungViewMode: 'list'
       });
     }
 
@@ -62,7 +67,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       widgetOrder: prefRecord.widget_order || ['weather', 'trains', 'latest-speech', 'activity'],
       activeWidgets: prefRecord.active_widgets || ['weather', 'trains', 'latest-speech', 'activity'],
-      themePreference: prefRecord.theme_preference || 'system'
+      themePreference: prefRecord.theme_preference || 'system',
+      videoplanungViewMode: prefRecord.videoplanung_view_mode || 'list'
     });
 
   } catch (error) {
@@ -79,7 +85,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { widgetOrder, activeWidgets, themePreference } = await request.json();
+    const { widgetOrder, activeWidgets, themePreference, videoplanungViewMode } = await request.json();
 
     // Get user ID from session (should be Supabase UUID now)
     const userId = session.user.id;
@@ -103,35 +109,33 @@ export async function POST(request: NextRequest) {
 
     console.log('🔄 Saving preferences for user:', session.user.email, 'ID:', userId);
 
-    // Temporarily use admin client until RLS policies are properly configured
-
-    // Check if user preferences already exist
-    const { data: existingRecord, error: fetchError } = await supabaseAdmin
+    // Get the most recent record to update
+    const { data: existingRecords, error: fetchError } = await supabaseAdmin
       .from('user_preferences')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .order('last_update', { ascending: false })
+      .limit(1);
 
-    const preferenceData = {
-      user_id: userId,
-      widget_order: widgetOrder,
-      active_widgets: activeWidgets,
-      theme_preference: themePreference,
+    const existingRecord = existingRecords?.[0];
+
+    // Prepare update data - only include fields that are being updated
+    const updateData: any = {
       last_update: new Date().toISOString()
     };
+    
+    if (widgetOrder !== undefined) updateData.widget_order = widgetOrder;
+    if (activeWidgets !== undefined) updateData.active_widgets = activeWidgets;
+    if (themePreference !== undefined) updateData.theme_preference = themePreference;
+    if (videoplanungViewMode !== undefined) updateData.videoplanung_view_mode = videoplanungViewMode;
 
-    if (existingRecord && !fetchError) {
+    if (existingRecord) {
       // Update existing record
       console.log('🔄 Updating existing preference record:', existingRecord.id);
       
       const { error: updateError } = await supabaseAdmin
         .from('user_preferences')
-        .update({
-          widget_order: widgetOrder,
-          active_widgets: activeWidgets,
-          theme_preference: themePreference,
-          last_update: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', existingRecord.id);
 
       if (updateError) {
@@ -141,12 +145,19 @@ export async function POST(request: NextRequest) {
 
       console.log('✅ Updated existing record successfully');
     } else {
-      // Create new record
-      console.log('➕ Creating new preference record (first time for this user)');
+      // Create new record only if none exists
+      console.log('➕ Creating new preference record (no existing record found)');
       
       const { error: insertError } = await supabaseAdmin
         .from('user_preferences')
-        .insert(preferenceData);
+        .insert({
+          user_id: userId,
+          widget_order: widgetOrder,
+          active_widgets: activeWidgets,
+          theme_preference: themePreference,
+          videoplanung_view_mode: videoplanungViewMode,
+          last_update: new Date().toISOString()
+        });
 
       if (insertError) {
         console.error('❌ Error creating preferences:', insertError);

@@ -379,6 +379,40 @@ export default function EinstellungenPage() {
     }
   };
 
+  // Save theme preference to database
+  const saveThemePreference = async (newTheme: string) => {
+    try {
+      console.log('💾 Settings: Saving theme preference:', newTheme);
+      
+      const response = await fetch('/api/user-preferences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          themePreference: newTheme
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('💾 Settings: Theme save error:', errorData);
+        throw new Error(errorData.error || 'Failed to save theme preference');
+      }
+
+      console.log('✅ Settings: Theme preference saved successfully');
+    } catch (error) {
+      console.error('💾 Settings: Error saving theme preference:', error);
+      toast.error("Fehler beim Speichern der Theme-Einstellung");
+    }
+  };
+
+  // Handle theme change with database persistence
+  const handleThemeChange = async (newTheme: string) => {
+    setTheme(newTheme);
+    await saveThemePreference(newTheme);
+  };
+
   return (
     <PageLayout title="Einstellungen" description="Verwalte deine persönlichen Einstellungen und Kontoinformationen.">
       <div className="grid gap-6 md:grid-cols-2">
@@ -675,7 +709,7 @@ export default function EinstellungenPage() {
                     <input 
                       type="checkbox" 
                       checked={theme === 'light'} 
-                      onChange={(e) => setTheme(e.target.checked ? 'light' : 'dark')}
+                      onChange={(e) => handleThemeChange(e.target.checked ? 'light' : 'dark')}
                     />
                     <span className="theme-slider">
                       <div className="theme-star theme-star_1"></div>

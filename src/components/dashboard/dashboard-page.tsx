@@ -7,12 +7,15 @@ async function fetchUserPreferences(userId: string) {
   try {
     console.log('Dashboard: Fetching preferences for user ID:', userId);
 
-    // Use direct Supabase query instead of API fetch (avoids auth issues)
-    const { data: prefRecord, error } = await supabaseAdmin
+    // Use the same logic as the API: get most recent record
+    const { data: prefRecords, error } = await supabaseAdmin
       .from('user_preferences')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .order('last_update', { ascending: false })
+      .limit(1);
+
+    const prefRecord = prefRecords?.[0];
 
     if (error || !prefRecord) {
       console.log('Dashboard: No preferences found for user, returning defaults:', error?.message);

@@ -211,9 +211,6 @@ export function TaskStatusTable({
         parentTaskId: [creatingSubtaskFor]
       };
       
-      console.log('Frontend: Creating subtask with data:', taskData);
-      console.log('Frontend: parentTaskId value:', taskData.parentTaskId, 'type:', typeof taskData.parentTaskId, 'isArray:', Array.isArray(taskData.parentTaskId));
-      
       await createTask(taskData);
       
       toast({
@@ -222,7 +219,6 @@ export function TaskStatusTable({
       });
       handleCancelSubtask();
     } catch (error) {
-      console.error('Error creating subtask:', error);
       toast({
         title: "Fehler beim Erstellen",
         description: "Die Unteraufgabe konnte nicht erstellt werden.",
@@ -376,7 +372,6 @@ export function TaskStatusTable({
       
       handleNewTaskCancel();
     } catch (error) {
-      console.error('Error creating new task:', error);
       toast({
         title: "Fehler beim Erstellen",
         description: "Die Aufgabe konnte nicht erstellt werden.",
@@ -486,10 +481,8 @@ export function TaskStatusTable({
   };
 
   const handleFieldEdit = (taskId: string, field: string, currentValue: string) => {
-    console.log('Frontend: handleFieldEdit called:', { taskId, field, currentValue });
     setEditingField({ taskId, field });
     setEditingValue(currentValue || '');
-    console.log('Frontend: Editing state set:', { editingField: { taskId, field }, editingValue: currentValue || '' });
   };
 
   const handleFieldSave = async () => {
@@ -597,7 +590,6 @@ export function TaskStatusTable({
                     setEditingField(null);
                     setEditingValue('');
                   } catch (error) {
-                    console.error('Frontend: Error saving date via calendar:', error);
                     toast({
                       title: "Fehler beim Aktualisieren",
                       description: "Das Datum konnte nicht aktualisiert werden.",
@@ -652,7 +644,6 @@ export function TaskStatusTable({
                 setEditingField(null);
                 setEditingValue('');
               } catch (error) {
-                console.error('Error saving nextJob:', error);
                 toast({
                   title: "Fehler beim Aktualisieren",
                   description: "Das Feld konnte nicht aktualisiert werden.",
@@ -732,7 +723,6 @@ export function TaskStatusTable({
                 setEditingField(null);
                 setEditingValue('');
               } catch (error) {
-                console.error('Error saving priority:', error);
                 toast({
                   title: "Fehler beim Aktualisieren",
                   description: "Das Feld konnte nicht aktualisiert werden.",

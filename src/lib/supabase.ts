@@ -157,6 +157,7 @@ export type Database = {
           widget_order?: string[];
           active_widgets?: string[];
           theme_preference?: string;
+          videoplanung_view_mode?: string;
           last_update?: string;
           created_at?: string;
         };
@@ -167,6 +168,7 @@ export type Database = {
           widget_order?: string[];
           active_widgets?: string[];
           theme_preference?: string;
+          videoplanung_view_mode?: string;
           last_update?: string;
           created_at?: string;
         };
@@ -177,6 +179,7 @@ export type Database = {
           widget_order?: string[];
           active_widgets?: string[];
           theme_preference?: string;
+          videoplanung_view_mode?: string;
           last_update?: string;
           created_at?: string;
         };

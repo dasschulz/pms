@@ -56,10 +56,21 @@ Main user table containing MdB profiles and authentication data.
 - **Recent Update**: Agenda setting now properly filters for role='MdB' when populating "Zuständiges MdB" field
 
 #### `user_preferences`
-User interface preferences and dashboard configurations.
+User interface preferences and dashboard widget configurations.
 - **Migration Status**: ✅ Complete
-- **Key Features**: Widget management, theme preferences
-- **API Endpoints**: `/api/user-preferences`
+- **Key Features**: Dashboard widget order, active widgets, theme preferences, videoplanung view mode persistence
+- **API Endpoints**: `/api/user-preferences` (GET/POST)
+- **Schema**:
+  - `id` (UUID, primary key)
+  - `user_id` (UUID, foreign key to users table)
+  - `widget_order` (TEXT[], dashboard widget order)
+  - `active_widgets` (TEXT[], enabled dashboard widgets)
+  - `theme_preference` (TEXT, UI theme: light/dark/system)
+  - `videoplanung_view_mode` (TEXT, videoplanung page view: list/kanban)
+  - `last_update` (DATE, last preference update)
+  - `created_at` (TIMESTAMPTZ)
+- **Constraints**: `videoplanung_view_mode` must be 'list' or 'kanban'
+- **RLS Policies**: Users can only access/modify their own preferences
 
 ### Communication Management
 

@@ -9,18 +9,21 @@ import { PageLayout } from "@/components/page-layout";
 import { Plus, Building2, MapPin, ExternalLink, Trash2, Edit, Clock, User, Phone, Mail, Users, HelpCircle, Calendar } from "lucide-react";
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import type { Wahlkreisbuero, WahlkreisbueroMitarbeiter, WahlkreisbueroOeffnungszeiten } from '@/types/wahlkreisbuero';
+import type { Wahlkreisbuero, WahlkreisbueroMitarbeiter, WahlkreisbueroOeffnungszeiten, WahlkreisbueroBeratungen } from '@/types/wahlkreisbuero';
 import WahlkreisbueroForm from '@/components/wahlkreisbueros/WahlkreisbueroForm';
 import MitarbeiterManager from '@/components/wahlkreisbueros/MitarbeiterManager';
 import OeffnungszeitenManager from '@/components/wahlkreisbueros/OeffnungszeitenManager';
+import BeratungsManager from '@/components/wahlkreisbueros/BeratungsManager';
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { BERATUNG_TYPEN } from '@/types/wahlkreisbuero';
 
-interface WahlkreisbueroWithDetails extends Omit<Wahlkreisbuero, 'mitarbeiter' | 'oeffnungszeiten'> {
+interface WahlkreisbueroWithDetails extends Omit<Wahlkreisbuero, 'mitarbeiter' | 'oeffnungszeiten' | 'beratungen'> {
   mitarbeiter: WahlkreisbueroMitarbeiter[];
   oeffnungszeiten: WahlkreisbueroOeffnungszeiten[];
+  beratungen: WahlkreisbueroBeratungen[];
 }
 
 const wochentagNamen = [
@@ -160,17 +163,23 @@ export default function WahlkreisbueroPage() {
               const hoursResponse = await fetch(`/api/wahlkreisbueros/${buero.id}/oeffnungszeiten`);
               const hoursData = hoursResponse.ok ? await hoursResponse.json() : { data: [] };
               
+              // Fetch beratungen
+              const beratungenResponse = await fetch(`/api/wahlkreisbueros/${buero.id}/beratungen`);
+              const beratungenData = beratungenResponse.ok ? await beratungenResponse.json() : { data: [] };
+              
               return {
                 ...buero,
                 mitarbeiter: Array.isArray(staffData.data) ? staffData.data : [],
-                oeffnungszeiten: Array.isArray(hoursData.data) ? hoursData.data : []
+                oeffnungszeiten: Array.isArray(hoursData.data) ? hoursData.data : [],
+                beratungen: Array.isArray(beratungenData.data) ? beratungenData.data : []
               };
             } catch (error) {
               console.warn('Error fetching details for buero:', buero.id, error);
               return {
                 ...buero,
                 mitarbeiter: [],
-                oeffnungszeiten: []
+                oeffnungszeiten: [],
+                beratungen: []
               };
             }
           })
@@ -308,25 +317,51 @@ export default function WahlkreisbueroPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {wahlkreisbueros.map((buero) => (
               <Card key={buero.id} className="overflow-hidden">
-                {/* Office Photo */}
-                {buero.photo_url && (
+                {/* Office Photo with Overlay Badge */}
+                {buero.photo_url ? (
                   <div className="relative h-48 w-full">
                     <img 
                       src={buero.photo_url} 
                       alt={buero.name}
                       className="w-full h-full object-cover"
                     />
+                    <div className="absolute top-3 left-3">
+                      <Badge 
+                        variant={buero.barrierefreiheit ? "default" : "destructive"} 
+                        className={`backdrop-blur-sm ${buero.barrierefreiheit ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' : 'bg-red-600 hover:bg-red-700 text-white border-red-600'}`}
+                      >
+                        <HelpCircle className="mr-1 h-3 w-3" />
+                        {buero.barrierefreiheit ? 'Barrierefrei' : 'Nicht barrierefrei'}
+                      </Badge>
+                    </div>
+                  </div>
+                ) : (
+                  // Default background when no image is available
+                  <div className="relative h-48 w-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                    <Building2 className="h-16 w-16 text-primary/20" />
+                    <div className="absolute top-3 left-3">
+                      <Badge 
+                        variant={buero.barrierefreiheit ? "default" : "destructive"}
+                        className={buero.barrierefreiheit ? 'bg-green-600 hover:bg-green-700 text-white border-green-600' : 'bg-red-600 hover:bg-red-700 text-white border-red-600'}
+                      >
+                        <HelpCircle className="mr-1 h-3 w-3" />
+                        {buero.barrierefreiheit ? 'Barrierefrei' : 'Nicht barrierefrei'}
+                      </Badge>
+                    </div>
                   </div>
                 )}
                 
-                <CardHeader className={buero.photo_url ? "pb-4" : ""}>
+                <CardHeader className="pb-4">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="px-3">
                         <CardTitle className="text-xl mb-3">{buero.name}</CardTitle>
                         
+                        {/* Horizontal Divider */}
+                        <hr className="mb-3 border-muted" />
+                        
                         {/* Address */}
-                        <div className="mb-4">
+                        <div>
                           <p className="font-medium">Adresse</p>
                           <p className="text-muted-foreground">
                             {buero.strasse} {buero.hausnummer}
@@ -335,35 +370,24 @@ export default function WahlkreisbueroPage() {
                           </p>
                         </div>
 
-                        {/* Contact Information */}
-                        <div className="grid md:grid-cols-2 gap-4 mb-4">
-                          {buero.telefon && (
-                            <div>
-                              <p className="font-medium">Telefon</p>
-                              <p className="text-muted-foreground">{buero.telefon}</p>
-                            </div>
-                          )}
-
-                          {buero.email && (
-                            <div>
-                              <p className="font-medium">E-Mail</p>
-                              <p className="text-muted-foreground">{buero.email}</p>
-                            </div>
-                          )}
-                        </div>
-
                         {/* Badges */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {buero.barrierefreiheit && (
-                            <Badge variant="outline">
-                              <HelpCircle className="mr-1 h-3 w-3" />
-                              Barrierefrei
-                            </Badge>
-                          )}
+                        <div className="flex flex-wrap gap-2 mb-1">
                           {buero.oeffnungszeiten.length > 0 && (
                             <Badge variant="secondary">
                               <Clock className="mr-1 h-3 w-3" />
                               {buero.oeffnungszeiten.length} Öffnungszeiten
+                            </Badge>
+                          )}
+                          {buero.beratungen.length > 0 && (
+                            <Badge variant="secondary">
+                              <HelpCircle className="mr-1 h-3 w-3" />
+                              {buero.beratungen.length} Beratungsangebote
+                            </Badge>
+                          )}
+                          {buero.latitude && buero.longitude && (
+                            <Badge variant="outline">
+                              <MapPin className="mr-1 h-3 w-3" />
+                              Koordinaten verfügbar
                             </Badge>
                           )}
                         </div>
@@ -378,7 +402,7 @@ export default function WahlkreisbueroPage() {
                           onOpenChange={(open) => setEditModalOpen(open ? buero.id : null)}
                         >
                           <DialogTrigger asChild>
-                            <Button size="sm" variant="outline" className="gap-2">
+                            <Button size="sm" variant="outline" className="h-8 w-8 p-0">
                               <Edit className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
@@ -391,7 +415,7 @@ export default function WahlkreisbueroPage() {
                             </DialogHeader>
 
                             <Tabs defaultValue="basic" className="w-full">
-                              <TabsList className="grid w-full grid-cols-3">
+                              <TabsList className="grid w-full grid-cols-4">
                                 <TabsTrigger value="basic" className="gap-2">
                                   <Building2 className="h-4 w-4" />
                                   Grunddaten
@@ -403,6 +427,10 @@ export default function WahlkreisbueroPage() {
                                 <TabsTrigger value="hours" className="gap-2">
                                   <Clock className="h-4 w-4" />
                                   Öffnungszeiten
+                                </TabsTrigger>
+                                <TabsTrigger value="consultations" className="gap-2">
+                                  <HelpCircle className="h-4 w-4" />
+                                  Beratungen
                                 </TabsTrigger>
                               </TabsList>
 
@@ -419,8 +447,6 @@ export default function WahlkreisbueroPage() {
                                         hausnummer: buero.hausnummer,
                                         plz: buero.plz,
                                         ort: buero.ort,
-                                        telefon: buero.telefon,
-                                        email: buero.email,
                                         barrierefreiheit: buero.barrierefreiheit,
                                         latitude: buero.latitude,
                                         longitude: buero.longitude,
@@ -450,13 +476,23 @@ export default function WahlkreisbueroPage() {
                                   compact={true}
                                 />
                               </TabsContent>
+
+                              <TabsContent value="consultations" className="mt-6 h-[500px] overflow-y-auto">
+                                <BeratungsManager 
+                                  wahlkreisbueroId={buero.id} 
+                                  wahlkreisbueroName={buero.name}
+                                  compact={true}
+                                />
+                              </TabsContent>
                             </Tabs>
                           </DialogContent>
                         </Dialog>
                       )}
                       <Button
                         size="sm"
+                        variant="outline"
                         onClick={() => handleDeleteClick(buero)}
+                        className="h-8 w-8 p-0"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getToken } from 'next-auth/jwt';
-import type { Wahlkreisbuero, WahlkreisbueroFormData } from '@/types/wahlkreisbuero';
+import type { Wahlkreisbuero, WahlkreisbueroFormData, GeocodeResult } from '@/types/wahlkreisbuero';
 
 // GET - Fetch all wahlkreisbueros for current user or all if public
 export async function GET(request: NextRequest) {
@@ -49,6 +49,31 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Helper function to geocode address
+async function geocodeAddress(strasse: string, hausnummer: string, plz: string, ort: string): Promise<GeocodeResult> {
+  try {
+    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/geocode`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.NEXTAUTH_SECRET}`, // Use server auth
+      },
+      body: JSON.stringify({ strasse, hausnummer, plz, ort }),
+    });
+
+    if (!response.ok) {
+      console.warn('[Wahlkreisbueros API] Geocoding failed:', response.status);
+      return { latitude: null, longitude: null, success: false, message: 'Geocoding service unavailable' };
+    }
+
+    const result: GeocodeResult = await response.json();
+    return result;
+  } catch (error) {
+    console.warn('[Wahlkreisbueros API] Geocoding error:', error);
+    return { latitude: null, longitude: null, success: false, message: 'Geocoding failed' };
+  }
+}
+
 // POST - Create new wahlkreisbuero
 export async function POST(request: NextRequest) {
   try {
@@ -74,7 +99,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Implement geocoding for coordinates
+    // Attempt to geocode the address
+    console.log('[Wahlkreisbueros API] Attempting to geocode address');
+    const geocodeResult = await geocodeAddress(formData.strasse, formData.hausnummer, formData.plz, formData.ort);
+    
+    if (geocodeResult.success) {
+      console.log('[Wahlkreisbueros API] Successfully geocoded address:', geocodeResult);
+    } else {
+      console.warn('[Wahlkreisbueros API] Geocoding failed:', geocodeResult.message);
+    }
+
     const wahlkreisbueroData = {
       user_id: userId,
       name: formData.name,
@@ -82,10 +116,10 @@ export async function POST(request: NextRequest) {
       hausnummer: formData.hausnummer,
       plz: formData.plz,
       ort: formData.ort,
-      telefon: formData.telefon || null,
-      email: formData.email || null,
       barrierefreiheit: formData.barrierefreiheit || false,
       photo_url: (formData as any).photo_url || null,
+      latitude: geocodeResult.latitude,
+      longitude: geocodeResult.longitude,
     };
 
     console.log('[Wahlkreisbueros API] Inserting data:', wahlkreisbueroData);
@@ -108,7 +142,13 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Wahlkreisbueros API] Successfully created wahlkreisbuero:', data);
-    return NextResponse.json({ data }, { status: 201 });
+    return NextResponse.json({ 
+      data,
+      geocoding: {
+        success: geocodeResult.success,
+        message: geocodeResult.message
+      }
+    }, { status: 201 });
   } catch (error) {
     console.error('[Wahlkreisbueros API] Unexpected error:', error);
     return NextResponse.json(

@@ -248,8 +248,7 @@ export function DraggableDashboard({ userName, initialPreferences }: DraggableDa
         },
         body: JSON.stringify({
           activeWidgets: newActiveWidgets || activeWidgets,
-          widgetOrder: newWidgetOrder || widgetOrder,
-          themePreference: 'system' // TODO: Add theme management
+          widgetOrder: newWidgetOrder || widgetOrder
         }),
       });
       console.log('✅ Preferences saved successfully');

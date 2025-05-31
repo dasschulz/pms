@@ -25,9 +25,10 @@ interface TaskModalProps {
   task?: Task;
   mode: 'create' | 'edit';
   parentTaskId?: string;
+  initialStatus?: string;
 }
 
-export function TaskModal({ isOpen, onClose, task, mode, parentTaskId }: TaskModalProps) {
+export function TaskModal({ isOpen, onClose, task, mode, parentTaskId, initialStatus }: TaskModalProps) {
   const { createTask, updateTask, isCreating, isUpdating } = useTasks();
   const { toast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -58,13 +59,13 @@ export function TaskModal({ isOpen, onClose, task, mode, parentTaskId }: TaskMod
           name: '',
           detailview: '',
           fälligkeitsdatum: null,
-          nextJob: 'Brainstorming',
+          nextJob: initialStatus || 'Brainstorming',
           priority: 'Normal',
           publishDate: null,
         });
       }
     }
-  }, [isOpen, task, mode]);
+  }, [isOpen, task, mode, initialStatus]);
 
   const insertMarkdown = (before: string, after: string = '') => {
     const textarea = textareaRef.current;
@@ -120,7 +121,6 @@ export function TaskModal({ isOpen, onClose, task, mode, parentTaskId }: TaskMod
       
       onClose();
     } catch (error) {
-      console.error('Failed to save task:', error);
       toast({
         title: "Fehler beim Speichern",
         description: error instanceof Error ? error.message : "Die Aufgabe konnte nicht gespeichert werden.",

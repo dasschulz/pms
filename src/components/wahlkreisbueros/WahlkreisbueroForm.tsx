@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Save, X, Plus, Trash2, Users, Clock, ChevronDown, ChevronRight, Upload, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { Wahlkreisbuero, WahlkreisbueroFormData } from '@/types/wahlkreisbuero';
+import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 
 interface WahlkreisbueroFormProps {
   wahlkreisbuero?: Wahlkreisbuero;
@@ -69,8 +70,6 @@ export default function WahlkreisbueroForm({
     hausnummer: wahlkreisbuero?.hausnummer || '',
     plz: wahlkreisbuero?.plz || '',
     ort: wahlkreisbuero?.ort || '',
-    telefon: wahlkreisbuero?.telefon || '',
-    email: wahlkreisbuero?.email || '',
     barrierefreiheit: wahlkreisbuero?.barrierefreiheit || false
   });
   const [error, setError] = useState<string | null>(null);
@@ -83,28 +82,44 @@ export default function WahlkreisbueroForm({
   const [initialMitarbeiter, setInitialMitarbeiter] = useState<InitialMitarbeiter[]>([]);
   const [initialOeffnungszeiten, setInitialOeffnungszeiten] = useState<InitialOeffnungszeit[]>([]);
 
+  // Image crop dialog state
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+
   const isEditing = !!wahlkreisbuero;
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('Bitte wähle eine Bilddatei aus');
+      // Validate file type - only allow JPG, PNG, GIF
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Nur JPG, PNG und GIF Dateien sind erlaubt');
         return;
       }
       
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Die Datei ist zu groß. Maximale Größe: 5MB');
-        return;
-      }
+      // Check if file size exceeds 2MB or if image needs processing
+      const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+      const needsProcessing = file.size > maxSizeBytes;
       
-      setSelectedFile(file);
+      // Check image dimensions to see if it needs cropping
+      const img = new Image();
+      img.onload = () => {
+        const isSquare = img.naturalWidth === img.naturalHeight;
+        
+        if (needsProcessing || !isSquare) {
+          // Show crop dialog for processing
+          setPendingImageFile(file);
+          setCropDialogOpen(true);
+        } else {
+          // File is already good, set directly
+          setSelectedFile(file);
+          const url = URL.createObjectURL(file);
+          setPreviewUrl(url);
+        }
+      };
       
-      // Create preview URL
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
+      img.src = URL.createObjectURL(file);
     }
   };
 
@@ -116,23 +131,39 @@ export default function WahlkreisbueroForm({
     setPreviewUrl(null);
   };
 
-  const uploadImage = async (file: File): Promise<string | null> => {
-    const formData = new FormData();
-    formData.append('image', file);
-    
+  // Handle crop completion
+  const handleCropComplete = (croppedImageBase64: string) => {
+    setPreviewUrl(croppedImageBase64);
+    setSelectedFile(null); // Clear file since we now have base64
+    setPendingImageFile(null);
+  };
+
+  const uploadImage = async (file?: File, base64String?: string): Promise<string | null> => {
     try {
-      const response = await fetch('/api/upload/image', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed');
+      if (base64String) {
+        // For base64 data from crop dialog, we can return it directly 
+        // since it's already processed and under 2MB
+        return base64String;
+      } else if (file) {
+        // For regular file uploads
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const response = await fetch('/api/upload/image', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Upload failed');
+        }
+        
+        return result.url;
+      } else {
+        throw new Error("No file or base64 string provided");
       }
-      
-      return result.url;
     } catch (error) {
       console.error('Image upload error:', error);
       toast.error('Fehler beim Hochladen des Bildes');
@@ -178,9 +209,16 @@ export default function WahlkreisbueroForm({
     try {
       let imageUrl = previewUrl;
       
-      // Upload image if a new file was selected
+      // Upload image if a new file was selected or base64 data exists
       if (selectedFile) {
         imageUrl = await uploadImage(selectedFile);
+        if (!imageUrl) {
+          setLoading(false);
+          return; // Upload failed, error already shown
+        }
+      } else if (previewUrl && previewUrl.startsWith('data:')) {
+        // Handle base64 data from crop dialog
+        imageUrl = await uploadImage(undefined, previewUrl);
         if (!imageUrl) {
           setLoading(false);
           return; // Upload failed, error already shown
@@ -418,40 +456,9 @@ export default function WahlkreisbueroForm({
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Right Column: Kontakt & Details */}
-        <div className="space-y-6">
-          <div>
-            {!compact && <h3 className="text-lg font-semibold mb-4">Kontakt & Details</h3>}
-            
-            {/* Kontakt */}
-            <div className="space-y-4 mb-6">
-              <div className="space-y-2">
-                <Label htmlFor="telefon">Telefon</Label>
-                <Input
-                  id="telefon"
-                  value={formData.telefon || ''}
-                  onChange={(e) => handleInputChange('telefon', e.target.value)}
-                  placeholder="z.B. +49 30 123456"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">E-Mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email || ''}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="z.B. buero@bundestag.de"
-                />
-              </div>
-            </div>
 
             {/* Barrierefreiheit */}
-            <div className="space-y-4">
+            <div className="space-y-4 mt-6">
               <div className="flex items-center space-x-2">
                 <Switch
                   id="barrierefreiheit"
@@ -461,9 +468,16 @@ export default function WahlkreisbueroForm({
                 <Label htmlFor="barrierefreiheit">Barrierefrei</Label>
               </div>
             </div>
+          </div>
+        </div>
 
+        {/* Right Column: Kontakt & Details */}
+        <div className="space-y-6">
+          <div>
+            {!compact && <h3 className="text-lg font-semibold mb-4">Details</h3>}
+            
             {/* Image Upload */}
-            <div className="space-y-2 mt-6">
+            <div className="space-y-2">
               <Label htmlFor="photo">Bürofoto (optional)</Label>
               <div className="space-y-3">
                 {previewUrl && (
@@ -488,7 +502,7 @@ export default function WahlkreisbueroForm({
                   <Input
                     id="photo"
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/gif"
                     onChange={handleFileChange}
                     className="hidden"
                   />
@@ -509,7 +523,7 @@ export default function WahlkreisbueroForm({
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Unterstützte Formate: JPG, PNG, GIF. Max. 5MB
+                  Unterstützte Formate: JPG, PNG, GIF. Max. 2MB. Große Bilder werden automatisch zugeschnitten.
                 </p>
               </div>
             </div>
@@ -747,6 +761,16 @@ export default function WahlkreisbueroForm({
           </p>
         )}
       </div>
+
+      {/* Image Crop Dialog */}
+      <ImageCropDialog
+        open={cropDialogOpen}
+        onOpenChange={setCropDialogOpen}
+        imageFile={pendingImageFile}
+        onCropComplete={handleCropComplete}
+        maxSizeBytes={2 * 1024 * 1024} // 2MB
+        targetDimensions={{ width: 800, height: 450 }}
+      />
     </form>
   );
 } 

@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getToken } from 'next-auth/jwt';
+import type { Task } from '@/types/videoplanung';
 
 export async function GET(req: NextRequest) {
   console.log('TaskManager API: Starting GET request');
   
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  // console.log('TaskManager API: Token check:', !!token, !!token?.id);
 
   if (!token || !token.id) {
     console.log('TaskManager API: No valid token found, denying access.');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = token.id as string; // This is now the Supabase UUID
+  const userId = token.id as string;
   console.log('TaskManager API: Fetching tasks for userId:', userId);
 
   try {
@@ -26,29 +26,38 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('TaskManager API: Error fetching tasks from Supabase:', error);
-      return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Failed to fetch tasks', 
+        details: error.message 
+      }, { status: 500 });
     }
 
     console.log('TaskManager API: Found', records?.length || 0, 'tasks');
 
-    // Transform Supabase records to match expected format
+    // Transform Supabase records to match expected Task interface
     const tasks = records?.map((record) => ({
-      id: record.id, // Use Supabase UUID for frontend operations
-      supabaseId: record.id, // Include Supabase UUID
-      name: record.name,
-      description: record.description,
-      priority: record.priority,
-      nextJob: record.next_job,
-      deadline: record.deadline,
-      completed: record.completed,
-      userId: record.user_id,
-      createdAt: record.created_at,
+      id: record.id,
+      taskId: record.auto_id || 0,
+      name: record.name || '',
+      detailview: record.description || '',
+      isSubtask: false,
+      parentTaskId: null,
+      fälligkeitsdatum: record.deadline || null,
+      nextJob: record.next_job || 'Brainstorming',
+      priority: record.priority || 'Normal',
+      publishDate: null,
+      sortOrder: 0,
+      createdDate: record.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+      modifiedDate: record.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
     })) || [];
 
     return NextResponse.json({ tasks });
   } catch (error) {
     console.error('TaskManager API: Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch tasks' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to fetch tasks',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
@@ -61,24 +70,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const userId = token.id as string; // This is now the Supabase UUID
+  const userId = token.id as string;
 
   try {
     const body = await req.json();
-    const { name, description, priority, nextJob, deadline } = body;
+    const { 
+      name, 
+      detailview, 
+      isSubtask, 
+      parentTaskId, 
+      fälligkeitsdatum, 
+      nextJob, 
+      priority, 
+      publishDate,
+      sortOrder 
+    } = body;
 
-    console.log('TaskManager API: Creating task:', { name, description, priority, nextJob, deadline });
+    console.log('TaskManager API: Creating task:', body);
 
-    // Create task in Supabase
+    // Create task in Supabase with proper field mapping
     const { data: newTask, error } = await supabase
       .from('task_manager')
       .insert({
         user_id: userId,
-        name,
-        description: description || null,
+        name: name || '',
+        description: detailview || '',
         priority: priority || 'Normal',
         next_job: nextJob || 'Brainstorming',
-        deadline: deadline || null,
+        deadline: fälligkeitsdatum || null,
         completed: false,
       })
       .select()
@@ -86,29 +105,38 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('TaskManager API: Error creating task:', error);
-      return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Failed to create task',
+        details: error.message 
+      }, { status: 500 });
     }
 
     console.log('TaskManager API: Task created successfully:', newTask.id);
 
-    // Transform response to match expected format
+    // Transform response to match expected Task interface
     const task = {
-      id: newTask.auto_id || newTask.id,
-      supabaseId: newTask.id,
-      name: newTask.name,
-      description: newTask.description,
-      priority: newTask.priority,
-      nextJob: newTask.next_job,
-      deadline: newTask.deadline,
-      completed: newTask.completed,
-      userId: newTask.user_id,
-      createdAt: newTask.created_at,
+      id: newTask.id,
+      taskId: newTask.auto_id || 0,
+      name: newTask.name || '',
+      detailview: newTask.description || '',
+      isSubtask: false,
+      parentTaskId: null,
+      fälligkeitsdatum: newTask.deadline || null,
+      nextJob: newTask.next_job || 'Brainstorming',
+      priority: newTask.priority || 'Normal',
+      publishDate: null,
+      sortOrder: 0,
+      createdDate: newTask.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+      modifiedDate: newTask.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
     };
 
     return NextResponse.json(task);
   } catch (error) {
     console.error('TaskManager API: Error creating task:', error);
-    return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to create task',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
@@ -125,69 +153,79 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { id, name, description, priority, nextJob, deadline, completed } = body;
+    const { 
+      id, 
+      name, 
+      detailview, 
+      isSubtask, 
+      parentTaskId, 
+      fälligkeitsdatum, 
+      nextJob, 
+      priority, 
+      publishDate,
+      sortOrder 
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Task ID is required' }, { status: 400 });
     }
 
-    console.log('TaskManager API: Updating task:', id);
+    console.log('TaskManager API: Updating task:', id, body);
 
-    // First check if the task belongs to the user
-    const { data: existingTask, error: fetchError } = await supabase
+    // Update task in Supabase with proper field mapping
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (detailview !== undefined) updateData.description = detailview;
+    if (priority !== undefined) updateData.priority = priority;
+    if (nextJob !== undefined) updateData.next_job = nextJob;
+    if (fälligkeitsdatum !== undefined) updateData.deadline = fälligkeitsdatum;
+
+    const { data: updatedTask, error } = await supabase
       .from('task_manager')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single();
-
-    if (fetchError || !existingTask) {
-      console.log('TaskManager API: Task not found or access denied:', id);
-      return NextResponse.json({ error: 'Task not found or access denied' }, { status: 404 });
-    }
-
-    // Update the task
-    const updateFields: any = {};
-    if (name !== undefined) updateFields.name = name;
-    if (description !== undefined) updateFields.description = description;
-    if (priority !== undefined) updateFields.priority = priority;
-    if (nextJob !== undefined) updateFields.next_job = nextJob;
-    if (deadline !== undefined) updateFields.deadline = deadline;
-    if (completed !== undefined) updateFields.completed = completed;
-
-    const { data: updatedTask, error: updateError } = await supabase
-      .from('task_manager')
-      .update(updateFields)
+      .update(updateData)
       .eq('id', id)
       .eq('user_id', userId)
       .select()
       .single();
 
-    if (updateError) {
-      console.error('TaskManager API: Error updating task:', updateError);
-      return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
+    if (error) {
+      console.error('TaskManager API: Error updating task:', error);
+      return NextResponse.json({ 
+        error: 'Failed to update task',
+        details: error.message 
+      }, { status: 500 });
+    }
+
+    if (!updatedTask) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
     console.log('TaskManager API: Task updated successfully:', updatedTask.id);
 
-    // Transform response to match expected format
+    // Transform response to match expected Task interface
     const task = {
-      id: updatedTask.auto_id || updatedTask.id,
-      supabaseId: updatedTask.id,
-      name: updatedTask.name,
-      description: updatedTask.description,
-      priority: updatedTask.priority,
-      nextJob: updatedTask.next_job,
-      deadline: updatedTask.deadline,
-      completed: updatedTask.completed,
-      userId: updatedTask.user_id,
-      createdAt: updatedTask.created_at,
+      id: updatedTask.id,
+      taskId: updatedTask.auto_id || 0,
+      name: updatedTask.name || '',
+      detailview: updatedTask.description || '',
+      isSubtask: false,
+      parentTaskId: null,
+      fälligkeitsdatum: updatedTask.deadline || null,
+      nextJob: updatedTask.next_job || 'Brainstorming',
+      priority: updatedTask.priority || 'Normal',
+      publishDate: null,
+      sortOrder: 0,
+      createdDate: updatedTask.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+      modifiedDate: updatedTask.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
     };
 
     return NextResponse.json(task);
   } catch (error) {
     console.error('TaskManager API: Error updating task:', error);
-    return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to update task',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
@@ -221,7 +259,10 @@ export async function DELETE(req: NextRequest) {
 
     if (error) {
       console.error('TaskManager API: Error deleting task:', error);
-      return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Failed to delete task',
+        details: error.message 
+      }, { status: 500 });
     }
 
     console.log('TaskManager API: Task deleted successfully:', id);
@@ -229,6 +270,9 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('TaskManager API: Error deleting task:', error);
-    return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to delete task',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 

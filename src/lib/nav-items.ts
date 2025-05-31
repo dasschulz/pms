@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin, Clapperboard, ClipboardList, Building2, Mountain, Code, Plane, Users, CalendarCheck, Phone, Shield, UserPlus, MessageSquare, Target } from 'lucide-react';
+import { LayoutDashboard, FileText, FileSearch2, Mic2, Video, BarChart3, Newspaper, Mail, Settings, LogOut, UserCircle, CalendarDays, Share2, Calendar, TrendingUp, Image, MapPin, Clapperboard, ClipboardList, Building2, Mountain, Code, Plane, Users, CalendarCheck, Phone, Shield, UserPlus, MessageSquare, Target, Rocket } from 'lucide-react';
 
 export interface NavItem {
   title: string;
@@ -29,9 +29,21 @@ export const navItems: NavItem[] = [
     icon: Newspaper,
   },
   {
-    title: 'Tagesordnung',
-    href: '/tagesordnung',
-    icon: CalendarDays,
+    title: 'Raumschiff',
+    icon: Rocket,
+    isChidren: true,
+    children: [
+      {
+        title: 'Tagesordnung',
+        href: '/tagesordnung',
+        icon: CalendarDays,
+      },
+      {
+        title: 'Dokumentensuche',
+        href: '/dokumentensuche',
+        icon: FileSearch2,
+      },
+    ],
   },
   {
     title: 'Draußenwelt',
@@ -71,11 +83,6 @@ export const navItems: NavItem[] = [
         icon: Newspaper,
       },
     ],
-  },
-  {
-    title: 'Dokumentensuche',
-    href: '/dokumentensuche',
-    icon: FileSearch2,
   },
   {
     title: 'Tscheka',

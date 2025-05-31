@@ -87,8 +87,6 @@ export interface WahlkreisbueroFormData {
   hausnummer: string;
   plz: string;
   ort: string;
-  telefon?: string;
-  email?: string;
   barrierefreiheit?: boolean;
   photo?: File;
 }
