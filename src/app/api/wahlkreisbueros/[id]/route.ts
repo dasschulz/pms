@@ -21,7 +21,6 @@ export async function GET(
       .from('wahlkreisbueros')
       .select(`
         *,
-        mitarbeiter:wahlkreisbuero_mitarbeiter(*),
         oeffnungszeiten:wahlkreisbuero_oeffnungszeiten(*),
         sprechstunden:wahlkreisbuero_sprechstunden(*),
         beratungen:wahlkreisbuero_beratungen(*)

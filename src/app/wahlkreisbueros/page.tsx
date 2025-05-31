@@ -9,9 +9,8 @@ import { PageLayout } from "@/components/page-layout";
 import { Plus, Building2, MapPin, ExternalLink, Trash2, Edit, Clock, User, Phone, Mail, Users, HelpCircle, Calendar } from "lucide-react";
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import type { Wahlkreisbuero, WahlkreisbueroMitarbeiter, WahlkreisbueroOeffnungszeiten, WahlkreisbueroBeratungen } from '@/types/wahlkreisbuero';
+import type { Wahlkreisbuero, WahlkreisbueroOeffnungszeiten, WahlkreisbueroBeratungen } from '@/types/wahlkreisbuero';
 import WahlkreisbueroForm from '@/components/wahlkreisbueros/WahlkreisbueroForm';
-import MitarbeiterManager from '@/components/wahlkreisbueros/MitarbeiterManager';
 import OeffnungszeitenManager from '@/components/wahlkreisbueros/OeffnungszeitenManager';
 import BeratungsManager from '@/components/wahlkreisbueros/BeratungsManager';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,8 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { BERATUNG_TYPEN } from '@/types/wahlkreisbuero';
 
-interface WahlkreisbueroWithDetails extends Omit<Wahlkreisbuero, 'mitarbeiter' | 'oeffnungszeiten' | 'beratungen'> {
-  mitarbeiter: WahlkreisbueroMitarbeiter[];
+interface WahlkreisbueroWithDetails extends Omit<Wahlkreisbuero, 'oeffnungszeiten' | 'beratungen'> {
   oeffnungszeiten: WahlkreisbueroOeffnungszeiten[];
   beratungen: WahlkreisbueroBeratungen[];
 }
@@ -85,21 +83,6 @@ function WahlkreisbueroCardSkeleton() {
       </CardHeader>
 
       <CardContent className="pt-0 space-y-6">
-        {/* Staff Section */}
-        <div>
-          <hr className="mb-4" />
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="p-3">
-                <Skeleton className="h-4 w-24 mb-1" />
-                <Skeleton className="h-4 w-20 mb-2" />
-                <Skeleton className="h-3 w-28 mb-1" />
-                <Skeleton className="h-3 w-32" />
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Opening Hours Section */}
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -155,10 +138,6 @@ export default function WahlkreisbueroPage() {
         const wahlkreisbuerosWithDetails = await Promise.all(
           result.data.map(async (buero: Wahlkreisbuero) => {
             try {
-              // Fetch full staff details
-              const staffResponse = await fetch(`/api/wahlkreisbueros/${buero.id}/mitarbeiter`);
-              const staffData = staffResponse.ok ? await staffResponse.json() : { data: [] };
-              
               // Fetch opening hours
               const hoursResponse = await fetch(`/api/wahlkreisbueros/${buero.id}/oeffnungszeiten`);
               const hoursData = hoursResponse.ok ? await hoursResponse.json() : { data: [] };
@@ -169,7 +148,6 @@ export default function WahlkreisbueroPage() {
               
               return {
                 ...buero,
-                mitarbeiter: Array.isArray(staffData.data) ? staffData.data : [],
                 oeffnungszeiten: Array.isArray(hoursData.data) ? hoursData.data : [],
                 beratungen: Array.isArray(beratungenData.data) ? beratungenData.data : []
               };
@@ -177,7 +155,6 @@ export default function WahlkreisbueroPage() {
               console.warn('Error fetching details for buero:', buero.id, error);
               return {
                 ...buero,
-                mitarbeiter: [],
                 oeffnungszeiten: [],
                 beratungen: []
               };
@@ -244,7 +221,7 @@ export default function WahlkreisbueroPage() {
     return (
       <PageLayout 
         title="Wahlkreisbüros"
-        description="Verwalte deine Wahlkreisbüros, Mitarbeitenden, Öffnungszeiten, Sprechstunden und Sozialberatungsangebote. Inhalte werden im Wahlkreisbürofinder der Fraktion öffentlich angezeigt."
+        description="Verwalte deine Wahlkreisbüros, Öffnungszeiten, Sprechstunden und Sozialberatungsangebote. Inhalte werden im Wahlkreisbürofinder der Fraktion öffentlich angezeigt."
       >
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -260,7 +237,7 @@ export default function WahlkreisbueroPage() {
   return (
     <PageLayout 
       title="Wahlkreisbüros"
-      description="Verwalte deine Wahlkreisbüros, Mitarbeitenden, Öffnungszeiten, Sprechstunden und Sozialberatungsangebote. Inhalte werden im Wahlkreisbürofinder der Fraktion öffentlich angezeigt."
+      description="Verwalte deine Wahlkreisbüros, Öffnungszeiten, Sprechstunden und Sozialberatungsangebote. Inhalte werden im Wahlkreisbürofinder der Fraktion öffentlich angezeigt. Personal wird zentral über den Bereich 'Mitarbeitende' verwaltet."
       headerActions={
         <Dialog open={showForm} onOpenChange={setShowForm}>
           <DialogTrigger asChild>
@@ -415,14 +392,10 @@ export default function WahlkreisbueroPage() {
                             </DialogHeader>
 
                             <Tabs defaultValue="basic" className="w-full">
-                              <TabsList className="grid w-full grid-cols-4">
+                              <TabsList className="grid w-full grid-cols-3">
                                 <TabsTrigger value="basic" className="gap-2">
                                   <Building2 className="h-4 w-4" />
                                   Grunddaten
-                                </TabsTrigger>
-                                <TabsTrigger value="staff" className="gap-2">
-                                  <Users className="h-4 w-4" />
-                                  Personal
                                 </TabsTrigger>
                                 <TabsTrigger value="hours" className="gap-2">
                                   <Clock className="h-4 w-4" />
@@ -461,14 +434,6 @@ export default function WahlkreisbueroPage() {
                                 </Card>
                               </TabsContent>
 
-                              <TabsContent value="staff" className="mt-6 h-[500px] overflow-y-auto">
-                                <MitarbeiterManager 
-                                  wahlkreisbueroId={buero.id} 
-                                  wahlkreisbueroName={buero.name}
-                                  compact={true}
-                                />
-                              </TabsContent>
-
                               <TabsContent value="hours" className="mt-6 h-[500px] overflow-y-auto">
                                 <OeffnungszeitenManager 
                                   wahlkreisbueroId={buero.id} 
@@ -501,37 +466,6 @@ export default function WahlkreisbueroPage() {
                 </CardHeader>
 
                 <CardContent className="pt-0 space-y-6">
-                  {/* Staff Section */}
-                  {buero.mitarbeiter.length > 0 && (
-                    <div>
-                      <hr className="mb-4" />
-                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {buero.mitarbeiter.map((mitarbeiter) => (
-                          <div key={mitarbeiter.id} className="p-3">
-                            <div className="font-medium whitespace-nowrap">{mitarbeiter.name}</div>
-                            <div className="text-muted-foreground mb-2">
-                              {mitarbeiter.funktion}
-                            </div>
-                            {(mitarbeiter.telefon || mitarbeiter.email) && (
-                              <div className="text-muted-foreground">
-                                {mitarbeiter.telefon && (
-                                  <div className="whitespace-nowrap">
-                                    {mitarbeiter.telefon}
-                                  </div>
-                                )}
-                                {mitarbeiter.email && (
-                                  <div className="whitespace-nowrap">
-                                    {mitarbeiter.email}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   {/* Opening Hours Section */}
                   {buero.oeffnungszeiten.length > 0 && (
                     <div>
@@ -565,11 +499,30 @@ export default function WahlkreisbueroPage() {
                     </div>
                   )}
 
+                  {/* Staff Reference Note */}
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <h4 className="font-medium text-sm">Personal</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Mitarbeitende werden zentral über den Bereich{' '}
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-sm text-primary underline"
+                        onClick={() => router.push('/mitarbeitende')}
+                      >
+                        'Mitarbeitende'
+                      </Button>
+                      {' '}verwaltet und können dort Wahlkreisbüros als Einsatzort zugeordnet werden.
+                    </p>
+                  </div>
+
                   {/* Empty State Messages */}
-                  {buero.mitarbeiter.length === 0 && buero.oeffnungszeiten.length === 0 && (
+                  {buero.oeffnungszeiten.length === 0 && (
                     <div className="text-center py-6 text-muted-foreground">
                       <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Noch keine Mitarbeiter oder Öffnungszeiten hinzugefügt</p>
+                      <p className="text-sm">Noch keine Öffnungszeiten hinzugefügt</p>
                       {isOwner(buero) && (
                         <p className="text-xs mt-1">Klicke auf "Bearbeiten" um Details hinzuzufügen</p>
                       )}
@@ -588,7 +541,7 @@ export default function WahlkreisbueroPage() {
             <AlertDialogTitle>Wahlkreisbüro löschen</AlertDialogTitle>
             <AlertDialogDescription>
               Bist du sicher, dass du das Wahlkreisbüro "{bueroToDelete?.name}" löschen möchtest?
-              Diese Aktion kann nicht rückgängig gemacht werden und löscht auch alle zugehörigen Mitarbeiter und Öffnungszeiten.
+              Diese Aktion kann nicht rückgängig gemacht werden und löscht auch alle zugehörigen Öffnungszeiten und Beratungsangebote.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

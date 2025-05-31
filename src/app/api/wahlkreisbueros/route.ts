@@ -16,7 +16,6 @@ export async function GET(request: NextRequest) {
       .select(`
         *
         ${includeRelations ? `,
-        mitarbeiter:wahlkreisbuero_mitarbeiter(*),
         oeffnungszeiten:wahlkreisbuero_oeffnungszeiten(*),
         sprechstunden:wahlkreisbuero_sprechstunden(*),
         beratungen:wahlkreisbuero_beratungen(*)

@@ -141,17 +141,6 @@ Main table for constituency office management with address and geocoding.
   - `longitude` (DECIMAL, for Germany map)
   - `created_at`, `updated_at` (timestamps)
 
-##### `wahlkreisbuero_mitarbeiter` (Staff Management) 🆕
-Staff members assigned to each office.
-- **Schema**:
-  - `id` (UUID, primary key)
-  - `wahlkreisbuero_id` (UUID, foreign key)
-  - `name` (VARCHAR, staff name)
-  - `funktion` (VARCHAR, role, default 'Mitarbeiter')
-  - `telefon` (VARCHAR, phone number)
-  - `email` (VARCHAR, email address)
-  - `created_at`, `updated_at` (timestamps)
-
 ##### `wahlkreisbuero_oeffnungszeiten` (Opening Hours) 🆕
 Weekly opening hours for each office.
 - **Schema**:
@@ -195,7 +184,6 @@ When MdB members are available for citizen meetings.
 #### API Endpoints
 - `GET/POST /api/wahlkreisbueros` - CRUD operations for offices
 - `GET/PUT/DELETE /api/wahlkreisbueros/[id]` - Individual office management
-- **Future**: `/api/wahlkreisbueros/[id]/mitarbeiter` - Staff management
 - **Future**: `/api/wahlkreisbueros/[id]/oeffnungszeiten` - Hours management
 - **Future**: `/api/wahlkreisbueros/[id]/sprechstunden` - Consultation hours
 - **Future**: `/api/wahlkreisbueros/[id]/beratungen` - Service management
@@ -336,6 +324,100 @@ Project and task tracking system.
 - **Migration Status**: ✅ Complete
 - **Key Features**: Priority management, workflow stages, deadline tracking
 - **API Endpoints**: `/api/task-manager`
+
+## Abgeordneten-Mitarbeiter System
+
+### Tabelle: `abgeordneten_mitarbeiter`
+Haupttabelle für alle Mitarbeitenden der Abgeordneten.
+
+**Felder:**
+- `id` (UUID, Primary Key)
+- `name` (TEXT, NOT NULL) - Vollständiger Name
+- `strasse` (TEXT, NOT NULL) - Straße der Adresse
+- `hausnummer` (TEXT, NOT NULL) - Hausnummer
+- `plz` (TEXT, NOT NULL) - Postleitzahl (5 Ziffern)
+- `ort` (TEXT, NOT NULL) - Ort
+- `geburtsdatum` (DATE, NOT NULL) - Geburtsdatum
+- `email` (TEXT, NOT NULL, UNIQUE) - E-Mail-Adresse (@bundestag.de)
+- `bueronummer` (TEXT) - Büronummer (optional)
+- `mobilnummer` (TEXT) - Mobiltelefonnummer (optional)
+- `profilbild_url` (TEXT) - URL für Profilbild (optional)
+- `created_at` (TIMESTAMPTZ, DEFAULT NOW())
+- `updated_at` (TIMESTAMPTZ, DEFAULT NOW())
+
+**Constraints:**
+- Email muss @bundestag.de Domain enthalten
+- PLZ muss 5 Ziffern haben
+
+### Tabelle: `mdb_mitarbeiter_zuordnungen`
+Verknüpfung zwischen Mitarbeitern und MdBs mit Arbeitsdetails.
+
+**Felder:**
+- `id` (UUID, Primary Key)
+- `mitarbeiter_id` (UUID, Foreign Key → abgeordneten_mitarbeiter.id)
+- `mdb_user_id` (UUID, Foreign Key → users.id)
+- `eingruppierung` (eingruppierung_enum, NOT NULL) - Stellenklassifikation
+- `zustaendigkeit` (TEXT, NOT NULL) - Aufgabenbereich
+- `einstellungsdatum` (DATE, NOT NULL) - Start der Tätigkeit
+- `befristung_bis` (DATE) - Ende bei befristeter Stelle (optional)
+- `einsatzort` (einsatzort_enum, NOT NULL) - Arbeitsort
+- `created_at` (TIMESTAMPTZ, DEFAULT NOW())
+- `updated_at` (TIMESTAMPTZ, DEFAULT NOW())
+
+**Unique Constraint:** Pro Mitarbeiter maximal 3 aktive Zuordnungen
+
+### Enums
+
+#### `eingruppierung_enum`
+Klassifikation der Mitarbeiter-Stellen:
+- `'Bürokraft'`
+- `'Sekretär:in'`
+- `'Sachbearbeiter:in'`
+- `'Wissenschaftliche:r Mitarbeiter:in'`
+
+#### `einsatzort_enum`
+Verfügbare Arbeitsorte (wird erweitert):
+- `'Bundestag'`
+- (Wahlkreisbüros werden dynamisch hinzugefügt)
+
+### View: `mitarbeiter_vollstaendig`
+Optimierte View für vollständige Mitarbeiter-Informationen mit Zuordnungen.
+
+**Felder:**
+- Alle Felder aus `abgeordneten_mitarbeiter`
+- `zuordnung_id` - ID der Zuordnung
+- `mdb_id` - ID des zugeordneten MdB
+- `mdb_name` - Name des MdB
+- `eingruppierung` - Stellenklassifikation
+- `zustaendigkeit` - Aufgabenbereich
+- `einstellungsdatum` - Einstellungsdatum
+- `befristung_bis` - Befristungsende (falls vorhanden)
+- `einsatzort` - Arbeitsort
+- `zuordnung_created_at` - Erstellungsdatum der Zuordnung
+- `zuordnung_updated_at` - Letzte Änderung der Zuordnung
+
+### API Endpoints
+
+#### `/api/mitarbeitende`
+- **GET**: Lädt alle Mitarbeitenden des aktuellen MdB
+- **POST**: Erstellt neuen Mitarbeiter mit Zuordnungen
+
+#### `/api/mitarbeitende/[id]`
+- **GET**: Lädt spezifischen Mitarbeiter mit Details
+- **PUT**: Aktualisiert Mitarbeiter-Daten und Zuordnungen
+- **DELETE**: Löscht Mitarbeiter oder nur MdB-Zuordnung
+
+### Integration mit Wahlkreisbüros
+- Mitarbeiter können Wahlkreisbüros als Einsatzort zugeordnet werden
+- Integration in Wahlkreisbüro-Karten (/wahlkreisbueros)
+- Automatische Anzeige auf entsprechenden Karten
+
+### Validierungsregeln
+- E-Mail muss @bundestag.de Domain haben
+- PLZ muss genau 5 Ziffern haben
+- Maximal 3 aktive MdB-Zuordnungen pro Mitarbeiter
+- Mindestens eine Zuordnung erforderlich
+- Einstellungsdatum darf nicht in der Zukunft liegen
 
 ---
 

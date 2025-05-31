@@ -15,8 +15,6 @@ This will create:
 - Public access policies for photos
 
 ### 🗃️ Database Tables
-- **wahlkreisbuero_mitarbeiter** (staff management)
-  - Name, function, phone, email per office
 - **wahlkreisbuero_oeffnungszeiten** (opening hours)
   - Weekday-based opening/closing times
 - **wahlkreisbuero_sprechstunden** (MdB consultation hours)
@@ -41,11 +39,19 @@ This will create:
 
 1. **Enable relations in API**: Update `/api/wahlkreisbueros?include=relations`
 2. **Photo upload**: Add image upload and resizing functionality
-3. **Staff management**: Create UI for adding/editing mitarbeiter
-4. **Hours management**: Create UI for opening hours and consultation times
-5. **Consultation services**: Create UI for "Die Linke hilft" services
-6. **Geocoding integration**: Add API call to convert addresses to coordinates
-7. **Germany map page**: Create separate page showing all offices on map
+3. **Hours management**: Create UI for opening hours and consultation times
+4. **Consultation services**: Create UI for "Die Linke hilft" services
+5. **Geocoding integration**: Add API call to convert addresses to coordinates
+6. **Germany map page**: Create separate page showing all offices on map
+
+## 📋 Staff Management Note
+
+**Staff management is now handled by the comprehensive `/mitarbeitende` system** which provides:
+- Professional MdB staff management with proper assignments
+- Support for multiple MdB assignments per staff member  
+- Integration with constituency office mapping via einsatzort field
+- Enhanced validation and business logic
+- Complete CRUD operations with form validation
 
 ## 📋 Full Schema Overview
 
@@ -54,11 +60,6 @@ wahlkreisbueros (main table)
 ├── id, user_id, name, photo_url
 ├── strasse, hausnummer, plz, ort
 ├── latitude, longitude (for map)
-└── created_at, updated_at
-
-wahlkreisbuero_mitarbeiter
-├── wahlkreisbuero_id → wahlkreisbueros.id
-├── name, funktion, telefon, email
 └── created_at, updated_at
 
 wahlkreisbuero_oeffnungszeiten

@@ -22,22 +22,10 @@ export interface Wahlkreisbuero {
   longitude?: number;
   
   // Relations
-  mitarbeiter?: WahlkreisbueroMitarbeiter[];
   oeffnungszeiten?: WahlkreisbueroOeffnungszeiten[];
   sprechstunden?: WahlkreisbueroSprechstunden[];
   beratungen?: WahlkreisbueroBeratungen[];
   
-  created_at: string;
-  updated_at: string;
-}
-
-export interface WahlkreisbueroMitarbeiter {
-  id: string;
-  wahlkreisbuero_id: string;
-  name: string;
-  funktion: string;
-  telefon?: string;
-  email?: string;
   created_at: string;
   updated_at: string;
 }
@@ -89,13 +77,6 @@ export interface WahlkreisbueroFormData {
   ort: string;
   barrierefreiheit?: boolean;
   photo?: File;
-}
-
-export interface MitarbeiterFormData {
-  name: string;
-  funktion: string;
-  telefon?: string;
-  email?: string;
 }
 
 export interface OeffnungszeitenFormData {

@@ -43,6 +43,11 @@ export const navItems: NavItem[] = [
         href: '/dokumentensuche',
         icon: FileSearch2,
       },
+      {
+        title: 'Mitarbeitende',
+        href: '/mitarbeitende',
+        icon: Users,
+      },
     ],
   },
   {
